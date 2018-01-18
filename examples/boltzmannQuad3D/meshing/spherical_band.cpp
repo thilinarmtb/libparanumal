@@ -4,6 +4,11 @@
 #include <map>
 #include <array>
 
+#include <iostream>
+using namespace std;
+
+// reference icosasphere meshing from https://github.com/softwareschneiderei/meshing-samples/blob/master/main.cpp
+
 //g++ -g -std=c++11  -o icosasphere icosasphere.cpp  
 
 struct v3
@@ -83,9 +88,9 @@ v3 normalize(v3 rhs)
 
 using Index=std::uint32_t;
 
-struct Triangle
+struct Quad
 {
-  Index vertex[3];
+  Index vertex[4];
 };
 
 struct ColorPosition
@@ -94,29 +99,25 @@ struct ColorPosition
   v3 position;
 };
 
-using TriangleList=std::vector<Triangle>;
+using QuadList=std::vector<Quad>;
 using VertexList=std::vector<v3>;
 using ColorVertexList=std::vector<ColorPosition>;
 
-namespace icosahedron
+namespace prism
 {
-  const float X=.525731112119133606f;
-  const float Z=.850650808352039932f;
+  const float Z=0.95f;
+  const float X=std::sqrt(1-Z*Z); //autogenerate X from Z
   const float N=0.f;
 
   static const VertexList vertices=
     {
       {-X,N,Z}, {X,N,Z}, {-X,N,-Z}, {X,N,-Z},
-      {N,Z,X}, {N,Z,-X}, {N,-Z,X}, {N,-Z,-X},
-      {Z,X,N}, {-Z,X, N}, {Z,-X,N}, {-Z,-X, N}
+      {N,X,Z}, {N,-X,Z}, {N,X,-Z}, {N,-X,-Z}
     };
 
-  static const TriangleList triangles=
+  static const QuadList quads=
     {
-      {0,4,1},{0,9,4},{9,5,4},{4,5,8},{4,8,1},
-      {8,10,1},{8,3,10},{5,3,8},{5,2,3},{2,7,3},
-      {7,10,3},{7,6,10},{7,11,6},{11,0,6},{0,1,6},
-      {6,1,10},{9,0,11},{9,11,2},{9,2,5},{7,2,11}
+      {0,5,7,2},{5,1,3,7},{1,4,6,3},{4,0,2,6}
     };
 }
 
@@ -161,38 +162,41 @@ Index vertex_for_edge(Lookup& lookup,
 }
 
 template <typename VertexList>
-TriangleList subdivide_4(VertexList& vertices,
-                         TriangleList triangles)
+QuadList subdivide_4(VertexList& vertices,
+                         QuadList quads)
 {
   Lookup lookup;
-  TriangleList result;
+  QuadList result;
 
-  for (auto&& each:triangles)
+  for (auto&& each:quads)
     {
-      std::array<Index, 3> mid;
-      for (int edge=0; edge<3; ++edge)
+      std::array<Index, 5> mid; //four on the edge, plus one center
+      for (int edge=0; edge<4; ++edge)
 	{
 	  mid[edge]=vertex_for_edge(lookup, vertices,
-				    each.vertex[edge], each.vertex[(edge+1)%3]);
+				    each.vertex[edge], each.vertex[(edge+1)%4]);
 	}
 
-      result.push_back({each.vertex[0], mid[0], mid[2]});
-      result.push_back({each.vertex[1], mid[1], mid[0]});
-      result.push_back({each.vertex[2], mid[2], mid[1]});
-      result.push_back({mid[0], mid[1], mid[2]});
+      //midpoint of an arbitrarily chosen edge
+      mid[4] = vertex_for_edge(lookup, vertices, mid[0],mid[2]);
+
+      result.push_back({each.vertex[0],mid[0],mid[4],mid[3]});
+      result.push_back({each.vertex[1], mid[0],mid[4], mid[1]});
+      result.push_back({each.vertex[2], mid[1],mid[4], mid[2]});
+      result.push_back({each.vertex[3], mid[2],mid[4], mid[3]});
     }
 
   return result;
 }
 
-int longest_edge(ColorVertexList& vertices, Triangle const& triangle)
+int longest_edge(ColorVertexList& vertices, Quad const& quad)
 {
   float best=0.f;
   int result=0;
-  for (int i=0; i<3; ++i)
+  for (int i=0; i<4; ++i)
     {
-      auto a=vertices[triangle.vertex[i]].position;
-      auto b=vertices[triangle.vertex[(i+1)%3]].position;
+      auto a=vertices[quad.vertex[i]].position;
+      auto b=vertices[quad.vertex[(i+1)%4]].position;
       float contest =(a-b).squared();
       if (contest>best)
 	{
@@ -203,48 +207,70 @@ int longest_edge(ColorVertexList& vertices, Triangle const& triangle)
   return result;
 }
 
-TriangleList subdivide_2(ColorVertexList& vertices,
-                         TriangleList triangles)
+using IndexedMesh=std::pair<VertexList, QuadList>;
+using ColoredIndexMesh=std::pair<ColorVertexList, QuadList>;
+
+void make_icosphere(int subdivisions, VertexList &vertices, QuadList &quads)
 {
-  Lookup lookup;
-  TriangleList result;
-
-  for (auto&& each:triangles)
-    {
-      auto edge=longest_edge(vertices, each);
-      Index mid=vertex_for_edge(lookup, vertices,
-				each.vertex[edge], each.vertex[(edge+1)%3]);
-
-      result.push_back({each.vertex[edge],
-	    mid, each.vertex[(edge+2)%3]});
-
-      result.push_back({each.vertex[(edge+2)%3],
-	    mid, each.vertex[(edge+1)%3]});
-    }
-
-  return result;
-}
-
-using IndexedMesh=std::pair<VertexList, TriangleList>;
-using ColoredIndexMesh=std::pair<ColorVertexList, TriangleList>;
-
-IndexedMesh make_icosphere(int subdivisions)
-{
-  VertexList vertices=icosahedron::vertices;
-  TriangleList triangles=icosahedron::triangles;
+  
+  vertices=prism::vertices;
+  quads=prism::quads;
 
   for (int i=0; i<subdivisions; ++i)
     {
-      triangles=subdivide_4(vertices, triangles);
+      quads=subdivide_4(vertices, quads);
     }
-
-  return{vertices, triangles};
 }
 
 
 int main(int argc, char **argv){
 
-  IndexedMesh mesh = make_icosphere(2);
+  int Nref = (argc==2) ? atoi(argv[1]): 0;
+  
+  VertexList vertices;
+  QuadList quads;
+  
+  //  IndexedMesh mesh = make_icosphere(2);
+  make_icosphere(Nref, vertices, quads);
 
+  // output
+  cout << "$MeshFormat" << endl;
+  cout << "2.2 0 8" << endl;
+  cout << "$EndMeshFormat" << endl;
+  cout << "$Nodes" << endl;
+  cout <<  vertices.size() << endl;
+
+  cout.precision(15);
+  cout << scientific;
+  
+  // output coordinates of vertices
+  
+  for(std::vector<int>::size_type i = 0; i != vertices.size(); i++) {
+    cout << i+1 << " " 
+      <<  vertices[i].data[0] << " "
+      <<  vertices[i].data[1] << " "
+      <<  vertices[i].data[2] << " "
+      <<  endl;
+      
+  }
+
+  cout << "$EndNodes" << endl;
+  cout << "$Elements" << endl;
+  cout << quads.size() << endl;
+
+  for(std::vector<int>::size_type i = 0; i != quads.size(); i++) {
+    cout
+      << i+1 << " "
+      << " 3 2 2 6 " 
+      <<  quads[i].vertex[0]+1 << " "
+      <<  quads[i].vertex[1]+1 << " "
+      <<  quads[i].vertex[2]+1 << " "
+      <<  quads[i].vertex[3]+1
+      <<  endl;
+  }
+  
+  cout << "$EndElements" << endl;
+
+  
   return 0;
 }
