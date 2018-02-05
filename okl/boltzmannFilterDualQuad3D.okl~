@@ -1,0 +1,18 @@
+kernel void boltzmannFilterDualQuad3D(const iint Nelements,
+       	    			      const iint * restrict elementIds,
+				      const dfloat * restrict dualMatrix,
+				      const iint * restrict cubeFaceNumber,
+				      const iint * restrict EToE,
+				      dfloat * restrict q) {
+
+  for (iint e = 0; e < Nelements;++e) {
+    for (iint i=0; i<p_Nq; ++i; inner1) {
+      for (iint j=0; j<p_Nq; ++j; inner0) {
+	occaUnroll(2)
+	for (iint dir=0; dir<2; ++dir) {//direction to apply the filter
+	  if 
+	}
+      }
+    }
+  }
+}
