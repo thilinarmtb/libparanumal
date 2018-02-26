@@ -265,7 +265,7 @@ int main(int argc, char **argv){
     }
     o_elementList = device.malloc(E*sizeof(int), elementList);
     char buf[200];
-    for (int i =1; i<NKernels+1; i++){
+    for (int i =2; i<NKernels+1; i++){
       printf("compiling 3D kernel %d ...\n", i);
       sprintf(buf, "ellipticPartialAxTet3D_Ref%d", i); 
       Tet3Dkernel[i-1] = device.buildKernelFromSource("ellipticAxTet3D.okl", buf, kernelInfo);
@@ -273,7 +273,7 @@ int main(int argc, char **argv){
     occa::initTimer(device);
 
     // queue Ax kernels
-    for (int i =1;i<=NKernels; i++){
+    for (int i =2;i<=NKernels; i++){
       datafloat lambda = 1.;
       occa::streamTag startTag = device.tagStream();
 
@@ -337,7 +337,7 @@ gflops *=Niter;
 
 
   //printf("\n\nBWfromCopy%d = [", E);
-  for (int k=1; k<=NKernels; k++){
+  for (int k=2; k<=NKernels; k++){
     printf("==== this is kernel %d \n", k);
     int p_Nq = k+1;
     int p_gjNq = k+2;
@@ -402,7 +402,7 @@ Nbytes /= 2;
   //printf("];\n\n");
 
   printf("\n\nROOFLINE = [");
-  for (int k=1; k<=NKernels; k++){
+  for (int k=2; k<=NKernels; k++){
 
     printf(" %16.17f ", roofline[k-1]);
   }
