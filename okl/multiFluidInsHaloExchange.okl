@@ -1,0 +1,30 @@
+kernel void multiFluidInsLevelSetHaloExtract(const int Nelments,
+                                            const int NhaloElements,
+                                            const int   * restrict haloElements,
+                                            const dfloat * restrict Phi,
+                                            dfloat * restrict haloq){
+
+  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+      const int id   = haloElements[e];
+      const int base = p_Np*e;
+      haloq[n + base + 0*p_Np] = Phi[n + p_Np*id];
+    }
+  }
+}
+
+
+kernel void multiFluidInsLevelSetHaloScatter(const int Nelments,
+                             const int NhaloElements,
+                             const int   * restrict haloElements,
+                                   dfloat * restrict Phi,
+                             const dfloat * restrict haloq){
+
+  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+    for(int n=0;n<p_Np;++n;inner0){ 
+      const int id   = haloElements[e];
+      const int base = p_Np*e;
+      Phi[n + p_Np*(Nelments+e)] = haloq[n + base + 0*p_Np];
+    }
+  }
+}
