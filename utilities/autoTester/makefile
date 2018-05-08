@@ -44,8 +44,8 @@ LOBJS = \
 ../../src/setupAide.o \
 ../../src/timer.o
 
-autoTester:../../src/matrix.o  ../../src/setupAide.o ../../src/trace.o autoTester.o
-	$(LD) $(LDFLAGS) -o autoTester autoTester.o ../../src/matrix.o  ../../src/trace.o ../../src/setupAide.o $(paths) $(LIBS)
+autoTester: ../../src/setupAide.o autoTester.o
+	$(LD) $(LDFLAGS) -o autoTester autoTester.o ../../src/setupAide.o $(paths) $(LIBS)
 
 all: autoTester
 
