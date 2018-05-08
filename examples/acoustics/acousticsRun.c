@@ -74,7 +74,8 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 	  mesh->dt = nextOutputTime-time;
 
 	  // print
-	  printf("Taking output mini step: %g\n", mesh->dt);
+	  if(rank==0)
+	    printf("Taking output mini step: %g\n", mesh->dt);
 	  
 	  // time step to output
 	  acousticsDopriStep(acoustics, newOptions, time);	  
@@ -103,11 +104,15 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
         acoustics->facold = mymax(err,1E-4); // hard coded factor ?
 
-	printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  mesh->dt);
+	if(rank==0)
+	  printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  mesh->dt);
+
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(acoustics->invfactor1,fac1/acoustics->safe));
-	printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, mesh->dt, dtnew);
+
+	if(rank==0)
+	  printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, mesh->dt, dtnew);
 
 	done = 0;
       }
