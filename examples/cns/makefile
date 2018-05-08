@@ -95,9 +95,7 @@ cnsReport.o \
 ../../src/meshVTU3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
-../../src/matrix.o \
 ../../src/setupAide.o \
-../../src/trace.o \
 ../../src/readArray.o
 
 
