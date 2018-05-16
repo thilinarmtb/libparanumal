@@ -1,0 +1,4 @@
+kernel void boltzmannLoadFilterGridQuad3D(const iint Nelements,
+					  const iint * restrict shift) {
+
+}
