@@ -14,12 +14,12 @@
     insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
     insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
     for (int s=0;s<stage;s++) {\
-      dfloat prkBn, ctime;\
+      dfloat prkAXn, ctime;\
       if (ARKswitch) {\
-        prkBn = prkB[stage*(p_Nstages+1)+s];\
+        prkAXn = prkAX[stage*(p_Nstages+1)+s];\
         ctime = time-(c[stage]-c[s])*dt;\
       } else {\
-        prkBn = prkB[s];\
+        prkAXn = prkAX[s];\
         ctime = time-(s+1)*dt;\
       }\
       \
@@ -28,9 +28,9 @@
       insPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);\
       \
 \
-      pP    -= prkBn*pPm;\
-      dpdxP -= prkBn*dpdxPm;\
-      dpdyP -= prkBn*dpdyPm;\
+      pP    -= prkAXn*pPm;\
+      dpdxP -= prkAXn*dpdxPm;\
+      dpdyP -= prkAXn*dpdyPm;\
     } \
   }                                                                     \
                                                                         \
@@ -51,7 +51,7 @@ kernel void insPressureIpdgBCQuad2D(const dlong Nelements,
                                       const int stage,
                                       const int ARKswitch,
                                       const dfloat * restrict c,
-                                      const dfloat * restrict prkB,
+                                      const dfloat * restrict prkAX,
                                       const dfloat * restrict x,
                                       const dfloat * restrict y,
                                       const dfloat * restrict z,
@@ -159,12 +159,12 @@ kernel void insPressureIpdgBCQuad2D(const dlong Nelements,
     insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
     insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
     for (int s=0;s<stage;s++) {\
-      dfloat prkBn, ctime;\
+      dfloat prkAXn, ctime;\
       if (ARKswitch) {\
-        prkBn = prkB[stage*(p_Nstages+1)+s];\
+        prkAXn = prkAX[stage*(p_Nstages+1)+s];\
         ctime = time-(c[stage]-c[s])*dt;\
       } else {\
-        prkBn = prkB[s];\
+        prkAXn = prkAX[s];\
         ctime = time-(s+1)*dt;\
       }\
       \
@@ -173,9 +173,9 @@ kernel void insPressureIpdgBCQuad2D(const dlong Nelements,
       insPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);\
       \
 \
-      pP    -= prkBn*pPm;\
-      dpdxP -= prkBn*dpdxPm;\
-      dpdyP -= prkBn*dpdyPm;\
+      pP    -= prkAXn*pPm;\
+      dpdxP -= prkAXn*dpdxPm;\
+      dpdyP -= prkAXn*dpdyPm;\
     } \
   }                                                                     \
                                                                         \
@@ -196,7 +196,7 @@ kernel void insPressureBCQuad2D(const dlong Nelements,
                               const int stage,
                               const int ARKswitch,
                               const dfloat * restrict c,
-                              const dfloat * restrict prkB,
+                              const dfloat * restrict prkAX,
                               const dfloat * restrict x,
                               const dfloat * restrict y,
                               const dfloat * restrict z,
@@ -326,7 +326,7 @@ kernel void insPressureAddBCQuad2D(const dlong Nelements,
                                   const int stage,
                                   const int ARKswitch,
                                   const dfloat * restrict c,
-                                  const dfloat * restrict prkB,
+                                  const dfloat * restrict prkAX,
                                   const dfloat * restrict x,
                                   const dfloat * restrict y,
                                   const dfloat * restrict z,
@@ -344,19 +344,19 @@ kernel void insPressureAddBCQuad2D(const dlong Nelements,
         insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
 
         for (int s=0;s<stage;s++) {
-          dfloat prkBn, ctime;
+          dfloat prkAXn, ctime;
           if (ARKswitch) {
-            prkBn = prkB[stage*(p_Nstages+1)+s];
+            prkAXn = prkAX[stage*(p_Nstages+1)+s];
             ctime = time-(c[stage]-c[s])*dt;
           } else {
-            prkBn = prkB[s];
+            prkAXn = prkAX[s];
             ctime = time-(s+1)*dt;
           }
           
           dfloat pPm;
           insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
          
-          pP    -= prkBn*pPm;
+          pP    -= prkAXn*pPm;
         }
         P[idM] = pP;
       }    

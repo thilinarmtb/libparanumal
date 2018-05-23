@@ -1,7 +1,8 @@
 // P^s = PI + \sum^s-1 prk_si P^i 
 kernel void insPressureUpdate(const dlong Nelements,
                             const int stage,
-                            const dfloat * restrict prkB,
+                            const int finalStageSwitch,
+                            const dfloat * restrict prkAX,
                             const dlong fieldOffset,
                             const dfloat * restrict PI,
                             const dfloat * restrict P,
@@ -13,8 +14,13 @@ kernel void insPressureUpdate(const dlong Nelements,
 
       dfloat rkPn = PI[id];
       for (int s=0;s<stage;s++) {
-        dfloat prkBn = prkB[stage*(p_Nstages+1)+s];   
-        rkPn += prkBn*P[id+s*fieldOffset];
+        dfloat prkAXn;
+        if (finalStageSwitch)
+          prkAXn = prkAX[s];   
+        else
+          prkAXn = prkAX[stage*(p_Nstages+1)+s];   
+        
+        rkPn += prkAXn*P[id+s*fieldOffset];
       }
 
       rkP[id] = rkPn;      

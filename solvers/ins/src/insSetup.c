@@ -75,7 +75,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     
     dfloat prkA[2*2] ={0.0, 0.0,\
                        0.0, 1.0};
-    dfloat prkB[2*2] ={0.0, 0.0,\
+    dfloat prkAX[2*2] ={0.0, 0.0,\
                        1.0, 0.0};                       
 
     ins->Nrk = Nrk;
@@ -83,13 +83,13 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
-    ins->prkB = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkAX = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
 
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
-    memcpy(ins->prkB, prkB, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkAX, prkAX, ins->Nrk*ins->Nrk*sizeof(dfloat));
 
     ins->g0 =  1.0;
     ins->embeddedRKFlag = 0; //no embedded method
@@ -113,7 +113,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
                          0.0,   gamma,   0.0,\
                          0.5,     0.0,   0.5};
 
-    dfloat prkB[3*3] = {0.0,     0.0,   0.0,\
+    dfloat prkAX[3*3] = {0.0,     0.0,   0.0,\
                         1.0,     0.0,   0.0,\
                         1.0,     0.0,   0.0};
 
@@ -122,19 +122,19 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
-    ins->prkB = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkAX = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     
 
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
-    memcpy(ins->prkB, prkB, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkAX, prkAX, ins->Nrk*ins->Nrk*sizeof(dfloat));
     
     ins->g0 =  1.0/gamma;
     ins->embeddedRKFlag = 0; //no embedded method
   } else if (options.compareArgs("TIME INTEGRATOR", "ARK3")) {
-    ins->Nstages = 4;
+    ins->Nstages = 3;
     int Nrk = 4;
 
     dfloat erkA[4*4] ={                              0.0,                              0.0,                               0.0, 0.0,\
@@ -170,36 +170,45 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
     dfloat prkA[4*4] ={  0.0,                             0.0,       0.0,   0.0,\
                          0.0, 1767732205903.0/2027836641118.0,       0.0,   0.0,\
-                         0.5,                             0.0,       0.5,   0.5};
+                         0.0,                             0.0,   3.0/5.0,   0.0,\
+                         0.0,                             0.0,       0.0,   1.0};
 
-    dfloat prkB[4*4] ={  0.0,                             0.0,       0.0,   0.0,\
-                         0.0, 1767732205903.0/2027836641118.0,       0.0,   0.0,\
-                         0.5,                             0.0,       0.5,   0.5};
+    dfloat prkAX[4*4] ={ 0.0, 0.0, 0.0, 0.0,\
+                         1.0, 0.0, 0.0, 0.0,\
+                         1.0, 0.0, 0.0, 0.0,\
+                         1.0, 0.0, 0.0, 0.0};
+
+    dfloat prkB[5]  = {0.5, 0.0, 0.0, 0.0, 0.5};
+    dfloat prkBX[5] = {1.0, 0.0, 0.0, 0.0, 0.0};
 
     ins->Nrk = Nrk;
     ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
-    ins->prkB = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkAX= (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->erkB = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
     ins->erkE = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
     ins->irkB = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
     ins->irkE = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->prkB = (dfloat*) calloc(ins->Nrk+1, sizeof(dfloat));
+    ins->prkBX= (dfloat*) calloc(ins->Nrk+1, sizeof(dfloat));
     ins->rkC  = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
 
 
     memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
-    memcpy(ins->prkB, prkB, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkAX,prkAX,ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkB, erkB, ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkE, erkE, ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkB, irkB, ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkE, irkE, ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkB, prkB, (ins->Nrk+1)*sizeof(dfloat));
+    memcpy(ins->prkBX, prkBX, (ins->Nrk+1)*sizeof(dfloat));
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     
     ins->g0 =  4055673282236.0/1767732205903.0;
-    ins->embeddedRKFlag = 1; 
+    ins->embeddedRKFlag = 0; 
   } 
 
 
@@ -233,8 +242,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->Nblock = (Nlocal+blockSize-1)/blockSize;
 
   // compute samples of q at interpolation nodes
-  ins->U     = (dfloat*) calloc(ins->NVfields*ins->Nstages*Ntotal,sizeof(dfloat));
-  ins->P     = (dfloat*) calloc(              ins->Nstages*Ntotal,sizeof(dfloat));
+  ins->U     = (dfloat*) calloc(ins->NVfields*(ins->Nstages+1)*Ntotal,sizeof(dfloat));
+  ins->P     = (dfloat*) calloc(              (ins->Nstages+1)*Ntotal,sizeof(dfloat));
 
   //rhs storage
   ins->rhsU  = (dfloat*) calloc(Nlocal,sizeof(dfloat));
@@ -328,8 +337,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   options.getArgs("DATA FILE", boundaryHeaderFileName);
   kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
 
-  ins->o_U = mesh->device.malloc(ins->NVfields*ins->Nstages*Ntotal*sizeof(dfloat), ins->U);
-  ins->o_P = mesh->device.malloc(              ins->Nstages*Ntotal*sizeof(dfloat), ins->P);
+  ins->o_U = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->U);
+  ins->o_P = mesh->device.malloc(              (ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->P);
 
   if (rank==0 && options.compareArgs("VERBOSE","TRUE")) 
     occa::setVerboseCompilation(true);
@@ -587,7 +596,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_erkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->erkA);
     ins->o_irkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->irkA);
     ins->o_prkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkA);
-    ins->o_prkB = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkB);
+    ins->o_prkAX = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkAX);
+
+    ins->o_erkB = mesh->device.malloc(ins->Nrk*sizeof(dfloat),ins->erkB);
+    ins->o_erkE = mesh->device.malloc(ins->Nrk*sizeof(dfloat),ins->erkE);
+    ins->o_irkB = mesh->device.malloc(ins->Nrk*sizeof(dfloat),ins->irkB);
+    ins->o_irkE = mesh->device.malloc(ins->Nrk*sizeof(dfloat),ins->irkE);
+    ins->o_prkB = mesh->device.malloc((ins->Nrk+1)*sizeof(dfloat),ins->prkB);
+    ins->o_prkBX = mesh->device.malloc((ins->Nrk+1)*sizeof(dfloat),ins->prkBX);
   }
 
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
@@ -601,7 +617,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_extC = mesh->device.malloc(3*sizeof(dfloat)); 
 
     ins->o_prkA = ins->o_extbdfC;
-    ins->o_prkB = ins->o_extbdfC;
+    ins->o_prkAX = ins->o_extbdfC;
   }
 
   // MEMORY ALLOCATION
@@ -778,6 +794,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
       sprintf(kernelName, "insVelocityUpdate");
       ins->velocityUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);      
+
+      sprintf(kernelName, "insVelocityRkUpdate");
+      ins->velocityRkUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);      
 
       // ===========================================================================
 

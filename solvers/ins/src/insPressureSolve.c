@@ -6,6 +6,14 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
   mesh_t *mesh = ins->mesh;
   elliptic_t *solver = ins->pSolver;
 
+  occa::memory o_prkAX = ins->o_prkAX;
+  int finalStageSwitch = 0;
+  if (stage==ins->Nstages+1) { //final stage
+    stage = ins->Nstages;
+    finalStageSwitch = 1;
+    o_prkAX = ins->o_prkBX;
+  }
+
   if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->pressureRhsBCKernel(mesh->Nelements,
                             mesh->o_ggeo,
@@ -18,8 +26,9 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             ins->dt,
                             stage,
                             ins->ARKswitch,
+                            finalStageSwitch,
                             ins->o_rkC,
-                            ins->o_prkB,
+                            o_prkAX,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
@@ -34,8 +43,9 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                                   ins->dt,
                                   stage,
                                   ins->ARKswitch,
+                                  finalStageSwitch,
                                   ins->o_rkC,
-                                  ins->o_prkB,
+                                  o_prkAX,
                                   mesh->o_x,
                                   mesh->o_y,
                                   mesh->o_z,
@@ -68,8 +78,9 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             ins->dt,
                             stage,
                             ins->ARKswitch,
+                            finalStageSwitch,
                             ins->o_rkC,
-                            ins->o_prkB,
+                            o_prkAX,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,

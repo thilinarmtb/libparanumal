@@ -75,21 +75,82 @@ void insRunARK(ins_t *ins){
 
       ins->o_NU.copyFrom(ins->o_rkNU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_LU.copyFrom(ins->o_rkLU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
-
-      if (stage==ins->Nstages) break; //final stage
-      ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), stage*ins->Ntotal*sizeof(dfloat), 0);
+      ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_GP.copyFrom(ins->o_rkGP, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
     } 
-
+    
     if (ins->embeddedRKFlag==0) {//check if an embedded rk method is being used
       //accept the step and proceed
       ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
       ins->tstep++;
       ins->time += ins->dt;
+    } else {
+
+      // final stage
+      dfloat stageTime = ins->time + ins->dt;
+      int stage = ins->Nstages+1;
+
+      insVelocityRkUpdate(ins, stageTime, ins->o_rkU);
+
+      dlong Nlocal = mesh->Nelements*mesh->Np*ins->NVfields;
+      ins->errorEstimateKernel(Nlocal, 
+                              ins->ATOL,
+                              ins->RTOL,
+                              ins->o_U,
+                              ins->o_rkU,
+                              ins->o_NU,
+                              ins->o_LU,
+                              ins->o_erkE,
+                              ins->o_irkE,
+                              ins->o_errtmp);
+
+      ins->o_errtmp.copyTo(ins->errtmp);
+      dfloat localerr = 0;
+      dfloat err = 0;
+      for(int n=0;n<ins->Nblock;++n){
+        localerr += ins->errtmp[n];
+      }
+      MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+      err = sqrt(err/(ins->totalElements*mesh->Np*ins->NVfields));
+
+      dfloat fac1 = pow(err,exp1);
+      dfloat fac  = fac1/pow(facold,beta);
+
+      fac = mymax(invfactor2, mymin(invfactor1,fac/safe));
+      dfloat dtnew = ins->dt/fac;
+
+      if(err<1.0){
+
+        insPressureRhs  (ins, stageTime, stage);
+        insPressureSolve(ins, stageTime, stage);      
+
+        insPressureUpdate(ins, stageTime, stage, ins->o_rkP);
+        insGradient(ins, stageTime, ins->o_rkP, ins->o_rkGP);
+
+        insVelocityUpdate(ins, stageTime, stage, ins->o_rkGP, ins->o_rkU);
+
+        //accept the step and proceed
+        ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+        ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
+        ins->tstep++;
+        ins->time += ins->dt;
+
+        facold = mymax(err,1E-4);
+
+      }else{
+        ins->rtstep++; 
+        dtnew = ins->dt/(mymax(invfactor1,fac1/safe));
+        done =0;
+      }
+
+      ins->dt = dtnew;
+      ins->atstep++;
     }
 
+    printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, ins->tstep, time/(dfloat)ins->tstep, Nregect/(dfloat) ins->tstep); fflush(stdout);
     occaTimerTic(mesh->device,"Report");
     if(((ins->tstep)%(ins->outputStep))==0){
       if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
@@ -103,53 +164,7 @@ void insRunARK(ins_t *ins){
 
 
 /*
-    dlong Nlocal = mesh->Nelements*mesh->Np*ins->NVfields;
-    ins->errorEstimateKernel(Nlocal, 
-                            ins->ATOL,
-                            ins->RTOL,
-                            ins->o_U,
-                            ins->o_rkU,
-                            ins->o_NU,
-                            ins->o_LU,
-                            ins->o_erkerr,
-                            ins->o_irkerr,
-                            ins->o_errtmp);
-
-    ins->o_errtmp.copyTo(ins->errtmp);
-    dfloat localerr = 0;
-    dfloat err = 0;
-    for(int n=0;n<ins->Nblock;++n){
-      localerr += ins->errtmp[n];
-    }
-    MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-
-    err = sqrt(err/(ins->totalElements*mesh->Np*ins->NVfields));
-
-    dfloat fac1 = pow(err,exp1);
-    dfloat fac  = fac1/pow(facold,beta);
-
-    fac = mymax(invfactor2, mymin(invfactor1,fac/safe));
-    dfloat dtnew = ins->dt/fac;
-
-    if(err<1.0){
-      ins->o_q.copyFrom(ins->o_rkq);
-      ins->o_pmlqx.copyFrom(ins->o_rkqx);
-      ins->o_pmlqy.copyFrom(ins->o_rkqy);
-
-      facold = mymax(err,1E-4);
-      ins->time += ins->dt;
-
-      ins->ins->tstep++;
-    }else{
-      ins->rtstep++; 
-      dtnew = ins->dt/(mymax(invfactor1,fac1/safe));
-      done =0;
-    }
-
-    ins->dt = dtnew;
-    ins->atstep++;
-
-    printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, ins->tstep, time/(dfloat)ins->tstep, Nregect/(dfloat) ins->tstep); fflush(stdout);
+    
   */
   }
   occaTimerToc(mesh->device,"INS");

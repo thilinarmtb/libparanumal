@@ -8,7 +8,7 @@ kernel void insVelocityRhsARKQuad2D(const dlong Nelements,
                                    const dfloat * restrict erkA,
                                    const dfloat * restrict irkA,
                                    const dfloat * restrict prkA,
-                                   const dfloat * restrict prkB,
+                                   const dfloat * restrict prkAX,
                                    const dlong fieldOffset,
                                    const dfloat * restrict U,
                                    const dfloat * restrict NU,
@@ -43,7 +43,7 @@ kernel void insVelocityRhsARKQuad2D(const dlong Nelements,
               rhsVn += irkA[stage*(p_Nstages+1)+s]*LU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
 
               // GP
-              dfloat prkAB = prkA[stage*(p_Nstages+1)+s]+prkAs*prkB[stage*(p_Nstages+1)+s];
+              dfloat prkAB = prkA[stage*(p_Nstages+1)+s]+prkAs*prkAX[stage*(p_Nstages+1)+s];
               rhsUn -= prkAB*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
               rhsVn -= prkAB*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
             }
