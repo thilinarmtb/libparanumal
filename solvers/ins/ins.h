@@ -26,11 +26,11 @@ typedef struct {
   int NVfields, NTfields;
   dlong fieldOffset;
   dlong Ntotal;
+  hlong totalElements;
 
   int Nblock;
 
   dfloat dt;          // time step
-  dfloat dtMIN;         
   dfloat time;
   int tstep;
   dfloat g0, ig0, lambda;      // helmhotz solver -lap(u) + lamda u
@@ -72,6 +72,13 @@ typedef struct {
   dfloat *erkB, *irkB, *prkB, *prkBX;
   dfloat *erkE, *irkE, *prkE, *prkEX;
   int embeddedRKFlag;
+
+  dfloat ATOL, RTOL;
+  dfloat factor1, invfactor1;
+  dfloat factor2, invfactor2;
+  dfloat exp1, facold,  dtMIN, safe, beta;
+
+  dfloat *rkerr, *errtmp;
 
   //EXTBDF data
   dfloat *extbdfA, *extbdfB, *extbdfC;
@@ -123,6 +130,8 @@ typedef struct {
   occa::memory o_erkB, o_irkB, o_prkB, o_prkBX;
   occa::memory o_erkE, o_irkE, o_prkE, o_prkEX;
 
+  occa::memory o_rkerr, o_errtmp;
+
   //EXTBDF data
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
   occa::memory o_extC;
@@ -163,6 +172,7 @@ typedef struct {
   occa::kernel velocityAddBCKernel;
   occa::kernel velocityUpdateKernel;  
   occa::kernel velocityRkUpdateKernel;  
+  occa::kernel errorEstimateKernel;
   
   occa::kernel vorticityKernel;
 
@@ -186,7 +196,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 void insVelocityRhs  (ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);
 void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
 void insVelocityUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkGP, occa::memory o_rkU);
-void insVelocityRkUpdate(ins_t *ins, dfloat time, occa::memory o_rkU);
+dfloat insVelocityRkUpdate(ins_t *ins, dfloat time, occa::memory o_rkU);
 
 void insPressureRhs  (ins_t *ins, dfloat time, int stage);
 void insPressureSolve(ins_t *ins, dfloat time, int stage);

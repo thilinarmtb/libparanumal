@@ -33,7 +33,7 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage,
 }
 
 
-void insVelocityRkUpdate(ins_t *ins, dfloat time, occa::memory o_rkU){
+dfloat insVelocityRkUpdate(ins_t *ins, dfloat time, occa::memory o_rkU){
 
   mesh_t *mesh = ins->mesh;
 
@@ -45,13 +45,38 @@ void insVelocityRkUpdate(ins_t *ins, dfloat time, occa::memory o_rkU){
                               ins->fieldOffset,
                               ins->o_erkB,
                               ins->o_irkB,
+                              ins->o_erkE,
+                              ins->o_irkE,
                               ins->o_prkB,
                               ins->o_prkBX,
                               ins->o_U,
                               ins->o_NU,
                               ins->o_LU,
                               ins->o_GP,
-                              o_rkU);
+                              o_rkU,
+                              ins->o_rkerr);
   occaTimerToc(mesh->device,"VelocityUpdate");
+
+
+  dlong Nlocal = mesh->Nelements*mesh->Np*ins->NVfields;
+  ins->errorEstimateKernel(Nlocal, 
+                          ins->ATOL,
+                          ins->RTOL,
+                          ins->o_U,
+                          ins->o_rkU,
+                          ins->o_rkerr,
+                          ins->o_errtmp);
+
+  ins->o_errtmp.copyTo(ins->errtmp);
+  dfloat localerr = 0;
+  dfloat err = 0;
+  for(int n=0;n<ins->Nblock;++n){
+    localerr += ins->errtmp[n];
+  }
+  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+  err = sqrt(err/(ins->totalElements*mesh->Np*ins->NVfields));
+
+  return err;
 }
 

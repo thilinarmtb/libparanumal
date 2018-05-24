@@ -61,6 +61,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   mesh->Nfields = 1; 
 
+  dlong Nlocal = mesh->Np*mesh->Nelements;
+  dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+
+  ins->Nblock = (Ntotal+blockSize-1)/blockSize;
+
+  hlong localElements = (hlong) mesh->Nelements;
+  MPI_Allreduce(&localElements, &(ins->totalElements), 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+
   ins->g0 =  1.0;
 
   if (options.compareArgs("TIME INTEGRATOR", "ARK1")) {
@@ -208,7 +216,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     
     ins->g0 =  4055673282236.0/1767732205903.0;
-    ins->embeddedRKFlag = 0; 
+    ins->embeddedRKFlag = 1; 
+
+    ins->dtMIN = 1E-7; //minumum allowed timestep
+    ins->ATOL = 1E-5;  //absolute error tolerance
+    ins->RTOL = 1E-4;  //relative error tolerance
   } 
 
 
@@ -233,9 +245,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->temporalOrder = 3;
     ins->g0 = 11.f/6.f;
   }
-
-  dlong Nlocal = mesh->Np*mesh->Nelements;
-  dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   
   ins->Ntotal = Ntotal;
   ins->fieldOffset = Ntotal;
@@ -279,6 +288,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->Nsubsteps = 0;
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
     options.getArgs("SUBCYCLING STEPS",ins->Nsubsteps);
+
+  ins->rkerr  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->NVfields, sizeof(dfloat));
+  ins->errtmp = (dfloat*) calloc(ins->Nblock, sizeof(dfloat));
 
   if(ins->Nsubsteps){
     ins->Ud    = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
@@ -604,6 +616,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_irkE = mesh->device.malloc(ins->Nrk*sizeof(dfloat),ins->irkE);
     ins->o_prkB = mesh->device.malloc((ins->Nrk+1)*sizeof(dfloat),ins->prkB);
     ins->o_prkBX = mesh->device.malloc((ins->Nrk+1)*sizeof(dfloat),ins->prkBX);
+
+    ins->o_rkerr = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->NVfields*sizeof(dfloat), ins->rkerr);
+  
+    ins->o_errtmp = mesh->device.malloc(ins->Nblock*sizeof(dfloat), ins->errtmp);
   }
 
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
@@ -797,6 +813,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       sprintf(kernelName, "insVelocityRkUpdate");
       ins->velocityRkUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);      
+
+      sprintf(fileName, DINS "/okl/insErrorEstimate.okl");
+      sprintf(kernelName, "insErrorEstimate");
+      ins->errorEstimateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);      
 
       // ===========================================================================
 

@@ -59,13 +59,16 @@ kernel void insVelocityRkUpdate(const dlong Nelements,
                               const dlong fieldOffset,
                               const dfloat * restrict erkB,
                               const dfloat * restrict irkB,
+                              const dfloat * restrict erkE,
+                              const dfloat * restrict irkE,
                               const dfloat * restrict prkB,
                               const dfloat * restrict prkBX,
                               const dfloat * restrict U,
                               const dfloat * restrict NU,
                               const dfloat * restrict LU,
                               const dfloat * restrict GP,
-                                    dfloat * restrict rkU){
+                                    dfloat * restrict rkU,
+                                    dfloat * restrict rkerr){
 
   for(dlong e=0;e<Nelements;++e;outer0){
     for(int n=0;n<p_Np;++n;inner0){
@@ -75,19 +78,23 @@ kernel void insVelocityRkUpdate(const dlong Nelements,
       for (int i=0;i<p_NVfields;i++) {
         
         dfloat Un = U[id+i*fieldOffset];
-        
+        dfloat err = 0.;
+
         for (int s=0;s<stage;s++) {
           // NU
           Un -= dt*erkB[s]*NU[id+i*fieldOffset + s*p_NVfields*fieldOffset];
+          err-= dt*erkE[s]*NU[id+i*fieldOffset + s*p_NVfields*fieldOffset];
 
           // LU
           Un += dt*irkB[s]*LU[id+i*fieldOffset + s*p_NVfields*fieldOffset];
+          err+= dt*irkE[s]*LU[id+i*fieldOffset + s*p_NVfields*fieldOffset];
 
           // GP
           dfloat prkAB = prkB[s]+prkBs*prkBX[s];
           Un -= dt*prkAB*GP[id+i*fieldOffset + s*p_NVfields*fieldOffset];
         }
 
+        rkerr[id+i*fieldOffset] = err;
         rkU[id+i*fieldOffset] = Un;
       }
     }

@@ -13,8 +13,8 @@ void insRunARK(ins_t *ins){
 
   //error control parameters
   dfloat beta    = 0.05; 
-  dfloat factor1 = 0.2;
-  dfloat factor2 = 5.0;
+  dfloat factor1 = 0.333;
+  dfloat factor2 = 3.0;
   dfloat exp1       = 0.25 - 0.75*beta;
   dfloat invfactor1 = 1.0/factor1;
   dfloat invfactor2 = 1.0/factor2;
@@ -27,10 +27,13 @@ void insRunARK(ins_t *ins){
   // Write Initial Data
   insReport(ins, 0.0, 0);
 
+  int Nregect = 0;
+  int allStep = 0;
 
   ins->tstep = 0;
   int done = 0;
   ins->time = ins->startTime;
+  
   while (!done) {
 
     if (ins->dt<ins->dtMIN){
@@ -92,29 +95,8 @@ void insRunARK(ins_t *ins){
       dfloat stageTime = ins->time + ins->dt;
       int stage = ins->Nstages+1;
 
-      insVelocityRkUpdate(ins, stageTime, ins->o_rkU);
-
-      dlong Nlocal = mesh->Nelements*mesh->Np*ins->NVfields;
-      ins->errorEstimateKernel(Nlocal, 
-                              ins->ATOL,
-                              ins->RTOL,
-                              ins->o_U,
-                              ins->o_rkU,
-                              ins->o_NU,
-                              ins->o_LU,
-                              ins->o_erkE,
-                              ins->o_irkE,
-                              ins->o_errtmp);
-
-      ins->o_errtmp.copyTo(ins->errtmp);
-      dfloat localerr = 0;
-      dfloat err = 0;
-      for(int n=0;n<ins->Nblock;++n){
-        localerr += ins->errtmp[n];
-      }
-      MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-
-      err = sqrt(err/(ins->totalElements*mesh->Np*ins->NVfields));
+      //update and get error estimate
+      dfloat err = insVelocityRkUpdate(ins, stageTime, ins->o_rkU);
 
       dfloat fac1 = pow(err,exp1);
       dfloat fac  = fac1/pow(facold,beta);
@@ -141,16 +123,16 @@ void insRunARK(ins_t *ins){
         facold = mymax(err,1E-4);
 
       }else{
-        ins->rtstep++; 
+        Nregect++;
         dtnew = ins->dt/(mymax(invfactor1,fac1/safe));
         done =0;
       }
 
       ins->dt = dtnew;
-      ins->atstep++;
+      allStep++;
     }
 
-    printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, ins->tstep, time/(dfloat)ins->tstep, Nregect/(dfloat) ins->tstep); fflush(stdout);
+    printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   \n", ins->time, ins->tstep, ins->time/(dfloat)ins->tstep, Nregect/(dfloat) ins->tstep); fflush(stdout);
     occaTimerTic(mesh->device,"Report");
     if(((ins->tstep)%(ins->outputStep))==0){
       if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
@@ -158,7 +140,7 @@ void insRunARK(ins_t *ins){
       insReport(ins, ins->time, ins->tstep);
     }
 
-    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     occaTimerToc(mesh->device,"Report");
 
