@@ -15,10 +15,10 @@ void bnsRun(bns_t *bns, setupAide &options){
     haloBytes = mesh->totalHaloPairs*mesh->Np*bns->Nfields*sizeof(dfloat);
 
   if (haloBytes) {
-    occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
-    occa::memory o_recvBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
-    sendBuffer = (dfloat*) o_sendBufferPinned.getMappedPointer();
-    recvBuffer = (dfloat*) o_recvBufferPinned.getMappedPointer();
+    occa::memory o_sendBufferPinned = mesh->device.malloc(haloBytes, NULL,"mapped: true");
+    occa::memory o_recvBufferPinned = mesh->device.malloc(haloBytes, NULL,"mapped: true");
+    sendBuffer = (dfloat*) occa::opencl::getCLMappedPtr( o_sendBufferPinned);
+    recvBuffer = (dfloat*) occa::opencl::getCLMappedPtr( o_recvBufferPinned);
   }
 
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){

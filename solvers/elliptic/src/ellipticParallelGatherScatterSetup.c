@@ -56,7 +56,7 @@ void ellipticParallelGatherScatterSetup(elliptic_t* elliptic){
   elliptic->NglobalGatherElements = globalCount;
   elliptic->NlocalGatherElements = localCount;
 
-  if(globalCount)
+  if(globalCount) 
     elliptic->o_globalGatherElementList =
       mesh->device.malloc(globalCount*sizeof(dlong), globalGatherElementList);
 

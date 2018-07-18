@@ -106,8 +106,8 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
   // if there are halo nodes to gather
   if(ogs->NhaloGather){
 
-    occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc(ogs->NhaloGather*sizeof(dfloat), NULL);
-    ogs->haloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc(ogs->NhaloGather*sizeof(dfloat), sizeof(char));
+    occa::memory o_gatherTmpPinned = mesh->device.malloc(ogs->NhaloGather*sizeof(dfloat), NULL,"mapped: true");
+    ogs->haloGatherTmp = (dfloat*) occa::opencl::getCLMappedPtr( o_gatherTmpPinned); // (char*) calloc(ogs->NhaloGather*sizeof(dfloat), sizeof(char));
     
     ogs->o_haloGatherTmp      = mesh->device.malloc(ogs->NhaloGather*sizeof(dfloat),  ogs->haloGatherTmp);
     ogs->o_haloGatherOffsets  = mesh->device.malloc((ogs->NhaloGather+1)*sizeof(dlong), ogs->haloGatherOffsets);

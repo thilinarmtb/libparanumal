@@ -2,6 +2,7 @@ sDir = ./src
 iDir = ./include
 objDir = ./
 
+include ${OCCA_DIR}/scripts/Makefile
 
 sources = $(wildcard $(sDir)/*c)
 includes = $(wildcard $(iDir)/*h)
@@ -12,7 +13,7 @@ deps = $(includes) \
 ../../include/hgs_t.h \
 ../../include/parAlmond.h
 
-flags = -I${OCCA_DIR}/include -I$(iDir) -I../../include
+flags = -DOCCA_VERSION_1_0 -I${OCCA_DIR}/include -I$(iDir) -I../../include
 libs   =  -L${OCCA_DIR}/lib -locca -llapack -lblas
 
 flags  += -D DPWD='"${CURDIR}"'
@@ -35,7 +36,7 @@ lib: $(objects) $(deps)
 	ar -cr libparALMOND.a $(objects)
 
 $(objDir)/%.o:$(sDir)/%.c $(deps) #$(wildcard $(subst $(sDir),$(iDir),$(<:.cpp=.hpp)))
-	$(CC) $(flags) -o $@ $(libs) -c $<
+	$(CC) $(flags) -o $@ $(libs) -c $< $(paths)
 
 clean:
 	rm -f libparALMOND.a
