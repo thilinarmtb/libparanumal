@@ -1,36 +1,18 @@
 
-cd ../examples/insTri2D;
+cd ../solvers/ins/;
 make -j; 
 
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 0
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 0
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 0
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 0
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 0
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 0
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe100N2.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe100N3.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe100N4.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe100N5.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe100N6.rc
 
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 4
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 4
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 4
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 4
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 4
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 4
-
-
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 8
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 8
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 8
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 8
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 8
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 8
-
-
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 16
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 16
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 16
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 16
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 16
-./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 16
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe200N2.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe200N3.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe200N4.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe200N5.rc
+mpiexec.openmpi -np 2 ./insMain ./setups/setupQuad2DRe200N6.rc
 
 
 

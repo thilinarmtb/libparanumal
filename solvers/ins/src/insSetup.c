@@ -214,6 +214,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
 
 
+
+
+
+
+
+
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   
@@ -290,6 +296,27 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
  kernelInfo["includes"].asArray();
  kernelInfo["header"].asArray();
  kernelInfo["flags"].asObject();
+
+
+#if 1
+  char fname[BUFSIZ];
+  string outName;
+  ins->options.getArgs("OUTPUT FILE NAME", outName);
+  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, ins->frame++);
+
+  insPlotVTU(ins, fname);
+
+
+  // Deform Curved Element
+  insMakeCylinder(ins, options);
+  
+  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, ins->frame++);
+
+  insPlotVTU(ins, fname);
+#endif
+
+
+
 
   if(ins->dim==3)
     meshOccaSetup3D(mesh, options, kernelInfo);

@@ -230,6 +230,46 @@ writeFloatMatrix(fid, cubDT, 'Quadrature Weak D Differentiation Matrix');
 writeFloatMatrix(fid, cubProject, 'Quadrature Projection Matrix');
 
 
+
+if(1)
+[z,w] = JacobiGQ(0,0,ceil(3*N/2));
+[cubr,cubs] = meshgrid(z);
+cubr = cubr'; 
+cubs = cubs'; 
+cubw = w*transpose(w);
+cubr = cubr(:);
+cubs = cubs(:);
+cubw = cubw(:);
+
+cInterpF = VandermondeQuad2D(N, cubr, cubs)/V;
+Ncub = length(cubr);
+
+cV = VandermondeQuad2D(N, cubr, cubs);
+cV'*diag(cubw)*cV;
+
+% [cVr,cVs] = GradVandermondeQuad2D(N, cubr, cubs);
+% cubDrF = V*transpose(cVr)*diag(cubw); cubDrF = cubDrF'; 
+% cubDsF = V*transpose(cVs)*diag(cubw); cubDsF = cubDsF'; 
+cV = VandermondeQuad2D(ceil(3*N/2), cubr, cubs);
+[cDr,cDs] = DmatricesQuad2D(ceil(3*N/2), cubr, cubs, cV);
+
+cDr = full(cDr);
+cDs = full(cDs);
+
+% cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+% 
+% 
+% writeFloatMatrix(fid, cubr, 'Cubature r-coordinates');
+% writeFloatMatrix(fid, cubs, 'Cubature s-coordinates');
+% writeFloatMatrix(fid, cubw, 'Cubature weights');
+
+writeFloatMatrix(fid, cInterpF, 'Quadrature Interpolation Matrix Full');
+writeFloatMatrix(fid, cDr, 'Quadrature Weak Dr Differentiation Matrix Full');
+writeFloatMatrix(fid, cDs, 'Quadrature Weak Ds Differentiation Matrix Full');
+% writeFloatMatrix(fid, cubProject, 'Cubature Projection Matrix');    
+end
+
+
 %{
 %% volume cubature
 [z,w] = JacobiGQ(0,0,ceil(3*N/2));

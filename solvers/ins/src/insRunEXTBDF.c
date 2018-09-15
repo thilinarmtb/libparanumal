@@ -159,6 +159,22 @@ void insRunEXTBDF(ins_t *ins){
 
     occaTimerTic(mesh->device,"Report");
 
+    int NstepForce = 0; 
+
+    if(mesh->N==2) NstepForce =5;
+    if(mesh->N==3) NstepForce =7;
+    if(mesh->N==4) NstepForce =10;
+    if(mesh->N==5) NstepForce =15;
+    if(mesh->N==6) NstepForce =20;
+
+    if( (tstep+1)% (10) == 0 ){
+      ins->o_U.copyTo(ins->U);
+      ins->o_P.copyTo(ins->P);
+      dfloat tforce = (tstep+1)*ins->dt;
+      insForces(ins, tforce);
+    }
+
+
     if(ins->outputStep){
       if(((tstep+1)%(ins->outputStep))==0){
         if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);

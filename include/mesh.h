@@ -200,6 +200,10 @@ typedef struct {
   dfloat *cubDtW;    // 't' weak differentiation matrix
   dfloat *cubDWmatrices;
 
+
+  // 
+  dfloat * cubInterpF, *cubDrF, *cubDsF; 
+
   dfloat *cubvgeo;  //volume geometric data at cubature points
   dfloat *cubsgeo;  //surface geometric data at cubature points
 

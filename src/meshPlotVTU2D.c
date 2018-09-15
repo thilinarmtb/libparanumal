@@ -70,27 +70,27 @@ void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
   
-  // write out pressure
-  fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
+  // // write out pressure
+  // fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
+  // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
   
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
-      dfloat plotpn = 0;
+  // for(dlong e=0;e<mesh->Nelements;++e){
+  //   for(int n=0;n<mesh->plotNp;++n){
+  //     dfloat plotpn = 0;
 
-      for(int m=0;m<mesh->Np;++m){
-        dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->Np)];
-        //dfloat pm = mesh->invTau[m+e*mesh->Np];
-        plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
-      }
+  //     for(int m=0;m<mesh->Np;++m){
+  //       dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->Np)];
+  //       //dfloat pm = mesh->invTau[m+e*mesh->Np];
+  //       plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
+  //     }
 
-      fprintf(fp, "       ");
-      fprintf(fp, "%g\n", plotpn);
-    }
-  }
+  //     fprintf(fp, "       ");
+  //     fprintf(fp, "%g\n", plotpn);
+  //   }
+  // }
 
-  fprintf(fp, "       </DataArray>\n");
-  fprintf(fp, "     </PointData>\n");
+  // fprintf(fp, "       </DataArray>\n");
+  // fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");

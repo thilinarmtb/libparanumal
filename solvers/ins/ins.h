@@ -255,6 +255,7 @@ void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP);
 // Welding  to Tris, needs to be moved seperate library
 int insWeldTriVerts(ins_t *ins, int isoNtris, dfloat *isoq);
 void insIsoPlotVTU(ins_t *ins, char *fileName);
+void insMakeCylinder(ins_t *ins, setupAide options);
 
 // Restarting from file
 void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 

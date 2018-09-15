@@ -17,9 +17,9 @@ ELLIPTICDIR = ../elliptic
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
@@ -75,7 +75,8 @@ AOBJS    = \
 ./src/insPressureUpdate.o \
 ./src/insRestart.o \
 ./src/insWeldTriVerts.o \
-./src/insIsoPlotVTU.o    
+./src/insIsoPlotVTU.o \
+./src/insMakeCylinder.o     
 
 # library objects
 LOBJS = \
@@ -134,7 +135,8 @@ LOBJS = \
 ../../src/readArray.o\
 ../../src/occaDeviceConfig.o\
 ../../src/occaHostMallocPinned.o \
-../../src/timer.o
+../../src/timer.o 
+
 
 insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparALMOND libelliptic
 	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
