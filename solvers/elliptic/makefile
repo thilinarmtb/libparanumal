@@ -27,7 +27,7 @@ LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
 LIBS	=   -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
-			-L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+			-L$(OCCA_DIR)/lib  -locca $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 INCLUDES = elliptic.h ellipticPrecon.h
 DEPS = $(INCLUDES) \
@@ -121,7 +121,6 @@ LOBJS = \
 ../../src/setupAide.o \
 ../../src/readArray.o\
 ../../src/occaDeviceConfig.o\
-../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
 ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparAlmond

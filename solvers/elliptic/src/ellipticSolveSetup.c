@@ -105,10 +105,14 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     elliptic->gradRecvBuffer = (dfloat*) o_gradRecvBuffer.getMappedPointer();
 #endif
 
-    elliptic->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_sendBuffer);
-    elliptic->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_recvBuffer);
-    elliptic->gradSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradSendBuffer);
-    elliptic->gradRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradRecvBuffer);
+    elliptic->o_sendBuffer = mesh->device.malloc(Nbytes, NULL, "mapped: true");
+    elliptic->o_recvBuffer = mesh->device.malloc(Nbytes, NULL, "mapped: true");
+    elliptic->o_gradSendBuffer = mesh->device.malloc(mesh->dim*Nbytes, NULL, "mapped: true");
+    elliptic->o_gradRecvBuffer = mesh->device.malloc(mesh->dim*Nbytes, NULL, "mapped: true");
+    elliptic->sendBuffer =  (dfloat*) elliptic->o_sendBuffer.ptr();
+    elliptic->recvBuffer =  (dfloat*) elliptic->o_recvBuffer.ptr();
+    elliptic->gradSendBuffer =  (dfloat*) elliptic->o_gradSendBuffer.ptr();
+    elliptic->gradRecvBuffer =  (dfloat*) elliptic->o_gradRecvBuffer.ptr();
 
   }else{
     elliptic->sendBuffer = NULL;

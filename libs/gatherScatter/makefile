@@ -23,16 +23,16 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)
 
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(GSDIR)/lib  -lgs 
+LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(GSDIR)/lib  -lgs
 
 #-llapack -lblas
 
 INCLUDES = ogs.hpp ogsKernels.hpp ogsInterface.h
 DEPS = $(INCLUDES) \
-$(HDRDIR)/types.h 
+$(HDRDIR)/types.h
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c .cpp
@@ -56,7 +56,7 @@ OBJS    = \
 ./src/ogsScatterVec.o \
 ./src/ogsScatterMany.o \
 ./src/ogsSetup.o \
-./src/ogsKernels.o 
+./src/ogsKernels.o
 
 COBJS = \
 ./src/ogsHostGatherScatter.o \

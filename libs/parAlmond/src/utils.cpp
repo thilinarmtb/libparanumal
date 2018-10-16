@@ -55,8 +55,8 @@ void allocateScratchSpace(size_t requiredBytes, occa::device device) {
   }
   if (reductionScratchBytes==0) {
     reductionScratchBytes = 3*NBLOCKS*sizeof(dfloat);
-    o_reductionScratch = device.mappedAlloc(reductionScratchBytes);
-    reductionScratch = o_reductionScratch.getMappedPointer();
+    o_reductionScratch = device.malloc(reductionScratchBytes, NULL, "mapped: true");
+    reductionScratch = o_reductionScratch.ptr();
   }
 }
 
@@ -79,8 +79,8 @@ void allocatePinnedScratchSpace(size_t requiredBytes, occa::device device) {
     if (pinnedScratchSpaceBytes!=0) {
       o_pinnedScratch.free();
     }
-    o_pinnedScratch = device.mappedAlloc(requiredBytes);
-    pinnedScratch = o_pinnedScratch.getMappedPointer();
+    o_pinnedScratch = device.malloc(requiredBytes, NULL, "mapped: true");
+    pinnedScratch = o_pinnedScratch.ptr();
     pinnedScratchSpaceBytes = requiredBytes;
   }
 }
