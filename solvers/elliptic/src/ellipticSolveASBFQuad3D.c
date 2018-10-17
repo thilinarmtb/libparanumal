@@ -53,7 +53,7 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
       
       for(int g=0;g<mesh->asbfNnodes;++g){
 	
-	dfloat Rg = mesh->asbfRnodes[g];
+	dfloat Rg = mesh->asbfRquad[g];
 
 	// stretch coordinates 
 	dfloat xg = Rg*xbase;
