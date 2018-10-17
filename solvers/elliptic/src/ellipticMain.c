@@ -79,8 +79,18 @@ int main(int argc, char **argv){
 
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
-  if(options.compareArgs("BENCHMARK", "BK5") ||
-     options.compareArgs("BENCHMARK", "BP5")){
+  // convergence tolerance
+  dfloat tol = 1e-8;
+  
+  if(options.compareArgs("ASBF", "TRUE")){
+    ellipticSolveASBFQuad3D(elliptic,
+			    lambda,
+			    tol,
+			    elliptic->o_r,
+			    elliptic->o_x);
+  }
+  else if(options.compareArgs("BENCHMARK", "BK5") ||
+	  options.compareArgs("BENCHMARK", "BP5")){
 
     // test Ax throughput
     occa::streamTag startAx = mesh->device.tagStream();
@@ -128,9 +138,6 @@ int main(int argc, char **argv){
 
   }
   else{
-
-    // convergence tolerance
-    dfloat tol = 1e-8;
 
     occa::streamTag startTag = mesh->device.tagStream();
 

@@ -205,5 +205,11 @@ extern "C"
   void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld);
 }
 
+int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
+			    dfloat lambda,
+			    dfloat tol,
+			    occa::memory &o_r,
+			    occa::memory &o_q);
+
 #endif
 
