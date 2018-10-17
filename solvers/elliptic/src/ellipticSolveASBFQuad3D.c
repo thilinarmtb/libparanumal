@@ -68,7 +68,7 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
       for(int m=0;m<mesh->asbfNmodes;++m){
 	dfloat fhatm = 0;
 	for(int i=0;i<mesh->asbfNnodes;++i){
-	  fhatm += mesh->asbfBquad[m + i*mesh->asbfNmodes]*f[i];
+	  fhatm += mesh->asbfBquad[m + i*mesh->asbfNmodes]*mesh->asbfWquad[i]*f[i];
 	}
 
 	// scale by surface weight
