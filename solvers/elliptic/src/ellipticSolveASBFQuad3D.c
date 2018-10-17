@@ -31,16 +31,46 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
 			    dfloat tol,
 			    occa::memory &o_r,
 			    occa::memory &o_q){
-  
+
   mesh_t *mesh = elliptic->mesh;
+  
+  char fname[BUFSIZ];
+  sprintf(fname, DHOLMES "/nodes/quadrilateralN%02d.dat", mesh->N);
+
+  FILE *fp = fopen(fname, "r");
+
+  if (!fp) {
+    printf("ERROR: Cannot open file: '%s'\n", fname);
+    exit(-1);
+  }
+
+  int Nrows, Ncols;
+  
+  readDfloatArray(fp, "ASBF EIGENVALUES",
+		  &(elliptic->asbfEigenvalues),&(elliptic->asbfNmodes), &(Ncols));
+  
+  readDfloatArray(fp, "ASBF QUADRATURE VANDERMONDE",
+		  &(elliptic->asbfBquad),&(elliptic->asbfNquad), &(elliptic->asbfNmodes));
+
+  readDfloatArray(fp, "ASBF QUADRATURE NODES",
+		  &(elliptic->asbfRquad),&(elliptic->asbfNquad), &Ncols);
+
+  readDfloatArray(fp, "ASBF QUADRATURE WEIGHTS",
+		  &(elliptic->asbfWquad),&(elliptic->asbfNquad), &Ncols);
+  
+  readDfloatArray(fp, "ASBF GLL VANDERMONDE",
+		  &(elliptic->asbfBgll),&(elliptic->asbfNgll), &(elliptic->asbfNmodes));
+  
+  readDfloatArray(fp, "ASBF GLL NODES",
+		  &(elliptic->asbfRgll),&(elliptic->asbfNgll), &Ncols);
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
   dlong Nall   = Ntotal + Nhalo;
   
-  dfloat *r3D = (dfloat*) calloc(mesh->asbfNmodes*Nall, sizeof(dfloat));
-  dfloat *q3D = (dfloat*) calloc(mesh->asbfNmodes*Nall, sizeof(dfloat));
-  dfloat *f   = (dfloat*) calloc(mesh->asbfNnodes, sizeof(dfloat));
+  dfloat *r3D = (dfloat*) calloc(elliptic->asbfNmodes*Nall, sizeof(dfloat));
+  dfloat *q3D = (dfloat*) calloc(elliptic->asbfNmodes*Nall, sizeof(dfloat));
+  dfloat *f   = (dfloat*) calloc(elliptic->asbfNquad, sizeof(dfloat));
   
   for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
@@ -51,9 +81,9 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
 
       dfloat JW = mesh->vgeo[mesh->Np*(e*mesh->Nvgeo + JWID) + n];
       
-      for(int g=0;g<mesh->asbfNnodes;++g){
+      for(int g=0;g<elliptic->asbfNquad;++g){
 	
-	dfloat Rg = mesh->asbfRquad[g];
+	dfloat Rg = elliptic->asbfRquad[g];
 
 	// stretch coordinates 
 	dfloat xg = Rg*xbase;
@@ -65,10 +95,10 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
       }
 
       // integrate f against asbf modes
-      for(int m=0;m<mesh->asbfNmodes;++m){
+      for(int m=0;m<elliptic->asbfNmodes;++m){
 	dfloat fhatm = 0;
-	for(int i=0;i<mesh->asbfNnodes;++i){
-	  fhatm += mesh->asbfBquad[m + i*mesh->asbfNmodes]*mesh->asbfWquad[i]*f[i];
+	for(int i=0;i<elliptic->asbfNquad;++i){
+	  fhatm += elliptic->asbfBquad[m + i*elliptic->asbfNmodes]*elliptic->asbfWquad[i]*f[i];
 	}
 
 	// scale by surface weight
@@ -77,13 +107,11 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
     }
   }
 
-  dfloat tol = 1e-8;
-
-  for(int m=0;m<mesh->asbfNmodes;++m){
+  for(int m=0;m<elliptic->asbfNmodes;++m){
 
     o_r.copyFrom(r3D + Nall*m);
     
-    dfloat lambdam = lambda + mesh->asbfLambda[m];
+    dfloat lambdam = lambda + elliptic->asbfEigenvalues[m];
 
     ellipticSolve(elliptic, lambdam, tol, o_r, o_q);
     
@@ -123,7 +151,7 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
       dfloat zbase = mesh->z[e*mesh->Np+n];
 
       for(int g=0;g<mesh->Nq;++g){
-	dfloat Rg = mesh->asbfRgll[g];
+	dfloat Rg = elliptic->asbfRgll[g];
 	
 	// stretch coordinates 
 	dfloat xg = Rg*xbase;
@@ -137,8 +165,8 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
       // interpolate from asbf to gll nodes
       for(int g=0;g<mesh->Nq;++g){
 	dfloat qg = 0;
-	for(int i=0;i<mesh->absfNmodes;++i){
-	  qg += meshSEM->asbfBgll[i + g*mesh->absfNmodes]*q3D[e*mesh->Np+n+i*Nall];
+	for(int i=0;i<elliptic->asbfNmodes;++i){
+	  qg += elliptic->asbfBgll[i + g*elliptic->asbfNmodes]*q3D[e*mesh->Np+n+i*Nall];
 	}
 	// assume Nfields=1
 	meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;

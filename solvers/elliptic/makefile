@@ -65,6 +65,7 @@ AOBJS    = \
 ./src/ellipticMultiGridSetup.o \
 ./src/ellipticMultiGridLevel.o \
 ./src/ellipticMultiGridLevelSetup.o \
+./src/ellipticSolveASBFQuad3D.o
 
 # library objects
 LOBJS = \
