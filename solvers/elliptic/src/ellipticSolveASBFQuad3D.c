@@ -30,7 +30,7 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
 			    dfloat lambda,
 			    dfloat tol,
 			    occa::memory &o_r,
-			    occa::memory &o_x){
+			    occa::memory &o_q){
   
   mesh_t *mesh = elliptic->mesh;
 
@@ -39,7 +39,7 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
   dlong Nall   = Ntotal + Nhalo;
   
   dfloat *r3D = (dfloat*) calloc(mesh->asbfNmodes*Nall, sizeof(dfloat));
-  dfloat *x3D = (dfloat*) calloc(mesh->asbfNmodes*Nall, sizeof(dfloat));
+  dfloat *q3D = (dfloat*) calloc(mesh->asbfNmodes*Nall, sizeof(dfloat));
   dfloat *f   = (dfloat*) calloc(mesh->asbfNnodes, sizeof(dfloat));
   
   for(int e=0;e<mesh->Nelements;++e){
@@ -85,9 +85,67 @@ int ellipticSolveASBFQuad3D(elliptic_t *elliptic,
     
     dfloat lambdam = lambda + mesh->asbfLambda[m];
 
-    ellipticSolve(elliptic, lambdam, tol, o_r, o_x);
+    ellipticSolve(elliptic, lambdam, tol, o_r, o_q);
     
-    o_x.copyTo(x3D + Nall*m);
+    o_q.copyTo(q3D + Nall*m);
   }
 
+  mesh_t *meshSEM = (mesh_t*) calloc(1, sizeof(mesh_t*));
+  
+  meshSEM->dim = 3;
+  meshSEM->Nverts = 8;
+  meshSEM->Nfaces = 6;
+  meshSEM->NfaceVertices = 4;
+  
+  // yuck --->
+  int faceVertices[6][4] = {{0,1,2,3},{0,1,5,4},{1,2,6,5},{2,3,7,6},{3,0,4,7},{4,5,6,7}};
+  mesh->faceVertices =
+    (int*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(int));
+  memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(int));
+  // <----
+  
+  meshSEM->rank = mesh->rank;
+  meshSEM->size = mesh->size;
+  meshSEM->comm = mesh->comm;
+
+  meshLoadReferenceNodesHex3D(meshSEM, mesh->N);
+  
+  meshSEM->x = (dfloat*) calloc(mesh->Nq*Nall, sizeof(dfloat));
+  meshSEM->y = (dfloat*) calloc(mesh->Nq*Nall, sizeof(dfloat));
+  meshSEM->z = (dfloat*) calloc(mesh->Nq*Nall, sizeof(dfloat));
+  meshSEM->q = (dfloat*) calloc(mesh->Nq*Nall, sizeof(dfloat));
+  
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+
+      dfloat xbase = mesh->x[e*mesh->Np+n];
+      dfloat ybase = mesh->y[e*mesh->Np+n];
+      dfloat zbase = mesh->z[e*mesh->Np+n];
+
+      for(int g=0;g<mesh->Nq;++g){
+	dfloat Rg = mesh->asbfRgll[g];
+	
+	// stretch coordinates 
+	dfloat xg = Rg*xbase;
+	dfloat yg = Rg*ybase;
+	dfloat zg = Rg*zbase;
+	meshSEM->x[e*meshSEM->Np+g*mesh->Np+n] = xg;
+	meshSEM->y[e*meshSEM->Np+g*mesh->Np+n] = yg;
+	meshSEM->z[e*meshSEM->Np+g*mesh->Np+n] = zg;
+      }
+
+      // interpolate from asbf to gll nodes
+      for(int g=0;g<mesh->Nq;++g){
+	dfloat qg = 0;
+	for(int i=0;i<mesh->absfNmodes;++i){
+	  qg += meshSEM->asbfBgll[i + g*mesh->absfNmodes]*q3D[e*mesh->Np+n+i*Nall];
+	}
+	// assume Nfields=1
+	meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
+      }
+    }
+  }
+  
+  ellipticPlotVTUHex3D(meshSEM, "foo", 0);
 }
+
