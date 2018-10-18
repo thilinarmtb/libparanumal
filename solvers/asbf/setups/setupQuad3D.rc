@@ -11,10 +11,10 @@ BROWN-MINION
 1.0
 
 [LAMBDA]
-0.0
+10.0
 
 [MESH FILE]
-../../meshes/sphereQuadH01.msh
+../../meshes/sphereQuadH02.msh
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
@@ -24,7 +24,7 @@ BROWN-MINION
 4
 
 [POLYNOMIAL DEGREE]
-8
+3
 
 [THREAD MODEL]
 CUDA
@@ -93,8 +93,8 @@ PCG,FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#IPDG
-CONTINUOUS
+IPDG
+#CONTINUOUS
 
 # can be NODAL or BERN
 [BASIS]
