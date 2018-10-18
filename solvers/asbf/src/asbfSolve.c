@@ -38,7 +38,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     asbf->o_x.copyTo(asbf->q3D + asbf->Ntotal*m);
   }
 
-  mesh_t *meshSEM = (mesh_t*) calloc(1, sizeof(mesh_t*));
+  mesh_t *meshSEM = (mesh_t*) calloc(1, sizeof(mesh_t));
 
   meshSEM->dim = 3;
   meshSEM->Nverts = 8;
