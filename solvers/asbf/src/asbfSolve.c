@@ -31,11 +31,17 @@ int asbfSolve(asbf_t *asbf, setupAide options)
   mesh_t *mesh         = asbf->mesh;
   elliptic_t *elliptic = asbf->pSolver;
 
+  mesh->q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->totalHaloPairs), sizeof(dfloat));
   for(int m=0;m<asbf->asbfNmodes;++m){
     asbf->o_r.copyFrom(asbf->r3D + asbf->Ntotal*m);
     dfloat lambdam = asbf->lambda + asbf->asbfEigenvalues[m];
     ellipticSolve(elliptic, lambdam, asbf->pTOL, asbf->o_r, asbf->o_x);
     asbf->o_x.copyTo(asbf->q3D + asbf->Ntotal*m);
+
+    asbf->o_x.copyTo(mesh->q);
+    char fileName2D[BUFSIZ];
+    sprintf(fileName2D, "bah_%05d.vtu", m);
+    meshPlotVTU3D(mesh, fileName2D, 0);
   }
 
   mesh_t *meshSEM = (mesh_t*) calloc(1, sizeof(mesh_t));
@@ -87,7 +93,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
       for(int g=0;g<mesh->Nq;++g){
 	dfloat qg = 0;
 	for(int i=0;i<asbf->asbfNmodes;++i){
-	  qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[e*mesh->Np+n+i*asbf->Ntotal];
+	  qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
 	}
 	// assume Nfields=1
 	meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
