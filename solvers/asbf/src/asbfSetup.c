@@ -116,17 +116,21 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
 
-   if(asbf->dim==3){
-     if(asbf->elementType != QUADRILATERALS)
-       meshOccaSetup3D(mesh, options, kernelInfo);
-     else
-       meshOccaSetupQuad3D(mesh, options, kernelInfo);
-   }
-   else
-     meshOccaSetup2D(mesh, options, kernelInfo);
-
+  if(asbf->dim==3){
+    if(asbf->elementType != QUADRILATERALS)
+      meshOccaSetup3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+  }
+  else
+    meshOccaSetup2D(mesh, options, kernelInfo);
+  
+  kernelInfo["defines/p_asbfNmodes"] = asbf->asbfNmodes;
+  kernelInfo["defines/p_asbfNquad"] = asbf->asbfNquad;
+  kernelInfo["defines/p_asbfNgll"] = asbf->asbfNgll;
+   
   occa::properties kernelInfoP  = kernelInfo;
-
+  
   asbf->o_r   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->r);
   asbf->o_x   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->x);
 
@@ -214,5 +218,12 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 
   asbf->meshSEM = meshSEM;
 
+  // OKL kernels specific to asbf
+  asbf->asbfReconstructKernel =
+    mesh->device.buildKernel(DASBF "/okl/asbfReconstructHex3D.okl",
+			     "asbfReconstructHex3D",
+			     kernelInfo);
+  
+  
   return asbf;
 }

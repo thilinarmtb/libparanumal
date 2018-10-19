@@ -1,16 +1,16 @@
 
-@kernel void asbfReconstuctHex3D(const dlong int Nelements,
-				 const dlong int Ntotal2D,
-				 @restrict const dfloat *asbfBgll,
-				 @restrict const dfloat *qmodes,
-				 @restrict       dfloat *q){
+@kernel void asbfReconstructHex3D(const dlong Nelements,
+				  const dlong Ntotal2D,
+				  @restrict const dfloat *asbfBgll,
+				  @restrict const dfloat *qmodes,
+				  @restrict       dfloat *q){
   
 
   // reconstruct SEM3D solution from mode slices
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     
     @shared dfloat s_Bgll[p_Nq][p_asbfNmodes];
-
+    
     for(int n=0;n<p_Nq*p_Nq;++n;@inner(0)){
       int m=n;
       while(m<p_Nq*p_asbfNmodes){
