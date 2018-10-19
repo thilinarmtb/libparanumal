@@ -77,34 +77,5 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     }
   }
   
-  char fname[] = "sol";
-  ellipticPlotVTUHex3D(meshSEM, fname, 0);
 
-   // Compute and plot the error.
-   // TODO:  Move this into a separate function.
-   // TODO:  Replace this with the H1 error.
-   for (int e = 0; e < mesh->Nelements; e++)  {
-     for (int n = 0; n < mesh->Np; n++) {
-       for (int g = 0; g < mesh->Nq; g++) {
-         dfloat qg = asbf->meshSEM->q[e*asbf->meshSEM->Np + g*mesh->Np + n];
- 
-         dfloat xg = asbf->meshSEM->x[e*asbf->meshSEM->Np + g*mesh->Np + n];
-         dfloat yg = asbf->meshSEM->y[e*asbf->meshSEM->Np + g*mesh->Np + n];
-         dfloat zg = asbf->meshSEM->z[e*asbf->meshSEM->Np + g*mesh->Np + n];
-         dfloat rg = sqrt(xg*xg + yg*yg + zg*zg);
- 
-         dfloat k = 6.283185307179586;
-         //dfloat k = 18.849555921538759;
-         //dfloat k = 25.132741228718345;
-         dfloat ug = sin(k*rg)/(k*rg);
- 
-         dfloat eg = fabs(ug - qg);
-         printf("%.3f, %.3f, %.3f, %.16e, %.16e\n", rg, ug, qg, ug/qg, eg);
-         asbf->meshSEM->q[e*asbf->meshSEM->Np + g*mesh->Np + n] = eg;
-       }
-     }
-   }
- 
-   char fname_e[] = "err";
-   ellipticPlotVTUHex3D(asbf->meshSEM, fname_e, 0);
 }

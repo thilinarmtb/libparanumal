@@ -222,6 +222,8 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
     }
   }
 
+  meshGeometricFactorsHex3D(meshSEM);
+  
   asbf->meshSEM = meshSEM;
 
   // OKL kernels specific to asbf

@@ -69,10 +69,18 @@ int main(int argc, char **argv){
   case HEXAHEDRA:
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
-
+  // build asbf 
   asbf_t *asbf = asbfSetup(mesh, options);
+
+  // solve for asbf->meshSEM->q
   asbfSolve(asbf, options);
 
+  // compute error 
+  asbfErrorHex3D(asbf->meshSEM, asbf->meshSEM->q);
+
+  char fname[] = "sol";
+  ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
+  
   // close down MPI
   MPI_Finalize();
 

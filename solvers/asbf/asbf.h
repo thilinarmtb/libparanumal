@@ -118,4 +118,7 @@ typedef struct {
 } asbf_t;
 
 asbf_t *asbfSetup(mesh_t *mesh, setupAide options);
+
 int asbfSolve(asbf_t *asbf, setupAide options);
+
+void asbfErrorHex3D(mesh_t *mesh, dfloat *q);
