@@ -65,6 +65,8 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 
   fclose(fp);
 
+  options.getArgs("LAMBDA", asbf->lambda);
+  
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
   asbf->Ntotal = Nlocal + Nhalo;
@@ -94,7 +96,13 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
           dfloat zg = Rg*zbase;
 
           // evaluate rhs at asbf quadrature for each surface node
-          asbf->f[g] = sin(M_PI*xg)*sin(M_PI*yg)*sin(M_PI*zg);
+          //asbf->f[g] = sin(M_PI*xg)*sin(M_PI*yg)*sin(M_PI*zg);
+
+          dfloat k = 6.283185307179586;
+          //dfloat k = 18.849555921538759;
+          //dfloat k = 25.132741228718345;
+          dfloat r = sqrt(xg*xg + yg*yg + zg*zg);
+          asbf->f[g] = (k + asbf->lambda/k)*sin(k*r)/r;
         }
 
         // integrate f against asbf modes
@@ -144,8 +152,6 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   asbf->pOptions.setArgs("PARALMOND CYCLE",      options.getArgs("PARALMOND CYCLE"));
   asbf->pOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("PARALMOND SMOOTHER"));
   asbf->pOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PARALMOND PARTITION"));
-
-  options.getArgs("LAMBDA", asbf->lambda);
 
   // SetUp Boundary Flags types for Elliptic Solve
   // bc = 1 -> wall
