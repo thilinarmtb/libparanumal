@@ -209,16 +209,6 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 	meshSEM->y[e*meshSEM->Np+g*mesh->Np+n] = yg;
 	meshSEM->z[e*meshSEM->Np+g*mesh->Np+n] = zg;
       }
-
-      // interpolate from asbf to gll nodes
-      for(int g=0;g<mesh->Nq;++g){
-	dfloat qg = 0;
-	for(int i=0;i<asbf->asbfNmodes;++i){
-	  qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
-	}
-	// assume Nfields=1
-	meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
-      }
     }
   }
 

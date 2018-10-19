@@ -29,6 +29,7 @@ SOFTWARE.
 int asbfSolve(asbf_t *asbf, setupAide options)
 {
   mesh_t *mesh         = asbf->mesh;
+  mesh_t *meshSEM      = asbf->meshSEM;
   elliptic_t *elliptic = asbf->pSolver;
 
   mesh->q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->totalHaloPairs), sizeof(dfloat));
@@ -60,6 +61,21 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     meshPlotVTU3D(mesh, fileName2D, 0);
   }
 
+  // reconstruct SEM3D solution ( should do in kernel )
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      // interpolate from asbf to gll nodes
+      for(int g=0;g<mesh->Nq;++g){
+	dfloat qg = 0;
+	for(int i=0;i<asbf->asbfNmodes;++i){
+	  qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
+	}
+	// assume Nfields=1
+	meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
+      }
+    }
+  }
+  
   char fname[] = "foo";
-  ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
+  ellipticPlotVTUHex3D(meshSEM, fname, 0);
 }
