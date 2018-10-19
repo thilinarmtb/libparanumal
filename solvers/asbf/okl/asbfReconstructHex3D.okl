@@ -41,7 +41,7 @@
 	}
 	
 	// assume Nfields=1
-	q[e*p_Nq*p_Nq*p_Nq + m*p_Nq*p_Nq + m] = qm;
+	q[e*p_Nq*p_Nq*p_Nq + m*p_Nq*p_Nq + n] = qm;
       }
     }
   }
