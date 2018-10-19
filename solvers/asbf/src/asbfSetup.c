@@ -165,5 +165,64 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 
   ellipticSolveSetup(asbf->pSolver, asbf->lambda, kernelInfoP);
 
+  mesh_t *meshSEM = (mesh_t*) calloc(1, sizeof(mesh_t));
+
+  meshSEM->Nelements = mesh->Nelements;
+  meshSEM->dim = 3;
+  meshSEM->Nverts = 8;
+  meshSEM->Nfaces = 6;
+  meshSEM->NfaceVertices = 4;
+
+  // yuck --->
+  int faceVertices[6][4] = {{0,1,2,3},{0,1,5,4},{1,2,6,5},{2,3,7,6},{3,0,4,7},{4,5,6,7}};
+  mesh->faceVertices =
+    (int*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(int));
+  memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(int));
+  // <----
+
+  meshSEM->rank = mesh->rank;
+  meshSEM->size = mesh->size;
+  meshSEM->comm = mesh->comm;
+
+  meshLoadReferenceNodesHex3D(meshSEM, mesh->N);
+
+  meshSEM->x = (dfloat*) calloc(mesh->Nq*asbf->Ntotal, sizeof(dfloat));
+  meshSEM->y = (dfloat*) calloc(mesh->Nq*asbf->Ntotal, sizeof(dfloat));
+  meshSEM->z = (dfloat*) calloc(mesh->Nq*asbf->Ntotal, sizeof(dfloat));
+  meshSEM->q = (dfloat*) calloc(mesh->Nq*asbf->Ntotal, sizeof(dfloat));
+
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+
+      dfloat xbase = mesh->x[e*mesh->Np+n];
+      dfloat ybase = mesh->y[e*mesh->Np+n];
+      dfloat zbase = mesh->z[e*mesh->Np+n];
+
+      for(int g=0;g<mesh->Nq;++g){
+	dfloat Rg = asbf->asbfRgll[g];
+
+	// stretch coordinates
+	dfloat xg = Rg*xbase;
+	dfloat yg = Rg*ybase;
+	dfloat zg = Rg*zbase;
+	meshSEM->x[e*meshSEM->Np+g*mesh->Np+n] = xg;
+	meshSEM->y[e*meshSEM->Np+g*mesh->Np+n] = yg;
+	meshSEM->z[e*meshSEM->Np+g*mesh->Np+n] = zg;
+      }
+
+      // interpolate from asbf to gll nodes
+      for(int g=0;g<mesh->Nq;++g){
+	dfloat qg = 0;
+	for(int i=0;i<asbf->asbfNmodes;++i){
+	  qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
+	}
+	// assume Nfields=1
+	meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
+      }
+    }
+  }
+
+  asbf->meshSEM = meshSEM;
+
   return asbf;
 }
