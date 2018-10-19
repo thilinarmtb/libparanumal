@@ -55,6 +55,7 @@ $(ELLIPTICDIR)/ellipticMultiGrid.h
 AOBJS    = \
 ./src/asbfSetup.o \
 ./src/asbfSolve.o \
+./src/asbfErrorHex3D.o
 
 # library objects
 LOBJS = \

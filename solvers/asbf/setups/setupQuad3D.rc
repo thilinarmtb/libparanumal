@@ -137,6 +137,9 @@ CHEBYSHEV
 [PARALMOND PARTITION]
 STRONGNODES
 
+[PARALMOND CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison

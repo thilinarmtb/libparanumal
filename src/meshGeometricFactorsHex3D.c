@@ -301,5 +301,9 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
   free(xre); free(xse); free(xte);
   free(yre); free(yse); free(yte);
   free(zre); free(zse); free(zte);
+
+  free(cubxre); free(cubxse); free(cubxte);
+  free(cubyre); free(cubyse); free(cubyte);
+  free(cubzre); free(cubzse); free(cubzte);
   
 }

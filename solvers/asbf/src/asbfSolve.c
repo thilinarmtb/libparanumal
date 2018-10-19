@@ -44,7 +44,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     printf("LAMBDAM[%02d] = %.3f\n", m, lambdam);
     
     // build precon
-    if(m>0){
+    if(m>1){
       elliptic->options.setArgs("PRECONDITIONER","JACOBI");
       dfloat *invDiagA;
       ellipticBuildJacobi(elliptic,lambdam,&invDiagA);
