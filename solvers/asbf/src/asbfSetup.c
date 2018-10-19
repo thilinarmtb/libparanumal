@@ -98,11 +98,13 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
           // evaluate rhs at asbf quadrature for each surface node
           //asbf->f[g] = sin(M_PI*xg)*sin(M_PI*yg)*sin(M_PI*zg);
 
-          dfloat k = 6.283185307179586;
-          //dfloat k = 18.849555921538759;
-          //dfloat k = 25.132741228718345;
+          dfloat k1 = 6.283185307179586;
+          dfloat k2 = 18.849555921538759;
+          dfloat k3 = 25.132741228718345;
           dfloat r = sqrt(xg*xg + yg*yg + zg*zg);
-          asbf->f[g] = (k + asbf->lambda/k)*sin(k*r)/r;
+          asbf->f[g] = (k1 + asbf->lambda/k1)*sin(k1*r)/r
+                         + (k2 + asbf->lambda/k2)*sin(k2*r)/r
+                         + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
         }
 
         // integrate f against asbf modes
