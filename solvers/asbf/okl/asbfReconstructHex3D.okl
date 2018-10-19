@@ -37,7 +37,7 @@
 
 #pragma unroll p_asbfNmodes
 	for(int i=0;i<p_asbfNmodes;++i){
-	  qm += s_Bgll[m][i]*qpencil[m]; // broadcast from shared
+	  qm += s_Bgll[m][i]*qpencil[i]; // broadcast from shared
 	}
 	
 	// assume Nfields=1
