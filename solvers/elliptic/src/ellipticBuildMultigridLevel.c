@@ -151,7 +151,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   switch(elliptic->elementType){
   case TRIANGLES:
     meshLoadReferenceNodesTri2D(mesh, Nc);
-    meshPhysicalNodesTri2D(mesh);
+    if(elliptic->dim==2){
+      meshPhysicalNodesTri2D(mesh);
+    }else{
+      meshPhysicalNodesTri3D(mesh);
+    }
     break;
   case QUADRILATERALS:{
     meshLoadReferenceNodesQuad2D(mesh, Nc);
@@ -194,7 +198,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   switch(elliptic->elementType){
   case TRIANGLES:
-    meshConnectFaceNodes2D(mesh);
+    if(elliptic->dim==2){
+      meshConnectFaceNodes2D(mesh);
+    }else{
+      meshConnectFaceNodes3D(mesh);
+    }
     break;
   case QUADRILATERALS:{
     if(elliptic->dim==2){
@@ -800,8 +808,12 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   // set kernel name suffix
   char *suffix;
   
-  if(elliptic->elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
+  if(elliptic->elementType==TRIANGLES){
+    if(elliptic->dim==2)
+      suffix = strdup("Tri2D");
+    else
+      suffix = strdup("Tri3D");
+  }      
   if(elliptic->elementType==QUADRILATERALS){
     if(elliptic->dim==2)
       suffix = strdup("Quad2D");
@@ -969,8 +981,12 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
 
       // Use the same kernel with quads for the following kenels
-      if((elliptic->dim==3 && elliptic->elementType==QUADRILATERALS))
-        suffix = strdup("Quad2D"); 
+      if(elliptic->dim==3){
+	if(elliptic->elementType==QUADRILATERALS)
+	  suffix = strdup("Quad2D");
+	if(elliptic->elementType==TRIANGLES)
+	  suffix = strdup("Tri2D");
+      }
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);

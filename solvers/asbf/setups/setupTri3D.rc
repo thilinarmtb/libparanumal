@@ -2,7 +2,7 @@
 1.0
 
 [DATA FILE]
-data/insBrownMinionQuad3D.h
+../elliptic/data/ellipticHomogeneousBC2D.h
 
 [INITIAL CONDITION]
 BROWN-MINION
@@ -14,17 +14,17 @@ BROWN-MINION
 10.0
 
 [MESH FILE]
-../../meshes/sphereQuadH02.msh 
+../../meshes/sphereH01.msh 
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
 3
 
 [ELEMENT TYPE] # number of edges
-4
+3
 
 [POLYNOMIAL DEGREE]
-10
+8
 
 [THREAD MODEL]
 CUDA
@@ -102,10 +102,10 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-#MULTIGRID
+MULTIGRID
 #JACOBI
 #SEMFEM
-FULLALMOND
+#FULLALMOND
 
 ########## MULTIGRID Options ##############
 

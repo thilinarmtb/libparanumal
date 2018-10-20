@@ -59,6 +59,7 @@ AOBJS    = \
 
 # library objects
 LOBJS = \
+../../src/meshApplyElementMatrix.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
@@ -66,6 +67,7 @@ LOBJS = \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshGeometricFactorsTri2D.o \
+../../src/meshGeometricFactorsTri3D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
 ../../src/meshGeometricFactorsQuad3D.o \
 ../../src/meshGeometricPartition2D.o \
@@ -79,18 +81,21 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/meshOccaSetup3D.o \
+../../src/meshOccaSetupTri3D.o \
 ../../src/meshOccaSetupQuad3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o\
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelReaderTri2D.o \
+../../src/meshParallelReaderTri3D.o \
 ../../src/meshParallelReaderQuad2D.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshParallelReaderTet3D.o \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
+../../src/meshPhysicalNodesTri3D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
 ../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPhysicalNodesTet3D.o \
@@ -100,11 +105,13 @@ LOBJS = \
 ../../src/meshPrint2D.o \
 ../../src/meshPrint3D.o \
 ../../src/meshSetupTri2D.o \
+../../src/meshSetupTri3D.o \
 ../../src/meshSetupQuad2D.o \
 ../../src/meshSetupQuad3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
+../../src/meshSurfaceGeometricFactorsTri3D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \

@@ -34,9 +34,17 @@ int asbfSolve(asbf_t *asbf, setupAide options)
 
   mesh->q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->totalHaloPairs), sizeof(dfloat));
   for(int m=0;m<asbf->asbfNmodes;++m){
+
+    // integrate agains surface basis (assume scaled by J)
+    if (options.compareArgs("BASIS","NODAL")){
+      meshApplyElementMatrix(mesh,mesh->MM,asbf->r3D+asbf->Ntotal*m, asbf->r3D+asbf->Ntotal*m);
+    }
+    
     asbf->o_r.copyFrom(asbf->r3D + asbf->Ntotal*m);
 
+    
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+      // gather scatter
       ogsGatherScatter(asbf->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     }
 
@@ -44,7 +52,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     printf("LAMBDAM[%02d] = %.3f\n", m, lambdam);
     
     // build precon
-    if(m>1){
+    if(m>5){
       elliptic->options.setArgs("PRECONDITIONER","JACOBI");
       dfloat *invDiagA;
       ellipticBuildJacobi(elliptic,lambdam,&invDiagA);
@@ -63,19 +71,20 @@ int asbfSolve(asbf_t *asbf, setupAide options)
   }
 
   // reconstruct SEM3D solution ( should do in kernel )
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      // interpolate from asbf to gll nodes
-      for(int g=0;g<mesh->Nq;++g){
-        dfloat qg = 0;
-        for(int i=0;i<asbf->asbfNmodes;++i){
-          qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
-        }
-        // assume Nfields=1
-        meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
+  if(asbf->elementType==QUADRILATERALS){
+    for(int e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
+	// interpolate from asbf to gll nodes
+	for(int g=0;g<mesh->Nq;++g){
+	  dfloat qg = 0;
+	  for(int i=0;i<asbf->asbfNmodes;++i){
+	    qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
+	  }
+	  // assume Nfields=1
+	  meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
+	}
       }
     }
   }
   
-
 }

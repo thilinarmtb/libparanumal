@@ -278,8 +278,12 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   // set kernel name suffix
   char *suffix;
 
-  if(elliptic->elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
+  if(elliptic->elementType==TRIANGLES){
+    if(elliptic->dim==2)
+      suffix = strdup("Tri2D");
+    else
+      suffix = strdup("Tri3D");
+  }
   if(elliptic->elementType==QUADRILATERALS){
     if(elliptic->dim==2)
       suffix = strdup("Quad2D");
@@ -474,9 +478,13 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       }
 
       // Use the same kernel with quads for the following kenels
-      if((elliptic->dim==3 && elliptic->elementType==QUADRILATERALS))
-        suffix = strdup("Quad2D"); 
-
+      if(elliptic->dim==3){
+	if(elliptic->elementType==QUADRILATERALS)
+	  suffix = strdup("Quad2D");
+	else if(elliptic->elementType==TRIANGLES)
+	  suffix = strdup("Tri2D");
+      }
+	
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
       elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);

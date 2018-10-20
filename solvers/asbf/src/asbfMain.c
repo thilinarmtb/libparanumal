@@ -51,24 +51,31 @@ int main(int argc, char **argv){
   
   // set up mesh
   mesh_t *mesh;
-  switch(elementType){
-  case TRIANGLES:
-    mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
-  case QUADRILATERALS:{
-    if(dim==2)
-      mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
+  if(dim==2){
+    switch(elementType){   
+    case TRIANGLES:
+      mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
+    case QUADRILATERALS:     
+      mesh = meshSetupQuad2D((char*)fileName.c_str(), N); break;
+    }
+  }
   else{
     dfloat radius = 1;
-    options.getArgs("SPHERE RADIUS", radius);
-    mesh = meshSetupQuad3D((char*)fileName.c_str(), N, radius);
+
+    switch(elementType){   
+    case TRIANGLES:
+      options.getArgs("SPHERE RADIUS", radius);
+      mesh = meshSetupTri3D((char*)fileName.c_str(), N, radius); break;
+    case QUADRILATERALS:
+      options.getArgs("SPHERE RADIUS", radius);
+      mesh = meshSetupQuad3D((char*)fileName.c_str(), N, radius); break;
+    case TETRAHEDRA:
+      mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
+    case HEXAHEDRA:
+      mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
+    }
   }
-  break;
-  }
-  case TETRAHEDRA:
-    mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
-  case HEXAHEDRA:
-    mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
-  }
+
   // build asbf 
   asbf_t *asbf = asbfSetup(mesh, options);
 
@@ -76,10 +83,12 @@ int main(int argc, char **argv){
   asbfSolve(asbf, options);
 
   // compute error 
-  asbfErrorHex3D(asbf->meshSEM, asbf->meshSEM->q);
+  if(asbf->elementType==QUADRILATERALS){
+    asbfErrorHex3D(asbf->meshSEM, asbf->meshSEM->q);
 
-  char fname[] = "sol";
-  ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
+    char fname[] = "sol";
+    ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
+  }
   
   // close down MPI
   MPI_Finalize();
