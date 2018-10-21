@@ -52,13 +52,19 @@ typedef struct {
   int asbfNmodes; // number of ASBF modes
   int asbfNquad;  // number of ASBF quadrature nodes
   int asbfNgll;   // number of ASBF gll nodes
+  int asbfNplot;  // number of ASBF plotting points
 
   dfloat *asbfEigenvalues; // generalzied eigenvalues of discrete r^2 weighted 1D Laplacian on [1,1.5]
+
   dfloat *asbfRquad; // coordinates of ABSF quadrature nodes (start at 1)
   dfloat *asbfRgll;  // coordinates of ABSF gll nodes (start at 1)
+  dfloat *asbfRplot; // coordinates of ABSF plot nodes (start at 1)
+  
   dfloat *asbfWquad; // weights of ABSF quadrature nodes (include radius^2 factor)
+
   dfloat *asbfBquad; // generalized Vandermonde for ABSF modes evaluated at quadrature nodes
   dfloat *asbfBgll;  // generalized Vandermonde for ABSF modes evaluated at gll nodes
+  dfloat *asbfBplot; // generalized Vandermonde for ABSF modes evaluated at plot nodes
 
   dfloat *r3D;
   dfloat *q3D;
