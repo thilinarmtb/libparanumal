@@ -38,6 +38,7 @@ void asbfExtrudeSphere(asbf_t *asbf){
   meshSEM->Nverts = 8;
   meshSEM->Nfaces = 6;
   meshSEM->NfaceVertices = 4;
+  meshSEM->Nfields = 1;
   
   // yuck --->
   int faceVertices[6][4] = {{0,1,2,3},{0,1,5,4},{1,2,6,5},{2,3,7,6},{3,0,4,7},{4,5,6,7}};
