@@ -62,7 +62,12 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 		  &(asbf->asbfBgll),&(asbf->asbfNgll), &(asbf->asbfNmodes));
   readDfloatArray(fp, "ASBF GLL NODES",
 		  &(asbf->asbfRgll),&(asbf->asbfNgll), &Ncols);
+  readDfloatArray(fp, "ASBF PLOT VANDERMONDE",
+		  &(asbf->asbfBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
+  readDfloatArray(fp, "ASBF PLOT  NODES",
+		  &(asbf->asbfRplot),&(asbf->asbfNplot), &Ncols);
 
+  
   fclose(fp);
 
   options.getArgs("LAMBDA", asbf->lambda);
