@@ -130,3 +130,5 @@ int asbfSolve(asbf_t *asbf, setupAide options);
 void asbfErrorHex3D(mesh_t *mesh, dfloat *q);
 
 void asbfExtrudeSphere(asbf_t *asbf);
+
+void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld);

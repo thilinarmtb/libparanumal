@@ -60,18 +60,9 @@ void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld){
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh->Nelements;++e){
 
-	// interpolate from asbf to gll nodes
-	for(int g=0;g<mesh->Nq;++g){
-
-	  // assume Nfields=1
-	  meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
-	}
-      }
-    }
-    
     for(int p=0;p<asbf->asbfNplot;++p){
       for(int n=0;n<mesh->Np;++n){
-	dfloat Rp = asbf->asbfRquad[p];
+	dfloat Rp = asbf->asbfRplot[p];
 	
 	// stretch coordinates
 	dfloat xbase = mesh->x[e*mesh->Np+n];

@@ -70,6 +70,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     meshPlotVTU3D(mesh, fileName2D, 0);
   }
 
+#if 0
   // reconstruct SEM3D solution ( should do in kernel )
   if(asbf->elementType==QUADRILATERALS){
     for(int e=0;e<mesh->Nelements;++e){
@@ -86,5 +87,5 @@ int asbfSolve(asbf_t *asbf, setupAide options)
       }
     }
   }
-  
+#endif  
 }

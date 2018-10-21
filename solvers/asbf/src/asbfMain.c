@@ -88,8 +88,12 @@ int main(int argc, char **argv){
 
     char fname[] = "sol";
     ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
-    //    meshPlotVTU3D(asbf->meshSEM, fname, 0);
+
+
+    asbfPlotVTU3D(asbf, fname, 0);
   }
+
+
   
   // close down MPI
   MPI_Finalize();

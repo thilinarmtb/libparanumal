@@ -56,7 +56,8 @@ AOBJS    = \
 ./src/asbfExtrudeSphere.o \
 ./src/asbfSetup.o \
 ./src/asbfSolve.o \
-./src/asbfErrorHex3D.o
+./src/asbfErrorHex3D.o \
+./src/asbfPlotVTU3D.o
 
 # library objects
 LOBJS = \

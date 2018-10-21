@@ -40,7 +40,7 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   mesh->Nfields = 1;
 
   char fname[BUFSIZ];
-  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", mesh->N);
+  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", 2*mesh->N);
 
   FILE *fp = fopen(fname, "r");
   if (!fp) {
@@ -64,7 +64,7 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 		  &(asbf->asbfRgll),&(asbf->asbfNgll), &Ncols);
   readDfloatArray(fp, "ASBF PLOT VANDERMONDE",
 		  &(asbf->asbfBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
-  readDfloatArray(fp, "ASBF PLOT  NODES",
+  readDfloatArray(fp, "ASBF PLOT NODES",
 		  &(asbf->asbfRplot),&(asbf->asbfNplot), &Ncols);
 
   
@@ -116,7 +116,7 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 
 	// evaluate rhs at asbf quadrature for each surface node
 	dfloat A = 2*M_PI, B = 2*M_PI, C = 2*M_PI;
-	asbf->f[g] = sin(A*xg)*sin(B*yg)*sin(C*zg)*(A*A+B*B+C*C);
+	//	asbf->f[g] = sin(A*xg)*sin(B*yg)*sin(C*zg)*(A*A+B*B+C*C);
       }
 
       // integrate f against asbf modes
@@ -194,10 +194,12 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   ellipticSolveSetup(asbf->pSolver, asbf->lambda, kernelInfoP);
 
   asbf->meshSEM = NULL;
+
   if(asbf->elementType==QUADRILATERALS){
     asbfExtrudeSphere(asbf);
   }
-  
+
+
   // OKL kernels specific to asbf
   asbf->asbfReconstructKernel =
     mesh->device.buildKernel(DASBF "/okl/asbfReconstructHex3D.okl",
