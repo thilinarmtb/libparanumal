@@ -122,3 +122,5 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options);
 int asbfSolve(asbf_t *asbf, setupAide options);
 
 void asbfErrorHex3D(mesh_t *mesh, dfloat *q);
+
+void asbfExtrudeSphere(asbf_t *asbf);
