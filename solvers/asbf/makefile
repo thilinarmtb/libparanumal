@@ -53,6 +53,7 @@ $(ELLIPTICDIR)/ellipticMultiGrid.h
 
 # list of objects to be compiled
 AOBJS    = \
+./src/asbfCubatureGradient.o \
 ./src/asbfExtrudeSphere.o \
 ./src/asbfSetup.o \
 ./src/asbfSolve.o \

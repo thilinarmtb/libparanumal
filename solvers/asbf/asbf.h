@@ -66,6 +66,10 @@ typedef struct {
   dfloat *asbfBgll;  // generalized Vandermonde for ABSF modes evaluated at gll nodes
   dfloat *asbfBplot; // generalized Vandermonde for ABSF modes evaluated at plot nodes
 
+  dfloat *asbfDBquad; // generalized Vandermonde for derivative of ABSF modes evaluated at quadrature nodes
+  dfloat *asbfDBgll;  // generalized Vandermonde for derivative of ABSF modes evaluated at gll nodes
+  dfloat *asbfDBplot; // generalized Vandermonde for derivative of ABSF modes evaluated at plot nodes
+  
   dfloat *r3D;
   dfloat *q3D;
   dfloat *f;
@@ -127,8 +131,11 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options);
 
 int asbfSolve(asbf_t *asbf, setupAide options);
 
-void asbfErrorHex3D(mesh_t *mesh, dfloat *q);
+void asbfErrorHex3D(asbf_t *asbf, dfloat *q);
 
 void asbfExtrudeSphere(asbf_t *asbf);
 
 void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld);
+
+void asbfCubatureGradient(asbf_t *asbf, dfloat *q3D,
+			  dfloat *cubq, dfloat *cubdqdx, dfloat *cubdqdy, dfloat *cubdqdz);

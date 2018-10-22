@@ -1,6 +1,8 @@
 #include "asbf.h"
 
-void asbfErrorHex3D(mesh_t *mesh, dfloat *q){
+void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
+
+  mesh_t *mesh = asbf->mesh;
   
   dfloat normErrorH1 = 0;
   dfloat normErrorL2 = 0;
@@ -69,8 +71,9 @@ void asbfErrorHex3D(mesh_t *mesh, dfloat *q){
       }
     }
   }
-#else
+#endif
 
+#if 0
   dfloat *cubq  = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   dfloat *cubqr = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   dfloat *cubqs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
@@ -181,6 +184,71 @@ void asbfErrorHex3D(mesh_t *mesh, dfloat *q){
   free(cubx); free(cuby);   free(cubz);
 
 #endif
+
+#if 1
+
+  hlong cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp*asbf->asbfNquad;
+  dfloat *cubq    = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
+  dfloat *cubdqdx = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
+  dfloat *cubdqdy = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
+  dfloat *cubdqdz = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
+
+  asbfCubatureGradient(asbf, q3D, cubq, cubdqdx, cubdqdy, cubdqdz);
+  
+  for(int e = 0; e < mesh->Nelements; e++){
+
+    for(int k=0;k<asbf->asbfNquad;++k){
+      for(int j=0;j<mesh->cubNq;++j){
+	for(int i=0;i<mesh->cubNq;++i){
+
+	  int m = j*mesh->cubNq + i;
+	  
+	  hlong id = e*mesh->cubNp+m + k*(mesh->Nelements*mesh->totalHaloPairs)*mesh->cubNp;
+
+	  dfloat qg    = cubq[id];
+	  dfloat dqdxg = cubdqdx[id];
+	  dfloat dqdyg = cubdqdy[id];
+	  dfloat dqdzg = cubdqdz[id];
+	  
+	  hlong gbase = e*mesh->cubNp*mesh->Nvgeo + m;
+	  dfloat JW = mesh->cubvgeo[gbase + JWID*mesh->cubNp];
+
+	  dfloat rhog = asbf->asbfRquad[k];
+	  
+	  dfloat xg = mesh->cubx[e*mesh->cubNp+m]*rhog;
+	  dfloat yg = mesh->cuby[e*mesh->cubNp+m]*rhog;
+	  dfloat zg = mesh->cubz[e*mesh->cubNp+m]*rhog;
+	  dfloat rg = sqrt(xg*xg + yg*yg + zg*zg);
+	  
+	  dfloat K1 = 6.283185307179586;
+	  dfloat K2 = 18.849555921538759;
+	  dfloat K3 = 25.132741228718345;
+	  dfloat qE = sin(K1*rg)/(K1*rg) + sin(K2*rg)/(K2*rg) + sin(K3*rg)/(K3*rg);
+	  dfloat dqEdrho = cos(K1*rg)/rg - sin(K1*rg)/(K1*rg*rg) // rho is radial
+	    + cos(K2*rg)/rg - sin(K2*rg)/(K2*rg*rg)
+	    + cos(K3*rg)/rg - sin(K3*rg)/(K3*rg*rg);
+	  
+	  dfloat dqEdx = dqEdrho*xg/rg;
+	  dfloat dqEdy = dqEdrho*yg/rg;
+	  dfloat dqEdz = dqEdrho*zg/rg;
+	  
+	  dfloat localH1 = pow(dqEdx-dqdxg, 2) + pow(dqEdy-dqdyg, 2) + pow(dqEdz-dqdzg, 2) + pow(qE-qg, 2);
+	  dfloat localL2 = pow(qE-qg, 2);
+	  
+	  normErrorH1 += JW*localH1;
+	  normErrorL2 += JW*localL2;
+	  
+	}
+      }
+    }
+  }
+
+  free(cubq);
+  free(cubdqdx); free(cubdqdy);   free(cubdqdz);
+
+#endif
+
+
   
   normErrorH1 = sqrt(normErrorH1);
   normErrorL2 = sqrt(normErrorL2);
