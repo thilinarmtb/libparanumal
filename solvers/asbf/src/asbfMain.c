@@ -84,12 +84,12 @@ int main(int argc, char **argv){
 
   // compute error 
   if(asbf->elementType==QUADRILATERALS){
-    asbfErrorHex3D(asbf, asbf->q3D);
 
     char fname[] = "sol";
-    //    ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
-
     asbfPlotVTU3D(asbf, fname, 0);
+    //    ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
+    
+    asbfErrorHex3D(asbf, asbf->q3D);
   }
 
 
