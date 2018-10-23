@@ -48,7 +48,8 @@ int asbfSolve(asbf_t *asbf, setupAide options)
       ogsGatherScatter(asbf->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     }
 
-    dfloat lambdam = asbf->lambda + asbf->asbfEigenvalues[m];
+    //dfloat lambdam = asbf->lambda + asbf->asbfEigenvalues[m];
+    dfloat lambdam = asbf->asbfEigenvalues[m];
     printf("LAMBDAM[%02d] = %.3f\n", m, lambdam);
     
     // build precon

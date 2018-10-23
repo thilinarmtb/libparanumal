@@ -91,8 +91,6 @@ int main(int argc, char **argv){
     
     asbfErrorHex3D(asbf, asbf->q3D);
   }
-
-
   
   // close down MPI
   MPI_Finalize();

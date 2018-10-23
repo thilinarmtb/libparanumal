@@ -139,3 +139,5 @@ void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld);
 
 void asbfCubatureGradient(asbf_t *asbf, dfloat *q3D,
 			  dfloat *cubq, dfloat *cubdqdx, dfloat *cubdqdy, dfloat *cubdqdz);
+
+void interpolateQuad2D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M);

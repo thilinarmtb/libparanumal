@@ -66,7 +66,12 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 		  &(asbf->asbfBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
   readDfloatArray(fp, "ASBF PLOT NODES",
 		  &(asbf->asbfRplot),&(asbf->asbfNplot), &Ncols);
-
+  readDfloatArray(fp, "ASBF QUADRATURE DERIVATIVE VANDERMONDE",
+      &(asbf->asbfDBquad),&(asbf->asbfNquad), &(asbf->asbfNmodes));
+  readDfloatArray(fp, "ASBF GLL DERIVATIVE VANDERMONDE",
+      &(asbf->asbfDBgll),&(asbf->asbfNgll), &(asbf->asbfNmodes));
+  readDfloatArray(fp, "ASBF PLOT DERIVATIVE VANDERMONDE",
+      &(asbf->asbfDBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
   
   fclose(fp);
 

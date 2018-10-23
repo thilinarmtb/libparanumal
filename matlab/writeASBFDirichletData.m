@@ -6,7 +6,9 @@
 %%   4.  Put any asbfNXX.dat files generated in solvers/asbf/data/.
 
 function writeASBFDirichletData(N)
-  R = 1.5;  %% TODO:  This should probably be an input parameter.
+  %% TODO:  These should be input parameters.
+  R = 1.5;
+  lambda = 1;
 
   fname = sprintf('asbfN%02d.dat', N);
   fid = fopen(fname, 'w');
@@ -16,20 +18,28 @@ function writeASBFDirichletData(N)
   %% TODO:  Remove Chebfun dependency.
   r = chebfun(@(r) r, [1 R]);
   U = (1 - r).*(R - r).*legpoly(0:N, [1 R], 'norm');
-  A = diff(U)'*((r.^2).*diff(U));
-  B = U'*(r.^2.*U);
+
+  % Old eigenfunctions.  (NB:  Also need r^2 inner product normalization.)
+  %A = diff(U)'*((r.^2).*diff(U));
+  %B = U'*(r.^2.*U);
+
+  A = diff(U)'*((r.^2).*diff(U)) + lambda*U'*((r.^2).*U);
+  B = U'*U;
+
   [V, D] = eig(A, B, 'vector');
   [D, p] = sort(D);
   V = V(:, p);
   Q_DDir = U*V;
   D_DDir = D;
 
-  %% Normalize in the r^2-weighted inner product.
+  % Normalize in the L^2 inner product.
   for (i = 1:1:size(Q_DDir, 2))
     qi = Q_DDir(:, i);
-    normqi = sqrt(qi.'*(r.^2.*qi));
+    normqi = norm(qi);
     Q_DDir(:, i) = qi/normqi;
   end
+
+  Q_DDir'*Q_DDir
 
   [Rquad, Wquad] = legpts(N + 5, [1 R]);
   Wquad = (Rquad.^2).*(Wquad.');
@@ -54,6 +64,15 @@ function writeASBFDirichletData(N)
 
   writeFloatMatrix(fid, Bplot, 'ASBF PLOT VANDERMONDE');
   writeFloatMatrix(fid, Rplot, 'ASBF PLOT NODES');
+
+  DQ_DDir = diff(Q_DDir);
+  DBgll = feval(DQ_DDir, Rgll);
+  DBquad = feval(DQ_DDir, Rquad);
+  DBplot = feval(DQ_DDir, Rplot);
+
+  writeFloatMatrix(fid, DBgll, 'ASBF GLL DERIVATIVE VANDERMONDE');
+  writeFloatMatrix(fid, DBquad, 'ASBF QUADRATURE DERIVATIVE VANDERMONDE');
+  writeFloatMatrix(fid, DBplot, 'ASBF PLOT DERIVATIVE VANDERMONDE');
 
   fclose(fid);
 end
