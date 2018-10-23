@@ -36,11 +36,12 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 
   options.getArgs("MESH DIMENSION", asbf->dim);
   options.getArgs("ELEMENT TYPE", asbf->elementType);
+  options.getArgs("RADIAL EXPANSION DEGREE", asbf->asbfNmodes);
 
   mesh->Nfields = 1;
 
   char fname[BUFSIZ];
-  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", 2*mesh->N);
+  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->asbfNmodes);
 
   FILE *fp = fopen(fname, "r");
   if (!fp) {
