@@ -52,32 +52,32 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   int Nrows, Ncols;
 
   readDfloatArray(fp, "ASBF EIGENVALUES",
-		  &(asbf->asbfEigenvalues),&(asbf->asbfNmodes), &(Ncols));
+      &(asbf->asbfEigenvalues),&(asbf->asbfNmodes), &(Ncols));
   readDfloatArray(fp, "ASBF QUADRATURE VANDERMONDE",
-		  &(asbf->asbfBquad),&(asbf->asbfNquad), &(asbf->asbfNmodes));
+      &(asbf->asbfBquad),&(asbf->asbfNquad), &(asbf->asbfNmodes));
   readDfloatArray(fp, "ASBF QUADRATURE NODES",
-		  &(asbf->asbfRquad),&(asbf->asbfNquad), &Ncols);
+      &(asbf->asbfRquad),&(asbf->asbfNquad), &Ncols);
   readDfloatArray(fp, "ASBF QUADRATURE WEIGHTS",
-		  &(asbf->asbfWquad),&(asbf->asbfNquad), &Ncols);
+      &(asbf->asbfWquad),&(asbf->asbfNquad), &Ncols);
   readDfloatArray(fp, "ASBF GLL VANDERMONDE",
-		  &(asbf->asbfBgll),&(asbf->asbfNgll), &(asbf->asbfNmodes));
+      &(asbf->asbfBgll),&(asbf->asbfNgll), &(asbf->asbfNmodes));
   readDfloatArray(fp, "ASBF GLL NODES",
-		  &(asbf->asbfRgll),&(asbf->asbfNgll), &Ncols);
+      &(asbf->asbfRgll),&(asbf->asbfNgll), &Ncols);
   readDfloatArray(fp, "ASBF PLOT VANDERMONDE",
-		  &(asbf->asbfBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
+      &(asbf->asbfBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
   readDfloatArray(fp, "ASBF PLOT NODES",
-		  &(asbf->asbfRplot),&(asbf->asbfNplot), &Ncols);
+      &(asbf->asbfRplot),&(asbf->asbfNplot), &Ncols);
   readDfloatArray(fp, "ASBF QUADRATURE DERIVATIVE VANDERMONDE",
       &(asbf->asbfDBquad),&(asbf->asbfNquad), &(asbf->asbfNmodes));
   readDfloatArray(fp, "ASBF GLL DERIVATIVE VANDERMONDE",
       &(asbf->asbfDBgll),&(asbf->asbfNgll), &(asbf->asbfNmodes));
   readDfloatArray(fp, "ASBF PLOT DERIVATIVE VANDERMONDE",
       &(asbf->asbfDBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
-  
+
   fclose(fp);
 
   options.getArgs("LAMBDA", asbf->lambda);
-  
+
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
   asbf->Ntotal = Nlocal + Nhalo;
@@ -99,46 +99,46 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
       dfloat J;
 
       if(asbf->elementType==QUADRILATERALS)
-	J = mesh->vgeo[mesh->Np*(e*mesh->Nvgeo + JID) + n];
+        J = mesh->vgeo[mesh->Np*(e*mesh->Nvgeo + JID) + n];
       else
-	J = mesh->vgeo[e*mesh->Nvgeo + JID];
-      
+        J = mesh->vgeo[e*mesh->Nvgeo + JID];
+
       for(int g=0;g<asbf->asbfNquad;++g){
-	
-	dfloat Rg = asbf->asbfRquad[g];
-	
-	// stretch coordinates
-	dfloat xg = Rg*xbase;
-	dfloat yg = Rg*ybase;
-	dfloat zg = Rg*zbase;
 
-	dfloat k1 = 6.283185307179586;
-	dfloat k2 = 18.849555921538759;
-	dfloat k3 = 25.132741228718345;
-	dfloat r = sqrt(xg*xg + yg*yg + zg*zg);
-	asbf->f[g] = (k1 + asbf->lambda/k1)*sin(k1*r)/r
-	  + (k2 + asbf->lambda/k2)*sin(k2*r)/r
-	  + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
+        dfloat Rg = asbf->asbfRquad[g];
 
-	// evaluate rhs at asbf quadrature for each surface node
-	dfloat A = 2*M_PI, B = 2*M_PI, C = 2*M_PI;
-	//	asbf->f[g] = sin(A*xg)*sin(B*yg)*sin(C*zg)*(A*A+B*B+C*C);
+        // stretch coordinates
+        dfloat xg = Rg*xbase;
+        dfloat yg = Rg*ybase;
+        dfloat zg = Rg*zbase;
+
+        dfloat k1 = 6.283185307179586;
+        dfloat k2 = 18.849555921538759;
+        dfloat k3 = 25.132741228718345;
+        dfloat r = sqrt(xg*xg + yg*yg + zg*zg);
+        asbf->f[g] = (k1 + asbf->lambda/k1)*sin(k1*r)/r
+          + (k2 + asbf->lambda/k2)*sin(k2*r)/r
+          + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
+
+        // evaluate rhs at asbf quadrature for each surface node
+        dfloat A = 2*M_PI, B = 2*M_PI, C = 2*M_PI;
+        //	asbf->f[g] = sin(A*xg)*sin(B*yg)*sin(C*zg)*(A*A+B*B+C*C);
       }
 
       // integrate f against asbf modes
       for(int m=0;m<asbf->asbfNmodes;++m){
-	dfloat fhatm = 0;
-	for(int i=0;i<asbf->asbfNquad;++i){
-	  fhatm += asbf->asbfBquad[m + i*asbf->asbfNmodes]*asbf->asbfWquad[i]*asbf->f[i];
-	}
+        dfloat fhatm = 0;
+        for(int i=0;i<asbf->asbfNquad;++i){
+          fhatm += asbf->asbfBquad[m + i*asbf->asbfNmodes]*asbf->asbfWquad[i]*asbf->f[i];
+        }
 
-	// scale by surface weight
-	//	asbf->r3D[e*mesh->Np + n + m*asbf->Ntotal] = JW*fhatm;
-	asbf->r3D[e*mesh->Np + n + m*asbf->Ntotal] = J*fhatm;
+        // scale by surface weight
+        //	asbf->r3D[e*mesh->Np + n + m*asbf->Ntotal] = JW*fhatm;
+        asbf->r3D[e*mesh->Np + n + m*asbf->Ntotal] = J*fhatm;
       }
     }
   }
-  
+
   occa::properties kernelInfo;
   kernelInfo["defines"].asObject();
   kernelInfo["includes"].asArray();
@@ -156,13 +156,13 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   }
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
-  
+
   kernelInfo["defines/p_asbfNmodes"] = asbf->asbfNmodes;
   kernelInfo["defines/p_asbfNquad"] = asbf->asbfNquad;
   kernelInfo["defines/p_asbfNgll"] = asbf->asbfNgll;
-   
+
   occa::properties kernelInfoP  = kernelInfo;
-  
+
   asbf->o_r   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->r);
   asbf->o_x   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->x);
 
@@ -209,8 +209,8 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   // OKL kernels specific to asbf
   asbf->asbfReconstructKernel =
     mesh->device.buildKernel(DASBF "/okl/asbfReconstructHex3D.okl",
-			     "asbfReconstructHex3D",
-			     kernelInfo);
+        "asbfReconstructHex3D",
+        kernelInfo);
 
   return asbf;
 }

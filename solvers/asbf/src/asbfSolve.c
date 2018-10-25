@@ -39,10 +39,10 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     if (options.compareArgs("BASIS","NODAL")){
       meshApplyElementMatrix(mesh,mesh->MM,asbf->r3D+asbf->Ntotal*m, asbf->r3D+asbf->Ntotal*m);
     }
-    
+
     asbf->o_r.copyFrom(asbf->r3D + asbf->Ntotal*m);
 
-    
+
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       // gather scatter
       ogsGatherScatter(asbf->o_r, ogsDfloat, ogsAdd, mesh->ogs);
@@ -51,17 +51,17 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     //dfloat lambdam = asbf->lambda + asbf->asbfEigenvalues[m];
     dfloat lambdam = asbf->asbfEigenvalues[m];
     printf("LAMBDAM[%02d] = %.3f\n", m, lambdam);
-    
+
     // build precon
     if(m>5){
       elliptic->options.setArgs("PRECONDITIONER","JACOBI");
       dfloat *invDiagA;
       ellipticBuildJacobi(elliptic,lambdam,&invDiagA);
       elliptic->precon->o_invDiagA =
-	mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+        mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
       free(invDiagA);
     }
-    
+
     ellipticSolve(elliptic, lambdam, asbf->pTOL, asbf->o_r, asbf->o_x);
     asbf->o_x.copyTo(asbf->q3D + asbf->Ntotal*m);
 
@@ -76,15 +76,15 @@ int asbfSolve(asbf_t *asbf, setupAide options)
   if(asbf->elementType==QUADRILATERALS){
     for(int e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
-	// interpolate from asbf to gll nodes
-	for(int g=0;g<mesh->Nq;++g){
-	  dfloat qg = 0;
-	  for(int i=0;i<asbf->asbfNmodes;++i){
-	    qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
-	  }
-	  // assume Nfields=1
-	  meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
-	}
+        // interpolate from asbf to gll nodes
+        for(int g=0;g<mesh->Nq;++g){
+          dfloat qg = 0;
+          for(int i=0;i<asbf->asbfNmodes;++i){
+            qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
+          }
+          // assume Nfields=1
+          meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
+        }
       }
     }
   }
