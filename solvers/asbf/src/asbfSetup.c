@@ -28,7 +28,7 @@
 #include "omp.h"
 #include <unistd.h>
 
-asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
+asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setupAide options){
 
   asbf_t *asbf = (asbf_t*) calloc(1, sizeof(asbf_t));
   asbf->mesh = mesh;
@@ -38,55 +38,23 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   options.getArgs("ELEMENT TYPE", asbf->elementType);
   options.getArgs("RADIAL EXPANSION DEGREE", asbf->Nmodes);
 
+  asbf->lambda = lambda;
+
   mesh->Nfields = 1;
 
-  char fname[BUFSIZ];
-  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
-
-  FILE *fp = fopen(fname, "r");
-  if (!fp) {
-    printf("ERROR: Cannot open file: '%s'\n", fname);
-    exit(-1);
+  if(asbf->dim==3){
+    if(asbf->elementType == QUADRILATERALS){
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+    }else if(asbf->elementType == TRIANGLES){
+      meshOccaSetupTri3D(mesh, options, kernelInfo);
+    }else{
+      meshOccaSetup3D(mesh, options, kernelInfo);
+    }
   }
+  else
+    meshOccaSetup2D(mesh, options, kernelInfo);
 
-  int Nrows, Ncols;
-
-  readDfloatArray(fp, "ASBF EIGENVALUES",
-      &(asbf->eigenvalues),&(asbf->Nmodes), &(Ncols));
-  readDfloatArray(fp, "ASBF QUADRATURE VANDERMONDE",
-      &(asbf->Bquad),&(asbf->Nquad), &(asbf->Nmodes));
-  readDfloatArray(fp, "ASBF QUADRATURE NODES",
-      &(asbf->Rquad),&(asbf->Nquad), &Ncols);
-  readDfloatArray(fp, "ASBF QUADRATURE WEIGHTS",
-      &(asbf->Wquad),&(asbf->Nquad), &Ncols);
-  readDfloatArray(fp, "ASBF GLL VANDERMONDE",
-      &(asbf->Bgll),&(asbf->Ngll), &(asbf->Nmodes));
-  readDfloatArray(fp, "ASBF GLL NODES",
-      &(asbf->Rgll),&(asbf->Ngll), &Ncols);
-  readDfloatArray(fp, "ASBF PLOT VANDERMONDE",
-      &(asbf->Bplot),&(asbf->Nplot), &(asbf->Nmodes));
-  readDfloatArray(fp, "ASBF PLOT NODES",
-      &(asbf->Rplot),&(asbf->Nplot), &Ncols);
-  readDfloatArray(fp, "ASBF QUADRATURE DERIVATIVE VANDERMONDE",
-      &(asbf->DBquad),&(asbf->Nquad), &(asbf->Nmodes));
-  readDfloatArray(fp, "ASBF GLL DERIVATIVE VANDERMONDE",
-      &(asbf->DBgll),&(asbf->Ngll), &(asbf->Nmodes));
-  readDfloatArray(fp, "ASBF PLOT DERIVATIVE VANDERMONDE",
-      &(asbf->DBplot),&(asbf->Nplot), &(asbf->Nmodes));
-
-  fclose(fp);
-
-  options.getArgs("LAMBDA", asbf->lambda);
-
-  dlong Nlocal = mesh->Np*mesh->Nelements;
-  dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
-  asbf->Ntotal = Nlocal + Nhalo;
-
-  asbf->r3D = (dfloat*) calloc(asbf->Nmodes*asbf->Ntotal, sizeof(dfloat));
-  asbf->q3D = (dfloat*) calloc(asbf->Nmodes*asbf->Ntotal, sizeof(dfloat));
-  asbf->f   = (dfloat*) calloc(asbf->Nquad, sizeof(dfloat));
-  asbf->r   = (dfloat*) calloc(asbf->Ntotal, sizeof(dfloat));
-  asbf->x   = (dfloat*) calloc(asbf->Ntotal, sizeof(dfloat));
+  asbfSolveSetup(asbf, lambda, kernelInfo);
 
   for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
@@ -95,7 +63,6 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
       dfloat ybase = mesh->y[e*mesh->Np+n];
       dfloat zbase = mesh->z[e*mesh->Np+n];
 
-      //      dfloat JW = mesh->vgeo[mesh->Np*(e*mesh->Nvgeo + JWID) + n];
       dfloat J;
 
       if(asbf->elementType==QUADRILATERALS)
@@ -112,6 +79,7 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
         dfloat yg = Rg*ybase;
         dfloat zg = Rg*zbase;
 
+        // evaluate rhs at asbf quadrature for each surface node
         dfloat k1 = 6.283185307179586;
         dfloat k2 = 18.849555921538759;
         dfloat k3 = 25.132741228718345;
@@ -120,9 +88,6 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
           + (k2 + asbf->lambda/k2)*sin(k2*r)/r
           + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
 
-        // evaluate rhs at asbf quadrature for each surface node
-        dfloat A = 2*M_PI, B = 2*M_PI, C = 2*M_PI;
-        //	asbf->f[g] = sin(A*xg)*sin(B*yg)*sin(C*zg)*(A*A+B*B+C*C);
       }
 
       // integrate f against asbf modes
@@ -133,84 +98,11 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
         }
 
         // scale by surface weight
-        //	asbf->r3D[e*mesh->Np + n + m*asbf->Ntotal] = JW*fhatm;
         asbf->r3D[e*mesh->Np + n + m*asbf->Ntotal] = J*fhatm;
       }
     }
   }
 
-  occa::properties kernelInfo;
-  kernelInfo["defines"].asObject();
-  kernelInfo["includes"].asArray();
-  kernelInfo["header"].asArray();
-  kernelInfo["flags"].asObject();
-
-  if(asbf->dim==3){
-    if(asbf->elementType == QUADRILATERALS){
-      meshOccaSetupQuad3D(mesh, options, kernelInfo);
-    }else if(asbf->elementType == TRIANGLES){
-      meshOccaSetupTri3D(mesh, options, kernelInfo);
-    }else{
-      meshOccaSetup3D(mesh, options, kernelInfo);
-    }
-  }
-  else
-    meshOccaSetup2D(mesh, options, kernelInfo);
-
-  kernelInfo["defines/p_asbfNmodes"] = asbf->Nmodes;
-  kernelInfo["defines/p_asbfNquad"] = asbf->Nquad;
-  kernelInfo["defines/p_asbfNgll"] = asbf->Ngll;
-
-  occa::properties kernelInfoP  = kernelInfo;
-
-  asbf->o_r   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->r);
-  asbf->o_x   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->x);
-
-  asbf->pOptions = options;
-  asbf->pOptions.setArgs("KRYLOV SOLVER",        options.getArgs("KRYLOV SOLVER"));
-  asbf->pOptions.setArgs("DISCRETIZATION",       options.getArgs("DISCRETIZATION"));
-  asbf->pOptions.setArgs("BASIS",                options.getArgs("BASIS"));
-  asbf->pOptions.setArgs("PRECONDITIONER",       options.getArgs("PRECONDITIONER"));
-  asbf->pOptions.setArgs("MULTIGRID COARSENING", options.getArgs("MULTIGRID COARSENING"));
-  asbf->pOptions.setArgs("MULTIGRID SMOOTHER",   options.getArgs("MULTIGRID SMOOTHER"));
-  asbf->pOptions.setArgs("PARALMOND CYCLE",      options.getArgs("PARALMOND CYCLE"));
-  asbf->pOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("PARALMOND SMOOTHER"));
-  asbf->pOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PARALMOND PARTITION"));
-
-  // SetUp Boundary Flags types for Elliptic Solve
-  // bc = 1 -> wall
-  // bc = 2 -> inflow
-  // bc = 3 -> outflow
-  // bc = 4 -> x-aligned slip
-  // bc = 5 -> y-aligned slip
-  // bc = 6 -> z-aligned slip
-  int pBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-
-  //Solver tolerances
-  asbf->pTOL = 1E-8;
-
-  asbf->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  asbf->pSolver->mesh = mesh;
-  asbf->pSolver->options = asbf->pOptions;
-  asbf->pSolver->dim = asbf->dim;
-  asbf->pSolver->elementType = asbf->elementType;
-  asbf->pSolver->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(asbf->pSolver->BCType,pBCType,7*sizeof(int));
-
-  ellipticSolveSetup(asbf->pSolver, asbf->lambda, kernelInfoP);
-
-  asbf->meshSEM = NULL;
-
-  if(asbf->elementType==QUADRILATERALS){
-    asbfExtrudeSphere(asbf);
-  }
-
-
-  // OKL kernels specific to asbf
-  asbf->asbfReconstructKernel =
-    mesh->device.buildKernel(DASBF "/okl/asbfReconstructHex3D.okl",
-        "asbfReconstructHex3D",
-        kernelInfo);
 
   return asbf;
 }

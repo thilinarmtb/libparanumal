@@ -77,7 +77,16 @@ int main(int argc, char **argv){
   }
 
   // build asbf 
-  asbf_t *asbf = asbfSetup(mesh, options);
+  dfloat lambda;
+  options.getArgs("LAMBDA", lambda);
+
+  occa::properties kernelInfo;
+  kernelInfo["defines"].asObject();
+  kernelInfo["includes"].asArray();
+  kernelInfo["header"].asArray();
+  kernelInfo["flags"].asObject();
+
+  asbf_t *asbf = asbfSetup(mesh, lambda, kernelInfo, options);
 
   // solve for asbf->meshSEM->q
   asbfSolve(asbf, options);

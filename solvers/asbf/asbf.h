@@ -127,9 +127,11 @@ typedef struct {
   
 } asbf_t;
 
-asbf_t *asbfSetup(mesh_t *mesh, setupAide options);
+asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setupAide options);
 
 int asbfSolve(asbf_t *asbf, setupAide options);
+
+void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo);
 
 void asbfErrorHex3D(asbf_t *asbf, dfloat *q);
 
