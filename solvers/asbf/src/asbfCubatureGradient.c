@@ -49,17 +49,17 @@ void asbfCubatureGradient(asbf_t *asbf, dfloat *q3D,
   for(int e = 0; e < mesh->Nelements; e++){
 
     // interpolate and differentiate
-    for(int k=0;k<asbf->asbfNquad;++k){
+    for(int k=0;k<asbf->Nquad;++k){
 
       for(int j=0;j<mesh->Nq;++j){
         for(int i=0;i<mesh->Nq;++i){
 
           int m = j*mesh->Nq + i;
           dfloat qk = 0, dqk = 0;
-          for(int p=0;p<asbf->asbfNmodes;++p){
+          for(int p=0;p<asbf->Nmodes;++p){
             dfloat qpji = asbf->q3D[(e*mesh->Np+m)+p*asbf->Ntotal];
-            qk  +=  asbf->asbfBquad[p+k*asbf->asbfNmodes]*qpji;
-            dqk += asbf->asbfDBquad[p+k*asbf->asbfNmodes]*qpji;
+            qk  +=  asbf->Bquad[p+k*asbf->Nmodes]*qpji;
+            dqk += asbf->DBquad[p+k*asbf->Nmodes]*qpji;
           }
           qe[m]  = qk;
           qte[m] = dqk;	  
@@ -106,13 +106,13 @@ void asbfCubatureGradient(asbf_t *asbf, dfloat *q3D,
           dfloat rz = mesh->cubvgeo[gbase + RZID*mesh->cubNp];
           dfloat sz = mesh->cubvgeo[gbase + SZID*mesh->cubNp];
 
-          dfloat rhok =  asbf->asbfRquad[k];
+          dfloat rhok =  asbf->Rquad[k];
           dfloat xk = cubx[m]*rhok;
           dfloat yk = cuby[m]*rhok;
           dfloat zk = cubz[m]*rhok;
           dfloat rk = sqrt(xk*xk+yk*yk+zk*zk);
 
-          // fix chain rule here (note that coordinates scaled out by asbf->asbfRquad[k])
+          // fix chain rule here (note that coordinates scaled out by asbf->Rquad[k])
           cubq[id] = cubqe[m];
           cubdqdx[id] = (rx*cubqre[m] + sx*cubqse[m])/rhok + cubqte[m]*cubx[m];
           cubdqdy[id] = (ry*cubqre[m] + sy*cubqse[m])/rhok + cubqte[m]*cuby[m];

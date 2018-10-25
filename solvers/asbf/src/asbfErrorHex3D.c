@@ -187,7 +187,7 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
 
 #if 1
 
-  hlong cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp*asbf->asbfNquad;
+  hlong cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp*asbf->Nquad;
   dfloat *cubq    = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
   dfloat *cubdqdx = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
   dfloat *cubdqdy = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
@@ -205,7 +205,7 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
     interpolateQuad2D(mesh->cubInterp, mesh->y+e*mesh->Np, mesh->Nq, cuby, mesh->cubNq);
     interpolateQuad2D(mesh->cubInterp, mesh->z+e*mesh->Np, mesh->Nq, cubz, mesh->cubNq);
 
-    for(int k=0;k<asbf->asbfNquad;++k){
+    for(int k=0;k<asbf->Nquad;++k){
       for(int j=0;j<mesh->cubNq;++j){
         for(int i=0;i<mesh->cubNq;++i){
 
@@ -219,9 +219,9 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
           dfloat dqdzg = cubdqdz[id];
 
           hlong gbase = e*mesh->cubNp*mesh->Nvgeo + m;
-          dfloat JW = mesh->cubvgeo[gbase + JWID*mesh->cubNp]*asbf->asbfWquad[k];
+          dfloat JW = mesh->cubvgeo[gbase + JWID*mesh->cubNp]*asbf->Wquad[k];
 
-          dfloat rhog = asbf->asbfRquad[k];
+          dfloat rhog = asbf->Rquad[k];
 
           dfloat xg = cubx[m]*rhog;
           dfloat yg = cuby[m]*rhog;

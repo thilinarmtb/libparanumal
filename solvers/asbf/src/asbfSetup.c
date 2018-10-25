@@ -36,12 +36,12 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
 
   options.getArgs("MESH DIMENSION", asbf->dim);
   options.getArgs("ELEMENT TYPE", asbf->elementType);
-  options.getArgs("RADIAL EXPANSION DEGREE", asbf->asbfNmodes);
+  options.getArgs("RADIAL EXPANSION DEGREE", asbf->Nmodes);
 
   mesh->Nfields = 1;
 
   char fname[BUFSIZ];
-  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->asbfNmodes);
+  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
 
   FILE *fp = fopen(fname, "r");
   if (!fp) {
@@ -52,27 +52,27 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   int Nrows, Ncols;
 
   readDfloatArray(fp, "ASBF EIGENVALUES",
-      &(asbf->asbfEigenvalues),&(asbf->asbfNmodes), &(Ncols));
+      &(asbf->eigenvalues),&(asbf->Nmodes), &(Ncols));
   readDfloatArray(fp, "ASBF QUADRATURE VANDERMONDE",
-      &(asbf->asbfBquad),&(asbf->asbfNquad), &(asbf->asbfNmodes));
+      &(asbf->Bquad),&(asbf->Nquad), &(asbf->Nmodes));
   readDfloatArray(fp, "ASBF QUADRATURE NODES",
-      &(asbf->asbfRquad),&(asbf->asbfNquad), &Ncols);
+      &(asbf->Rquad),&(asbf->Nquad), &Ncols);
   readDfloatArray(fp, "ASBF QUADRATURE WEIGHTS",
-      &(asbf->asbfWquad),&(asbf->asbfNquad), &Ncols);
+      &(asbf->Wquad),&(asbf->Nquad), &Ncols);
   readDfloatArray(fp, "ASBF GLL VANDERMONDE",
-      &(asbf->asbfBgll),&(asbf->asbfNgll), &(asbf->asbfNmodes));
+      &(asbf->Bgll),&(asbf->Ngll), &(asbf->Nmodes));
   readDfloatArray(fp, "ASBF GLL NODES",
-      &(asbf->asbfRgll),&(asbf->asbfNgll), &Ncols);
+      &(asbf->Rgll),&(asbf->Ngll), &Ncols);
   readDfloatArray(fp, "ASBF PLOT VANDERMONDE",
-      &(asbf->asbfBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
+      &(asbf->Bplot),&(asbf->Nplot), &(asbf->Nmodes));
   readDfloatArray(fp, "ASBF PLOT NODES",
-      &(asbf->asbfRplot),&(asbf->asbfNplot), &Ncols);
+      &(asbf->Rplot),&(asbf->Nplot), &Ncols);
   readDfloatArray(fp, "ASBF QUADRATURE DERIVATIVE VANDERMONDE",
-      &(asbf->asbfDBquad),&(asbf->asbfNquad), &(asbf->asbfNmodes));
+      &(asbf->DBquad),&(asbf->Nquad), &(asbf->Nmodes));
   readDfloatArray(fp, "ASBF GLL DERIVATIVE VANDERMONDE",
-      &(asbf->asbfDBgll),&(asbf->asbfNgll), &(asbf->asbfNmodes));
+      &(asbf->DBgll),&(asbf->Ngll), &(asbf->Nmodes));
   readDfloatArray(fp, "ASBF PLOT DERIVATIVE VANDERMONDE",
-      &(asbf->asbfDBplot),&(asbf->asbfNplot), &(asbf->asbfNmodes));
+      &(asbf->DBplot),&(asbf->Nplot), &(asbf->Nmodes));
 
   fclose(fp);
 
@@ -82,9 +82,9 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
   asbf->Ntotal = Nlocal + Nhalo;
 
-  asbf->r3D = (dfloat*) calloc(asbf->asbfNmodes*asbf->Ntotal, sizeof(dfloat));
-  asbf->q3D = (dfloat*) calloc(asbf->asbfNmodes*asbf->Ntotal, sizeof(dfloat));
-  asbf->f   = (dfloat*) calloc(asbf->asbfNquad, sizeof(dfloat));
+  asbf->r3D = (dfloat*) calloc(asbf->Nmodes*asbf->Ntotal, sizeof(dfloat));
+  asbf->q3D = (dfloat*) calloc(asbf->Nmodes*asbf->Ntotal, sizeof(dfloat));
+  asbf->f   = (dfloat*) calloc(asbf->Nquad, sizeof(dfloat));
   asbf->r   = (dfloat*) calloc(asbf->Ntotal, sizeof(dfloat));
   asbf->x   = (dfloat*) calloc(asbf->Ntotal, sizeof(dfloat));
 
@@ -103,9 +103,9 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
       else
         J = mesh->vgeo[e*mesh->Nvgeo + JID];
 
-      for(int g=0;g<asbf->asbfNquad;++g){
+      for(int g=0;g<asbf->Nquad;++g){
 
-        dfloat Rg = asbf->asbfRquad[g];
+        dfloat Rg = asbf->Rquad[g];
 
         // stretch coordinates
         dfloat xg = Rg*xbase;
@@ -126,10 +126,10 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
       }
 
       // integrate f against asbf modes
-      for(int m=0;m<asbf->asbfNmodes;++m){
+      for(int m=0;m<asbf->Nmodes;++m){
         dfloat fhatm = 0;
-        for(int i=0;i<asbf->asbfNquad;++i){
-          fhatm += asbf->asbfBquad[m + i*asbf->asbfNmodes]*asbf->asbfWquad[i]*asbf->f[i];
+        for(int i=0;i<asbf->Nquad;++i){
+          fhatm += asbf->Bquad[m + i*asbf->Nmodes]*asbf->Wquad[i]*asbf->f[i];
         }
 
         // scale by surface weight
@@ -157,9 +157,9 @@ asbf_t *asbfSetup(mesh_t *mesh, setupAide options){
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  kernelInfo["defines/p_asbfNmodes"] = asbf->asbfNmodes;
-  kernelInfo["defines/p_asbfNquad"] = asbf->asbfNquad;
-  kernelInfo["defines/p_asbfNgll"] = asbf->asbfNgll;
+  kernelInfo["defines/p_asbfNmodes"] = asbf->Nmodes;
+  kernelInfo["defines/p_asbfNquad"] = asbf->Nquad;
+  kernelInfo["defines/p_asbfNgll"] = asbf->Ngll;
 
   occa::properties kernelInfoP  = kernelInfo;
 

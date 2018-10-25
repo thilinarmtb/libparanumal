@@ -64,14 +64,14 @@ void asbfExtrudeSphere(asbf_t *asbf){
       hlong vid1 = mesh->EToV[id];
       hlong vid2 = vid1 + mesh->Nnodes;
 
-      dfloat Rg1 = asbf->asbfRgll[0];
+      dfloat Rg1 = asbf->Rgll[0];
       hlong id1  = e*meshSEM->Nverts+n;
       meshSEM->EToV[id1] = vid1;
       meshSEM->EX[id1] = Rg1*mesh->EX[id];
       meshSEM->EY[id1] = Rg1*mesh->EY[id];
       meshSEM->EZ[id1] = Rg1*mesh->EZ[id];
 
-      dfloat Rg2 = asbf->asbfRgll[mesh->Nq-1];
+      dfloat Rg2 = asbf->Rgll[mesh->Nq-1];
       hlong id2  = e*meshSEM->Nverts+n+mesh->Nverts;
       meshSEM->EToV[id2] = vid2;
       meshSEM->EX[id2] = Rg2*mesh->EX[id];
@@ -126,7 +126,7 @@ void asbfExtrudeSphere(asbf_t *asbf){
       dfloat zbase = mesh->z[e*mesh->Np+n];
 
       for(int g=0;g<mesh->Nq;++g){
-        dfloat Rg = asbf->asbfRgll[g];
+        dfloat Rg = asbf->Rgll[g];
 
         // stretch coordinates
         dfloat xg = Rg*xbase;

@@ -48,9 +48,9 @@ void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld){
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
 
-  int Eloc = (mesh->Nq-1)*(mesh->Nq-1)*(asbf->asbfNplot-1);
+  int Eloc = (mesh->Nq-1)*(mesh->Nq-1)*(asbf->Nplot-1);
   fprintf(fp, "    <Piece NumberOfPoints=\""dlongFormat"\" NumberOfCells=\""dlongFormat"\">\n", 
-          mesh->Nelements*mesh->Np*asbf->asbfNplot, 
+          mesh->Nelements*mesh->Np*asbf->Nplot, 
           mesh->Nelements*Eloc);
 
   // write out nodes
@@ -60,9 +60,9 @@ void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld){
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh->Nelements;++e){
 
-    for(int p=0;p<asbf->asbfNplot;++p){
+    for(int p=0;p<asbf->Nplot;++p){
       for(int n=0;n<mesh->Np;++n){
-        dfloat Rp = asbf->asbfRplot[p];
+        dfloat Rp = asbf->Rplot[p];
 
         // stretch coordinates
         dfloat xbase = mesh->x[e*mesh->Np+n];
@@ -86,12 +86,12 @@ void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld){
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
 
   for(dlong e=0;e<mesh->Nelements;++e){
-    for(int p=0;p<asbf->asbfNplot;++p){
+    for(int p=0;p<asbf->Nplot;++p){
       for(int n=0;n<mesh->Np;++n){
 
         dfloat qp = 0;
-        for(int i=0;i<asbf->asbfNmodes;++i){
-          qp += asbf->asbfBplot[i + p*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
+        for(int i=0;i<asbf->Nmodes;++i){
+          qp += asbf->Bplot[i + p*asbf->Nmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
         }
         fprintf(fp, "       ");
         fprintf(fp, "%g\n", qp);
@@ -106,10 +106,10 @@ void asbfPlotVTU3D(asbf_t *asbf, char *fileNameBase, int fld){
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
 
   for(dlong e=0;e<mesh->Nelements;++e){
-    for(int k=0;k<asbf->asbfNplot-1;++k){
+    for(int k=0;k<asbf->Nplot-1;++k){
       for(int j=0;j<mesh->Nq-1;++j){
         for(int i=0;i<mesh->Nq-1;++i){
-          int b = e*mesh->Np*asbf->asbfNplot + i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
+          int b = e*mesh->Np*asbf->Nplot + i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
           fprintf(fp, 
               dlongFormat" "
               dlongFormat" "

@@ -33,7 +33,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
   elliptic_t *elliptic = asbf->pSolver;
 
   mesh->q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->totalHaloPairs), sizeof(dfloat));
-  for(int m=0;m<asbf->asbfNmodes;++m){
+  for(int m=0;m<asbf->Nmodes;++m){
 
     // integrate agains surface basis (assume scaled by J)
     if (options.compareArgs("BASIS","NODAL")){
@@ -48,8 +48,8 @@ int asbfSolve(asbf_t *asbf, setupAide options)
       ogsGatherScatter(asbf->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     }
 
-    //dfloat lambdam = asbf->lambda + asbf->asbfEigenvalues[m];
-    dfloat lambdam = asbf->asbfEigenvalues[m];
+    //dfloat lambdam = asbf->lambda + asbf->eigenvalues[m];
+    dfloat lambdam = asbf->eigenvalues[m];
     printf("LAMBDAM[%02d] = %.3f\n", m, lambdam);
 
     // build precon
@@ -79,8 +79,8 @@ int asbfSolve(asbf_t *asbf, setupAide options)
         // interpolate from asbf to gll nodes
         for(int g=0;g<mesh->Nq;++g){
           dfloat qg = 0;
-          for(int i=0;i<asbf->asbfNmodes;++i){
-            qg += asbf->asbfBgll[i + g*asbf->asbfNmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
+          for(int i=0;i<asbf->Nmodes;++i){
+            qg += asbf->Bgll[i + g*asbf->Nmodes]*asbf->q3D[(e*mesh->Np+n)+i*asbf->Ntotal];
           }
           // assume Nfields=1
           meshSEM->q[e*meshSEM->Np+g*mesh->Np+n] = qg;
