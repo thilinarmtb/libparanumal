@@ -30,7 +30,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
 {
   mesh_t *mesh         = asbf->mesh;
   mesh_t *meshSEM      = asbf->meshSEM;
-  elliptic_t *elliptic = asbf->pSolver;
+  elliptic_t *elliptic = asbf->elliptic;
 
   mesh->q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->totalHaloPairs), sizeof(dfloat));
   for(int m=0;m<asbf->Nmodes;++m){

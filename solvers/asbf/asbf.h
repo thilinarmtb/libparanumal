@@ -39,12 +39,11 @@ typedef struct {
   int dim, elementType;
 
   mesh_t *mesh;
-  elliptic_t *pSolver;
+  elliptic_t *elliptic;
 
   mesh_t *meshSEM; // 3D hex SEM mesh
   
   setupAide options;
-  setupAide pOptions;
 
   /*********/
   dlong Ntotal;

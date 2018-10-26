@@ -87,8 +87,6 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   asbf->o_r   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->r);
   asbf->o_x   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->x);
 
-  asbf->pOptions = options;
-
   // SetUp Boundary Flags types for Elliptic Solve
   // bc = 1 -> wall
   // bc = 2 -> inflow
@@ -101,15 +99,15 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   //Solver tolerances
   asbf->pTOL = 1E-8;
 
-  asbf->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  asbf->pSolver->mesh = mesh;
-  asbf->pSolver->options = asbf->pOptions;
-  asbf->pSolver->dim = asbf->dim;
-  asbf->pSolver->elementType = asbf->elementType;
-  asbf->pSolver->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(asbf->pSolver->BCType,pBCType,7*sizeof(int));
+  asbf->elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  asbf->elliptic->mesh = mesh;
+  asbf->elliptic->options = asbf->options;
+  asbf->elliptic->dim = asbf->dim;
+  asbf->elliptic->elementType = asbf->elementType;
+  asbf->elliptic->BCType = (int*) calloc(7,sizeof(int));
+  memcpy(asbf->elliptic->BCType,pBCType,7*sizeof(int));
 
-  ellipticSolveSetup(asbf->pSolver, asbf->lambda, kernelInfoP);
+  ellipticSolveSetup(asbf->elliptic, asbf->lambda, kernelInfoP);
 
   asbf->meshSEM = NULL;
 
