@@ -51,6 +51,12 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   setupAide options = asbf->options;
   asbf->lambda = lambda;
 
+  options.getArgs("OUTER RADIUS", asbf->R);
+  if (asbf->R <= 1) {
+    printf("ERROR:  OUTER RADIUS must be greater than 1.\n");
+    exit(-1);
+  }
+
   char fname[BUFSIZ];
   sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
 
@@ -61,9 +67,6 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   }
 
   int Nrows, Ncols;
-
-  // TODO:  Read outer radius from setup file.
-  asbf->R = 1.5;
 
   readDfloatArray(fp, "ASBF QUADRATURE NODES",
       &(asbf->Rquad),&(asbf->Nquad), &Ncols);
