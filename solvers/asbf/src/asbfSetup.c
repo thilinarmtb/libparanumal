@@ -36,7 +36,7 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
 
   options.getArgs("MESH DIMENSION", asbf->dim);
   options.getArgs("ELEMENT TYPE", asbf->elementType);
-  options.getArgs("RADIAL EXPANSION DEGREE", asbf->Nmodes);
+  options.getArgs("RADIAL EXPANSION MODES", asbf->Nmodes);
 
   mesh->Nfields = 1;
 

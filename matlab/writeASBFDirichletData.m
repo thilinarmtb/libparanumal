@@ -13,7 +13,7 @@ function writeASBFDirichletData(N)
   %
   % TODO:  Do the same for Neumann and write out the associated matrices.
   x = chebfun(@(x) x);
-  T = (1 + x).*(1 - x).*chebpoly(0:N);
+  T = (1 + x).*(1 - x).*chebpoly(0:(N - 1));
   DT = diff(T);
 
   [Rquad, Wquad] = legpts(N + 5);

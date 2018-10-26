@@ -77,9 +77,6 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   asbfScaleNodesAndWeights(asbf);
   asbfAssembleRadialVandermondeMatrices(asbf, lambda, fp);
 
-  // TODO:  Fix this off-by-one error.
-  asbf->Nmodes += 1;
-
   // Put the r^2 factor into the quadrature weights.
   //
   // TODO:  Fix other codes so this can be removed.
@@ -170,16 +167,18 @@ static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, F
   dfloat *DTquad, *DTgll, *DTplot; // Initial basis derivative Vandermondes.
   dfloat *A, *B;                   // Matrices for GEVP.
   dfloat C1, C2;                   // Scaling constants (e.g., Jacobian).
-  int Ndeg;                        // Expansion degree (no. of modes + 1).
   int Nrows, Ncols;                // Needed by readDfloatArray().
+  int Nmodes, Nquad, Ngll, Nplot;  // Local copies of variables from asbf.
 
   // Variables needed for dsygv_()---see LAPACK documentation.
   int ITYPE, N, LDA, LDB, LWORK, INFO;
   char JOBZ, UPLO;
   dfloat *W, *WORK;
 
-  // TODO:  Fix the off-by-one error so that this parameter is not necessary.
-  Ndeg = asbf->Nmodes + 1;
+  Nmodes = asbf->Nmodes;
+  Nquad  = asbf->Nquad;
+  Ngll   = asbf->Ngll;
+  Nplot  = asbf->Nplot;
 
   readDfloatArray(fp, "ASBF INITIAL BASIS QUADRATURE VANDERMONDE",
     &Tquad, &Nrows, &Ncols);
@@ -201,44 +200,44 @@ static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, F
   C1 = pow((asbf->R - 1)/2, 2);
   C2 = (asbf->R - 1)/2;
 
-  for (int i = 0; i < asbf->Nquad*Ndeg; i++) {
+  for (int i = 0; i < Nquad*Nmodes; i++) {
       Tquad[i] *= C1;
       DTquad[i] *= C2;
   }
 
-  for (int i = 0; i < asbf->Ngll*Ndeg; i++) {
+  for (int i = 0; i < Ngll*Nmodes; i++) {
       Tgll[i]  *= C1;
       DTgll[i]  *= C2;
   }
 
-  for (int i = 0; i < asbf->Nplot*Ndeg; i++) {
+  for (int i = 0; i < Nplot*Nmodes; i++) {
       Tplot[i] *= C1;
       DTplot[i] *= C2;
   }
 
   // Set up and solve the eigenvalue problem.
-  A = (dfloat*) calloc(Ndeg*Ndeg, sizeof(dfloat)); 
-  B = (dfloat*) calloc(Ndeg*Ndeg, sizeof(dfloat));
-  for (int i = 0; i < Ndeg; i++) {
-    for (int j = 0; j < Ndeg; j++) {
-      for (int k = 0; k < asbf->Nquad; k++) {
+  A = (dfloat*) calloc(Nmodes*Nmodes, sizeof(dfloat)); 
+  B = (dfloat*) calloc(Nmodes*Nmodes, sizeof(dfloat));
+  for (int i = 0; i < Nmodes; i++) {
+    for (int j = 0; j < Nmodes; j++) {
+      for (int k = 0; k < Nquad; k++) {
         dfloat a1, a2, b;
-        a1 = asbf->Wquad[k]*pow(asbf->Rquad[k], 2)*DTquad[i + k*Ndeg]*DTquad[j + k*Ndeg];
-        a2 = asbf->lambda*asbf->Wquad[k]*pow(asbf->Rquad[k], 2)*Tquad[i + k*Ndeg]*Tquad[j + k*Ndeg];
-        b = asbf->Wquad[k]*Tquad[i + k*Ndeg]*Tquad[j + k*Ndeg];
-        A[i*Ndeg + j] += a1 + a2;
-        B[i*Ndeg + j] += b;
+        a1 = asbf->Wquad[k]*pow(asbf->Rquad[k], 2)*DTquad[i + k*Nmodes]*DTquad[j + k*Nmodes];
+        a2 = asbf->lambda*asbf->Wquad[k]*pow(asbf->Rquad[k], 2)*Tquad[i + k*Nmodes]*Tquad[j + k*Nmodes];
+        b = asbf->Wquad[k]*Tquad[i + k*Nmodes]*Tquad[j + k*Nmodes];
+        A[i*Nmodes + j] += a1 + a2;
+        B[i*Nmodes + j] += b;
       }
     }
   }
 
-  ITYPE = 1;      // Solve Ax = cBx
-  JOBZ = 'V';     // Want both eigenvalues and eigenvectors.
-  UPLO = 'U';     // Assume upper triangular storage for symmetric matrices.
-  N = Ndeg;       // Matrix dimension.
-  LDA = Ndeg;     // Leading dimension of A.
-  LDB = Ndeg;     // Leading dimension of B.
-  LWORK = 4*Ndeg; // Workspace size.  (TODO:  ilaenv() for optimal value?)
+  ITYPE = 1;        // Solve Ax = cBx
+  JOBZ = 'V';       // Want both eigenvalues and eigenvectors.
+  UPLO = 'U';       // Assume upper triangular storage for symmetric matrices.
+  N = Nmodes;       // Matrix dimension.
+  LDA = Nmodes;     // Leading dimension of A.
+  LDB = Nmodes;     // Leading dimension of B.
+  LWORK = 4*Nmodes; // Workspace size.  (TODO:  ilaenv() for optimal value?)
 
   W = (dfloat*) calloc(N, sizeof(dfloat));        // Eigenvalues.
   WORK = (dfloat*) calloc(LWORK, sizeof(dfloat)); // LAPACK workspace.
@@ -249,41 +248,41 @@ static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, F
     printf("Error in DSYGV (INFO = %d).\n", INFO);
 
   // Assign eigenvalues.  (TODO:  Sort them and the modes first?)
-  asbf->eigenvalues = (dfloat*) calloc(Ndeg, sizeof(dfloat));
-  memcpy(asbf->eigenvalues, W, Ndeg*sizeof(dfloat));
+  asbf->eigenvalues = (dfloat*) calloc(Nmodes, sizeof(dfloat));
+  memcpy(asbf->eigenvalues, W, Nmodes*sizeof(dfloat));
 
   // Assemble Vandermonde matrices.
   //
   // NB:  A contains the eigenvectors, stored in column-major order.
-  asbf->Bquad = (dfloat*) calloc(asbf->Nquad*Ndeg, sizeof(dfloat));
-  asbf->DBquad = (dfloat*) calloc(asbf->Nquad*Ndeg, sizeof(dfloat));
-  for (int i = 0; i < asbf->Nquad; i++) {
-    for (int j = 0; j < Ndeg; j++) {
-      for (int k = 0; k < Ndeg; k++) {
-        asbf->Bquad[i*Ndeg + j]  += Tquad[i*Ndeg + k]*A[j*Ndeg + k];
-        asbf->DBquad[i*Ndeg + j] += DTquad[i*Ndeg + k]*A[j*Ndeg + k];
+  asbf->Bquad = (dfloat*) calloc(Nquad*Nmodes, sizeof(dfloat));
+  asbf->DBquad = (dfloat*) calloc(Nquad*Nmodes, sizeof(dfloat));
+  for (int i = 0; i < Nquad; i++) {
+    for (int j = 0; j < Nmodes; j++) {
+      for (int k = 0; k < Nmodes; k++) {
+        asbf->Bquad[i*Nmodes + j]  += Tquad[i*Nmodes + k]*A[j*Nmodes + k];
+        asbf->DBquad[i*Nmodes + j] += DTquad[i*Nmodes + k]*A[j*Nmodes + k];
       }
     }
   }
 
-  asbf->Bgll = (dfloat*) calloc(asbf->Ngll*Ndeg, sizeof(dfloat));
-  asbf->DBgll = (dfloat*) calloc(asbf->Ngll*Ndeg, sizeof(dfloat));
-  for (int i = 0; i < asbf->Ngll; i++) {
-    for (int j = 0; j < Ndeg; j++) {
-      for (int k = 0; k < Ndeg; k++) {
-        asbf->Bgll[i*Ndeg + j]  += Tgll[i*Ndeg + k]*A[j*Ndeg + k];
-        asbf->DBgll[i*Ndeg + j] += DTgll[i*Ndeg + k]*A[j*Ndeg + k];
+  asbf->Bgll = (dfloat*) calloc(Ngll*Nmodes, sizeof(dfloat));
+  asbf->DBgll = (dfloat*) calloc(Ngll*Nmodes, sizeof(dfloat));
+  for (int i = 0; i < Ngll; i++) {
+    for (int j = 0; j < Nmodes; j++) {
+      for (int k = 0; k < Nmodes; k++) {
+        asbf->Bgll[i*Nmodes + j]  += Tgll[i*Nmodes + k]*A[j*Nmodes + k];
+        asbf->DBgll[i*Nmodes + j] += DTgll[i*Nmodes + k]*A[j*Nmodes + k];
       }
     }
   }
 
-  asbf->Bplot = (dfloat*) calloc(asbf->Nplot*Ndeg, sizeof(dfloat));
-  asbf->DBplot = (dfloat*) calloc(asbf->Nplot*Ndeg, sizeof(dfloat));
-  for (int i = 0; i < asbf->Nplot; i++) {
-    for (int j = 0; j < Ndeg; j++) {
-      for (int k = 0; k < Ndeg; k++) {
-        asbf->Bplot[i*Ndeg + j]   += Tplot[i*Ndeg + k]*A[j*Ndeg + k];
-        asbf->DBplot[i*Ndeg + j]  += DTplot[i*Ndeg + k]*A[j*Ndeg + k];
+  asbf->Bplot = (dfloat*) calloc(Nplot*Nmodes, sizeof(dfloat));
+  asbf->DBplot = (dfloat*) calloc(Nplot*Nmodes, sizeof(dfloat));
+  for (int i = 0; i < Nplot; i++) {
+    for (int j = 0; j < Nmodes; j++) {
+      for (int k = 0; k < Nmodes; k++) {
+        asbf->Bplot[i*Nmodes + j]   += Tplot[i*Nmodes + k]*A[j*Nmodes + k];
+        asbf->DBplot[i*Nmodes + j]  += DTplot[i*Nmodes + k]*A[j*Nmodes + k];
       }
     }
   }
