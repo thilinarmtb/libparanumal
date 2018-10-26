@@ -53,6 +53,8 @@ typedef struct {
   int Ngll;   // number of ASBF gll nodes
   int Nplot;  // number of ASBF plotting points
 
+  dfloat R;   // outer radius of shell; must have R > 1.
+
   dfloat *eigenvalues; // generalzied eigenvalues of discrete r^2 weighted 1D Laplacian on [1,1.5]
 
   dfloat *Rquad; // coordinates of ABSF quadrature nodes (start at 1)
