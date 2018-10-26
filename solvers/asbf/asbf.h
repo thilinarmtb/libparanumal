@@ -69,19 +69,14 @@ typedef struct {
   dfloat *DBgll;  // generalized Vandermonde for derivative of ABSF modes evaluated at gll nodes
   dfloat *DBplot; // generalized Vandermonde for derivative of ABSF modes evaluated at plot nodes
   
-  dfloat *r3D;
-  dfloat *q3D;
-  dfloat *f;
+  dfloat *r3D;    // right-hand sides for screened Poisson equation for each mode
+  dfloat *q3D;    // solution to screened Poisson equation for each mode
+  dfloat *f;      // forcing function
   /*********/
-
-  // ASBF SOLVER OCCA VARIABLES
-  dfloat pbar;
-  int Nblock;
-  int frame;
 
   dfloat lambda;      // helmhotz solver -lap(u) + lamda u
 
-  int NiterP;
+  // ASBF SOLVER OCCA VARIABLES
 
   //solver tolerances
   dfloat pTOL;
@@ -91,36 +86,6 @@ typedef struct {
 
   occa::memory o_r;
   occa::memory o_x;
-
-  int *PmapB;
-  occa::memory o_PmapB;
-
-  //halo data
-  dfloat *pSendBuffer;
-  dfloat *pRecvBuffer;
-
-  occa::memory o_pSendBuffer;
-  occa::memory o_pRecvBuffer;
-
-  occa::memory o_plotInterp, o_plotEToV;
-
-  occa::kernel constrainKernel;
-
-  occa::memory o_P;
-  occa::memory o_rhsP;
-
-  occa::memory o_pHaloBuffer;
-
-  occa::kernel pressureHaloExtractKernel;
-  occa::kernel pressureHaloScatterKernel;
-
-  occa::kernel setFlowFieldKernel;
-
-  occa::kernel pressureRhsKernel;
-  occa::kernel pressureRhsIpdgBCKernel;
-  occa::kernel pressureRhsBCKernel;
-  occa::kernel pressureAddBCKernel;
-  // occa::kernel pressureUpdateKernel;
 
   occa::kernel asbfReconstructKernel;
   
