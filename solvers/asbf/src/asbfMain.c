@@ -88,19 +88,16 @@ int main(int argc, char **argv){
 
   asbf_t *asbf = asbfSetup(mesh, lambda, kernelInfo, options);
 
-  // solve for asbf->meshSEM->q
+  // solve for asbf->q3D
   asbfSolve(asbf, options);
 
-  // compute error 
+  // plot solution and compute error 
   if(asbf->elementType==QUADRILATERALS){
-
     char fname[] = "sol";
     asbfPlotVTU3D(asbf, fname, 0);
-    //    ellipticPlotVTUHex3D(asbf->meshSEM, fname, 0);
-    
     asbfErrorHex3D(asbf, asbf->q3D);
   }
-  
+ 
   // close down MPI
   MPI_Finalize();
 
