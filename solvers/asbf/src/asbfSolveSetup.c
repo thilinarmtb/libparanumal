@@ -57,6 +57,8 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
     exit(-1);
   }
 
+  options.getArgs("RADIAL EXPANSION MODES", asbf->Nmodes);
+
   char fname[BUFSIZ];
   sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
 
