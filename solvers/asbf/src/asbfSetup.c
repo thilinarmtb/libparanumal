@@ -28,6 +28,8 @@
 #include "omp.h"
 #include <unistd.h>
 
+static dfloat asbfManufacturedForcingFunction(asbf_t *asbf, dfloat x, dfloat y, dfloat z);
+
 asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setupAide options){
 
   asbf_t *asbf = (asbf_t*) calloc(1, sizeof(asbf_t));
@@ -36,7 +38,6 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
 
   options.getArgs("MESH DIMENSION", asbf->dim);
   options.getArgs("ELEMENT TYPE", asbf->elementType);
-  options.getArgs("RADIAL EXPANSION MODES", asbf->Nmodes);
 
   mesh->Nfields = 1;
 
@@ -78,14 +79,7 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
         dfloat zg = Rg*zbase;
 
         // evaluate rhs at asbf quadrature for each surface node
-        dfloat k1 = 6.283185307179586;
-        dfloat k2 = 18.849555921538759;
-        dfloat k3 = 25.132741228718345;
-        dfloat r = sqrt(xg*xg + yg*yg + zg*zg);
-        asbf->f[g] = (k1 + asbf->lambda/k1)*sin(k1*r)/r
-          + (k2 + asbf->lambda/k2)*sin(k2*r)/r
-          + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
-
+        asbf->f[g] = asbfManufacturedForcingFunction(asbf, xg, yg, zg);
       }
 
       // integrate f against asbf modes
@@ -103,4 +97,26 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
 
 
   return asbf;
+}
+
+/******************************************************************************/
+
+// NB:  This must match asbfManufacturedSolution() in asbfErrorHex3D.c
+static dfloat asbfManufacturedForcingFunction(asbf_t *asbf, dfloat x, dfloat y, dfloat z)
+{
+  dfloat r, theta, phi;
+  dfloat f;
+
+  r     = sqrt(x*x + y*y + z*z);
+  theta = atan2(y, x);
+  phi   = acos(z/r);
+
+  dfloat k1 = 6.283185307179586;
+  dfloat k2 = 18.849555921538759;
+  dfloat k3 = 25.132741228718345;
+  f = (k1 + asbf->lambda/k1)*sin(k1*r)/r
+          + (k2 + asbf->lambda/k2)*sin(k2*r)/r
+          + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
+
+  return f;
 }

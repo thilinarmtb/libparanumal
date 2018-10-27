@@ -1,5 +1,7 @@
 #include "asbf.h"
 
+static void asbfManufacturedSolution(dfloat xg, dfloat yg, dfloat zg, dfloat* q, dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
+
 void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
 
   mesh_t *mesh = asbf->mesh;
@@ -226,19 +228,9 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
           dfloat xg = cubx[m]*rhog;
           dfloat yg = cuby[m]*rhog;
           dfloat zg = cubz[m]*rhog;
-          dfloat rg = sqrt(xg*xg + yg*yg + zg*zg);
 
-          dfloat K1 = 6.283185307179586;
-          dfloat K2 = 18.849555921538759;
-          dfloat K3 = 25.132741228718345;
-          dfloat qE = sin(K1*rg)/(K1*rg) + sin(K2*rg)/(K2*rg) + sin(K3*rg)/(K3*rg);
-          dfloat dqEdrho = cos(K1*rg)/rg - sin(K1*rg)/(K1*rg*rg) // rho is radial
-            + cos(K2*rg)/rg - sin(K2*rg)/(K2*rg*rg)
-            + cos(K3*rg)/rg - sin(K3*rg)/(K3*rg*rg);
-
-          dfloat dqEdx = dqEdrho*xg/rg;
-          dfloat dqEdy = dqEdrho*yg/rg;
-          dfloat dqEdz = dqEdrho*zg/rg;
+          dfloat qE, dqEdx, dqEdy, dqEdz;
+          asbfManufacturedSolution(xg, yg, zg, &qE, &dqEdx, &dqEdy, &dqEdz);
 
           dfloat localH1 = pow(dqEdx-dqdxg, 2) + pow(dqEdy-dqdyg, 2) + pow(dqEdz-dqdzg, 2) + pow(qE-qg, 2);
           dfloat localL2 = pow(qE-qg, 2);
@@ -266,4 +258,28 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
 
   printf("%g, %g %%%% abs H1 error norm, L2 error norm\n", normErrorH1, normErrorL2);
 
+}
+
+/******************************************************************************/
+
+static void asbfManufacturedSolution(dfloat x, dfloat y, dfloat z, dfloat* q, dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
+{
+  dfloat r, theta, phi;
+
+  r     = sqrt(x*x + y*y + z*z);
+  theta = atan2(y, x);
+  phi   = acos(z/r);
+
+  dfloat k1 = 6.283185307179586;
+  dfloat k2 = 18.849555921538759;
+  dfloat k3 = 25.132741228718345;
+  *q = sin(k1*r)/(k1*r) + sin(k2*r)/(k2*r) + sin(k3*r)/(k3*r);
+  dfloat dqdrho = cos(k1*r)/r - sin(k1*r)/(k1*r*r) // rho is radial
+    + cos(k2*r)/r - sin(k2*r)/(k2*r*r)
+    + cos(k3*r)/r - sin(k3*r)/(k3*r*r);
+  *dqdx = dqdrho*x/r;
+  *dqdy = dqdrho*y/r;
+  *dqdz = dqdrho*z/r;
+
+  return;
 }

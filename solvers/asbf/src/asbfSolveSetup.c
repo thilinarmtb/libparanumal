@@ -57,6 +57,8 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
     exit(-1);
   }
 
+  options.getArgs("RADIAL EXPANSION MODES", asbf->Nmodes);
+
   char fname[BUFSIZ];
   sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
 
@@ -131,9 +133,13 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
 
   asbf->meshSEM = NULL;
 
-  if(asbf->elementType==QUADRILATERALS){
-    asbfExtrudeSphere(asbf);
-  }
+  // TODO:  asbfExtrudeSphere needs to be rewritten to remove the assumption
+  // that asbf->Ngll == mesh->Nq.  We don't use asbf->meshSEM for anything
+  // anyway, so disable this for now.
+  //
+  // if(asbf->elementType==QUADRILATERALS){
+  //   asbfExtrudeSphere(asbf);
+  // }
 
   // OKL kernels specific to asbf
   asbf->asbfReconstructKernel =
