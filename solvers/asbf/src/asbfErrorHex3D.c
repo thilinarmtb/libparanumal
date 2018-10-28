@@ -1,6 +1,8 @@
 #include "asbf.h"
 
-static void asbfManufacturedSolution(dfloat xg, dfloat yg, dfloat zg, dfloat* q, dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
+static void asbfManufacturedSolution(asbf_t *asbf,
+                                     dfloat x, dfloat y, dfloat z, dfloat* q,
+                                     dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
 
 void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
 
@@ -230,7 +232,7 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
           dfloat zg = cubz[m]*rhog;
 
           dfloat qE, dqEdx, dqEdy, dqEdz;
-          asbfManufacturedSolution(xg, yg, zg, &qE, &dqEdx, &dqEdy, &dqEdz);
+          asbfManufacturedSolution(asbf, xg, yg, zg, &qE, &dqEdx, &dqEdy, &dqEdz);
 
           dfloat localH1 = pow(dqEdx-dqdxg, 2) + pow(dqEdy-dqdyg, 2) + pow(dqEdz-dqdzg, 2) + pow(qE-qg, 2);
           dfloat localL2 = pow(qE-qg, 2);
@@ -262,7 +264,9 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
 
 /******************************************************************************/
 
-static void asbfManufacturedSolution(dfloat x, dfloat y, dfloat z, dfloat* q, dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
+static void asbfManufacturedSolution(asbf_t *asbf,
+                                     dfloat x, dfloat y, dfloat z, dfloat* q,
+                                     dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
 {
   dfloat r, theta, phi;
 
@@ -270,16 +274,27 @@ static void asbfManufacturedSolution(dfloat x, dfloat y, dfloat z, dfloat* q, df
   theta = atan2(y, x);
   phi   = acos(z/r);
 
+#if 0
   dfloat k1 = 6.283185307179586;
   dfloat k2 = 18.849555921538759;
   dfloat k3 = 25.132741228718345;
   *q = sin(k1*r)/(k1*r) + sin(k2*r)/(k2*r) + sin(k3*r)/(k3*r);
-  dfloat dqdrho = cos(k1*r)/r - sin(k1*r)/(k1*r*r) // rho is radial
+  dfloat dqdr = cos(k1*r)/r - sin(k1*r)/(k1*r*r)
     + cos(k2*r)/r - sin(k2*r)/(k2*r*r)
     + cos(k3*r)/r - sin(k3*r)/(k3*r*r);
-  *dqdx = dqdrho*x/r;
-  *dqdy = dqdrho*y/r;
-  *dqdz = dqdrho*z/r;
+  *dqdx = dqdr*x/r;
+  *dqdy = dqdr*y/r;
+  *dqdz = dqdr*z/r;
+#else
+  dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
+  dfloat r2m1       = pow(r, 2.0) - 1.0;
+  dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(asbf->R, 2.0) - 1.0;
+
+  *q = sin(x)*cos(y)*exp(z)*r2mR2*r2m1;
+  *dqdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1); 
+  *dqdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
+  *dqdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
+#endif
 
   return;
 }

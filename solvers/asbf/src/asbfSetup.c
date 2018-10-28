@@ -111,12 +111,26 @@ static dfloat asbfManufacturedForcingFunction(asbf_t *asbf, dfloat x, dfloat y, 
   theta = atan2(y, x);
   phi   = acos(z/r);
 
+#if 0
+  // NB:  This solution assumes asbf->R == 1.5.
   dfloat k1 = 6.283185307179586;
   dfloat k2 = 18.849555921538759;
   dfloat k3 = 25.132741228718345;
   f = (k1 + asbf->lambda/k1)*sin(k1*r)/r
           + (k2 + asbf->lambda/k2)*sin(k2*r)/r
           + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
+#else
+  dfloat q, d2qdx2, d2qdy2, d2qdz2;
+  dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
+  dfloat r2m1       = pow(r, 2.0) - 1.0;
+  dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(asbf->R, 2.0) - 1.0;
+  
+  q = sin(x)*cos(y)*exp(z)*r2mR2*r2m1;
+  d2qdx2 = cos(y)*exp(z)*((2.0*sin(x) + 4.0*x*cos(x))*twor2mR2m1 + 8.0*x*x*sin(x) - sin(x)*r2mR2*r2m1);
+  d2qdy2 = sin(x)*exp(z)*((2.0*cos(y) - 4.0*y*sin(y))*twor2mR2m1 + 8.0*y*y*cos(y) - cos(y)*r2mR2*r2m1);
+  d2qdz2 = sin(x)*cos(y)*exp(z)*((2.0 + 4.0*z)*twor2mR2m1 + 8.0*z*z + r2mR2*r2m1);
+  f = -d2qdx2 - d2qdy2 - d2qdz2 + asbf->lambda*q;
+#endif
 
   return f;
 }
