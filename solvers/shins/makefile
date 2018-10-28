@@ -29,7 +29,7 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond  -L$(ASBFDIR) -lasbf\
+LIBS	= -L$(ASBFDIR) -lasbf -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
 		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
@@ -115,6 +115,7 @@ LOBJS = \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
+../../src/meshPhysicalNodesTri3D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
 ../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPhysicalNodesTet3D.o \
