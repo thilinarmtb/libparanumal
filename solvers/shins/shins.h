@@ -57,7 +57,7 @@ typedef struct {
   dfloat ubar, vbar, wbar, pbar;
   int NVfields, NTfields;
   dlong fieldOffset;
-  dlong Ntotal;
+  dlong Ntotal, Nlocal;
 
   int Nblock;
 
@@ -98,6 +98,27 @@ typedef struct {
   dfloat *Vort, *Div;
 
   dfloat g[3];      // gravitational Acceleration
+
+
+  // Radial basis stuff
+  int Nmodes, Nquad, Ngll, Nplot;  
+  dfloat R;   // outer radius of shell; must have R > 1.
+
+  dfloat *eigenvalues; // generalzied eigenvalues of discrete r^2 weighted 1D Laplacian on [1,1.5]
+
+  dfloat *Rquad; // coordinates of ABSF quadrature nodes (start at 1)
+  dfloat *Rgll;  // coordinates of ABSF gll nodes (start at 1)
+  dfloat *Rplot; // coordinates of ABSF plot nodes (start at 1)
+  
+  dfloat *Wquad; // weights of ABSF quadrature nodes (include radius^2 factor)
+
+  dfloat *Bquad; // generalized Vandermonde for ABSF modes evaluated at quadrature nodes
+  dfloat *Bgll;  // generalized Vandermonde for ABSF modes evaluated at gll nodes
+  dfloat *Bplot; // generalized Vandermonde for ABSF modes evaluated at plot nodes
+
+  dfloat *DBquad; // generalized Vandermonde for derivative of ABSF modes evaluated at quadrature nodes
+  dfloat *DBgll;  // generalized Vandermonde for derivative of ABSF modes evaluated at gll nodes
+  dfloat *DBplot; // generalized Vandermonde for derivative of ABSF modes evaluated at plot nodes
 
 
   //ARK data

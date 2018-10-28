@@ -116,7 +116,7 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   // bc = 4 -> x-aligned slip
   // bc = 5 -> y-aligned slip
   // bc = 6 -> z-aligned slip
-  int pBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  // int pBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
   //Solver tolerances
   asbf->pTOL = 1E-8;

@@ -2,13 +2,20 @@
 1.0
 
 [DATA FILE]
-data/insBrownMinionQuad3D.h
+data/shinsUniform.h
+#data/insBrownMinionQuad3D.h
 
 [INITIAL CONDITION]
 BROWN-MINION
 
 [SPHERE RADIUS]
 1.0
+
+[OUTER RADIUS]
+1.5
+
+[RADIAL EXPANSION MODES]
+25
 
 [MESH FILE]
 ../../meshes/sphereQuadH01.msh
@@ -51,6 +58,9 @@ COLLOCATION
 0.0
 
 [VBAR]
+0.0
+
+[WBAR]
 0.0
 
 [PBAR]
