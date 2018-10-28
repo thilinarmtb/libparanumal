@@ -93,9 +93,11 @@ int main(int argc, char **argv){
 
   // plot solution and compute error 
   if(asbf->elementType==QUADRILATERALS){
+    dfloat errH1, errL2;
     char fname[] = "sol";
     asbfPlotVTU3D(asbf, fname, 0);
-    asbfErrorHex3D(asbf, asbf->q3D);
+    asbfErrorHex3D(asbf, asbf->q3D, &errH1, &errL2);
+    printf("%g, %g %%%% abs H1 error norm, L2 error norm\n", errH1, errL2);
   }
  
   // close down MPI

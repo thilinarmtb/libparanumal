@@ -99,7 +99,7 @@ int asbfSolve(asbf_t *asbf, setupAide options);
 
 void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo);
 
-void asbfErrorHex3D(asbf_t *asbf, dfloat *q);
+void asbfErrorHex3D(asbf_t *asbf, dfloat *q, dfloat *normErrorL2, dfloat *normErrorH1);
 
 void asbfExtrudeSphere(asbf_t *asbf);
 

@@ -4,12 +4,12 @@ static void asbfManufacturedSolution(asbf_t *asbf,
                                      dfloat x, dfloat y, dfloat z, dfloat* q,
                                      dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
 
-void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
+void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2){
 
   mesh_t *mesh = asbf->mesh;
 
-  dfloat normErrorH1 = 0;
-  dfloat normErrorL2 = 0;
+  *normErrorH1 = 0;
+  *normErrorL2 = 0;
 
 #if 0
   for (int e = 0; e < mesh->Nelements; e++){
@@ -240,8 +240,8 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
           //printf("dqdx = %g,%g - dqdy = %g,%g - dqdz = %g,%g - q = %g,%g - JW = %g\n",
           //       dqEdx, dqdxg, dqEdy, dqdyg, dqEdz, dqdzg, qE, qg, JW);
 
-          normErrorH1 += JW*localH1;
-          normErrorL2 += JW*localL2;
+          *normErrorH1 += JW*localH1;
+          *normErrorL2 += JW*localL2;
 
         }
       }
@@ -253,13 +253,8 @@ void asbfErrorHex3D(asbf_t *asbf, dfloat *q3D){
 
 #endif
 
-
-
-  normErrorH1 = sqrt(normErrorH1);
-  normErrorL2 = sqrt(normErrorL2);
-
-  printf("%g, %g %%%% abs H1 error norm, L2 error norm\n", normErrorH1, normErrorL2);
-
+  *normErrorH1 = sqrt(*normErrorH1);
+  *normErrorL2 = sqrt(*normErrorL2);
 }
 
 /******************************************************************************/
