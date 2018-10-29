@@ -359,40 +359,38 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   shins->uSolver->options = shins->vOptions;
   shins->uSolver->dim = shins->dim;
   shins->uSolver->elementType = shins->elementType;
-  shins->uSolver->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(shins->uSolver->BCType,uBCType,7*sizeof(int));
+  // This needs to be fixed!!!!!!!!!!!!!! define bcType on asbf
+  // shins->uSolver->BCType = (int*) calloc(7,sizeof(int));
+  // memcpy(shins->uSolver->BCType,uBCType,7*sizeof(int));
   asbfSolveSetup(shins->uSolver, shins->lambda, kernelInfoV); 
 
-#if 0
-  shins->vSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  shins->vSolver = (asbf_t*) calloc(1, sizeof(asbf_t));
   shins->vSolver->mesh = mesh;
   shins->vSolver->options = shins->vOptions;
   shins->vSolver->dim = shins->dim;
   shins->vSolver->elementType = shins->elementType;
-  shins->vSolver->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(shins->vSolver->BCType,vBCType,7*sizeof(int));
-  ellipticSolveSetup(shins->vSolver, shins->lambda, kernelInfoV); //!!!!!
+  // shins->vSolver->BCType = (int*) calloc(7,sizeof(int));
+  // memcpy(shins->vSolver->BCType,vBCType,7*sizeof(int));
+  asbfSolveSetup(shins->vSolver, shins->lambda, kernelInfoV); //!!!!!
 
-  if (shins->dim==3) {
-    shins->wSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-    shins->wSolver->mesh = mesh;
-    shins->wSolver->options = shins->vOptions;
-    shins->wSolver->dim = shins->dim;
-    shins->wSolver->elementType = shins->elementType;
-    shins->wSolver->BCType = (int*) calloc(7,sizeof(int));
-    memcpy(shins->wSolver->BCType,wBCType,7*sizeof(int));
-    ellipticSolveSetup(shins->wSolver, shins->lambda, kernelInfoV);  //!!!!! 
-  }
+  shins->wSolver = (asbf_t*) calloc(1, sizeof(asbf_t));
+  shins->wSolver->mesh = mesh;
+  shins->wSolver->options = shins->vOptions;
+  shins->wSolver->dim = shins->dim;
+  shins->wSolver->elementType = shins->elementType;
+  // shins->wSolver->BCType = (int*) calloc(7,sizeof(int));
+  // memcpy(shins->wSolver->BCType,wBCType,7*sizeof(int));
+  asbfSolveSetup(shins->wSolver, shins->lambda, kernelInfoV);  //!!!!! 
   
   if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
-  shins->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  shins->pSolver = (asbf_t*) calloc(1, sizeof(asbf_t));
   shins->pSolver->mesh = mesh;
   shins->pSolver->options = shins->pOptions;
   shins->pSolver->dim = shins->dim;
   shins->pSolver->elementType = shins->elementType;
-  shins->pSolver->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(shins->pSolver->BCType,pBCType,7*sizeof(int));
-  ellipticSolveSetup(shins->pSolver, 0.0, kernelInfoP); //!!!!
+  // shins->pSolver->BCType = (int*) calloc(7,sizeof(int));
+  // memcpy(shins->pSolver->BCType,pBCType,7*sizeof(int));
+  asbfSolveSetup(shins->pSolver, 0.0, kernelInfoP); //!!!!
 
 
   //make node-wise boundary flags
@@ -423,6 +421,25 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   shins->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), shins->VmapB);
   shins->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), shins->PmapB);
 
+  // Now define Radial Basis Operators // Copying from asbf needed to be moved to meshSetup I think AK.
+  shins->Nquad = shins->uSolver->Nquad;  
+  shins->Ngll  = shins->uSolver->Ngll;   
+  shins->Nplot = shins->uSolver->Nplot;  
+  shins->Rquad = shins->uSolver->Rquad; 
+  shins->Rgll  = shins->uSolver->Rgll;  
+  shins->Rplot = shins->uSolver->Rplot; 
+  
+  shins->Wquad = shins->uSolver->Wquad; 
+
+  shins->Bquad = shins->uSolver->Bquad; 
+  shins->Bgll  = shins->uSolver->Bgll;  
+  shins->Bplot = shins->uSolver->Bplot; 
+
+  shins->DBquad= shins->uSolver->DBquad; 
+  shins->DBgll = shins->uSolver->DBgll;  
+  shins->DBplot= shins->uSolver->DBplot; 
+
+  
 
   kernelInfo["defines/" "p_blockSize"]= blockSize;
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
@@ -454,39 +471,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   kernelInfo["defines/" "p_cubNblockS"]=cubNblockS;
 
   
-  // IsoSurface related
-  if(ins->dim==3 && ins->elementType != QUADRILATERALS ){
-    kernelInfo["defines/" "p_isoNfields"]= ins->isoNfields;
-    // Define Isosurface Area Tolerance
-    kernelInfo["defines/" "p_triAreaTol"]= (dfloat) 1.0E-16;
-
-    kernelInfo["defines/" "p_dim"]= ins->dim;
-    kernelInfo["defines/" "p_plotNp"]= mesh->plotNp;
-    kernelInfo["defines/" "p_plotNelements"]= mesh->plotNelements;
-    
-    int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
-    kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
- } 
-
-
-
-
-
-  // if (mesh->rank==0) {
-  //   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
-  //   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
-
-  //   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
-  // }
   
-  if (options.compareArgs("TIME INTEGRATOR", "ARK")) {
-    ins->o_rkC  = mesh->device.malloc(         ins->Nrk*sizeof(dfloat),ins->rkC );
-    ins->o_erkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->erkA);
-    ins->o_irkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->irkA);
-    ins->o_prkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkA);
-    ins->o_prkB = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkB);
-  }
-
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
     dfloat rkC[4] = {1.0, 0.0, -1.0, -2.0};
 
@@ -501,6 +486,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     ins->o_prkB = ins->o_extbdfC;
   }
 
+#if 0
   // MEMORY ALLOCATION
   ins->o_rhsU  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsU);
   ins->o_rhsV  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsV);
