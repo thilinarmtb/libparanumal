@@ -116,7 +116,7 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   // bc = 4 -> x-aligned slip
   // bc = 5 -> y-aligned slip
   // bc = 6 -> z-aligned slip
-  int pBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  //int pBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
   //Solver tolerances
   asbf->pTOL = 1E-8;
@@ -126,8 +126,9 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   asbf->elliptic->options = asbf->options;
   asbf->elliptic->dim = asbf->dim;
   asbf->elliptic->elementType = asbf->elementType;
-  asbf->elliptic->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(asbf->elliptic->BCType,pBCType,7*sizeof(int));
+
+  // Elliptic BCType flags should be all zero for spherical problem.
+  asbf->elliptic->BCType = (int*)calloc(7, sizeof(int));
 
   ellipticSolveSetup(asbf->elliptic, asbf->lambda, kernelInfoP);
 
@@ -189,34 +190,55 @@ static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, F
   Ngll   = asbf->Ngll;
   Nplot  = asbf->Nplot;
 
-  readDfloatArray(fp, "ASBF INITIAL BASIS QUADRATURE VANDERMONDE",
-    &Tquad, &Nrows, &Ncols);
-  readDfloatArray(fp, "ASBF INITIAL BASIS QUADRATURE DERIVATIVE VANDERMONDE",
-    &DTquad, &Nrows, &Ncols);
-  readDfloatArray(fp, "ASBF INITIAL BASIS GLL VANDERMONDE",
-    &Tgll, &Nrows, &Ncols);
-  readDfloatArray(fp, "ASBF INITIAL BASIS GLL DERIVATIVE VANDERMONDE",
-    &DTgll, &Nrows, &Ncols);
-  readDfloatArray(fp, "ASBF INITIAL BASIS PLOT VANDERMONDE",
-    &Tplot, &Nrows, &Ncols);
-  readDfloatArray(fp, "ASBF INITIAL BASIS PLOT DERIVATIVE VANDERMONDE",
-    &DTplot, &Nrows, &Ncols);
+  if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+    // Dirichlet BCs on both spheres.
+    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE VANDERMONDE",
+        &Tquad, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE DERIVATIVE VANDERMONDE",
+        &DTquad, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET GLL VANDERMONDE",
+        &Tgll, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET GLL DERIVATIVE VANDERMONDE",
+        &DTgll, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET PLOT VANDERMONDE",
+        &Tplot, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET PLOT DERIVATIVE VANDERMONDE",
+        &DTplot, &Nrows, &Ncols);
+
+    C1 = pow((asbf->R - 1)/2, 2);
+    C2 = (asbf->R - 1)/2;
+  } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+    // Neumann BCs on both spheres.
+    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN QUADRATURE VANDERMONDE",
+        &Tquad, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN QUADRATURE DERIVATIVE VANDERMONDE",
+        &DTquad, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN GLL VANDERMONDE",
+        &Tgll, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN GLL DERIVATIVE VANDERMONDE",
+        &DTgll, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN PLOT VANDERMONDE",
+        &Tplot, &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN PLOT DERIVATIVE VANDERMONDE",
+        &DTplot, &Nrows, &Ncols);
+
+    C1 = pow((asbf->R - 1), 3)/8;
+    C2 = pow((asbf->R - 1)/2, 2);
+  } else {
+    printf("Type-{%d, %d} boundary conditions not implmented.\n", 
+           asbf->BCType[1], asbf->BCType[2]);
+    exit(-1);
+  }
 
   // Scale initial basis matrices from [-1, 1] to [1, R].
-  //
-  // TODO:  We need to scale DTxxx, but do we need to scale Txxx too?
-  // TODO:  The C1 scaling only applies for Dirichlet conditions.
-  C1 = pow((asbf->R - 1)/2, 2);
-  C2 = (asbf->R - 1)/2;
-
   for (int i = 0; i < Nquad*Nmodes; i++) {
       Tquad[i] *= C1;
       DTquad[i] *= C2;
   }
 
   for (int i = 0; i < Ngll*Nmodes; i++) {
-      Tgll[i]  *= C1;
-      DTgll[i]  *= C2;
+      Tgll[i] *= C1;
+      DTgll[i] *= C2;
   }
 
   for (int i = 0; i < Nplot*Nmodes; i++) {
@@ -259,6 +281,8 @@ static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, F
   // Assign eigenvalues.  (TODO:  Sort them and the modes first?)
   asbf->eigenvalues = (dfloat*) calloc(Nmodes, sizeof(dfloat));
   memcpy(asbf->eigenvalues, W, Nmodes*sizeof(dfloat));
+
+  // TODO:  Explicitly normalize the eigenfunctions?
 
   // Assemble Vandermonde matrices.
   //

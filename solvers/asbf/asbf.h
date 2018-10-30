@@ -74,6 +74,10 @@ typedef struct {
   dfloat *r3D;    // right-hand sides for screened Poisson equation for each mode
   dfloat *q3D;    // solution to screened Poisson equation for each mode
   dfloat *f;      // forcing function
+
+  // Boundary conditions:  three integers {0, BCInner, BCOuter}.  Set BCInner
+  // and BCOuter to 1 or 2 for Dirichlet or Neumann conditions, respectively.
+  int *BCType;
   /*********/
 
   dfloat lambda;      // helmhotz solver -lap(u) + lamda u

@@ -1,0 +1,163 @@
+[FORMAT]
+1.0
+
+[DATA FILE]
+data/insBrownMinionQuad3D.h
+
+[INITIAL CONDITION]
+BROWN-MINION
+
+[SPHERE RADIUS]
+1.0
+
+[OUTER RADIUS]
+1.5
+
+[LAMBDA]
+1.0
+
+[MESH FILE]
+../../meshes/sphereQuadH02.msh 
+#../../meshes/insVortexQuad2D.msh
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+4
+
+[POLYNOMIAL DEGREE]
+12
+
+[RADIAL EXPANSION MODES]
+12
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+# can be EXTBDF1,2, or 3
+# can add SUBCYCLING to EXTBDF
+[TIME INTEGRATOR]
+#ARK2
+EXTBDF2
+
+[SUBCYCLING STEPS]
+0
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+#COLLOCATION
+CUBATURE
+
+[VISCOSITY]
+0.0002
+
+[UBAR]
+0.0
+
+[VBAR]
+0.0
+
+[PBAR]
+0.0
+
+[TSTEPS FOR SOLUTION OUTPUT]
+1127
+
+[START TIME]
+0
+
+[FINAL TIME]
+10
+
+[CFL]
+0.2
+
+[OUTPUT TYPE]
+#VTU
+PPM
+
+[RESTART FROM FILE]
+0
+
+[OUTPUT FILE NAME]
+fence
+
+#################################################
+########## Pressure Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[KRYLOV SOLVER]
+PCG,FLEXIBLE
+
+# can be IPDG, or CONTINUOUS
+[DISCRETIZATION]
+#IPDG
+CONTINUOUS
+
+# can be NODAL or BERN
+[BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[PRECONDITIONER]
+MULTIGRID
+#JACOBI
+#SEMFEM
+#FULLALMOND
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[PARALMOND PARTITION]
+STRONGNODES
+
+[PARALMOND CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+# compare to a reference solution. Use NONE to skip comparison
+# can be VORTEX or KOVASZNAY
+[EXACT]
+NONE
+
+[VERBOSE]
+TRUE
+#FALSE
+
+[OUTPUT FILE FORMAT]
+PPM
