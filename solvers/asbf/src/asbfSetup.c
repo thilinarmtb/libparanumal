@@ -59,8 +59,8 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
   //   BCType[2] = Radial BC at outer sphere.
   // Set to 1 for Dirichlet, 2 for Neumann.
   asbf->BCType = (int*)calloc(3, sizeof(int));
-  asbf->BCType[1] = 1;
-  asbf->BCType[2] = 1;
+  asbf->BCType[1] = 2;
+  asbf->BCType[2] = 2;
 
   asbfSolveSetup(asbf, lambda, kernelInfo);
 
@@ -122,15 +122,15 @@ static dfloat asbfManufacturedForcingFunction(asbf_t *asbf, dfloat x, dfloat y, 
 
 #if 0
   // NB:  This solution assumes asbf->R == 1.5.
-  // Appropriate BCs:  Dirichlet
+  // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat k1 = 6.283185307179586;
   dfloat k2 = 18.849555921538759;
   dfloat k3 = 25.132741228718345;
   f = (k1 + asbf->lambda/k1)*sin(k1*r)/r
           + (k2 + asbf->lambda/k2)*sin(k2*r)/r
           + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
-#else
-  // Appropriate BCs:  Dirichlet
+#elif 0
+  // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat q, d2qdx2, d2qdy2, d2qdz2;
   dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
   dfloat r2m1       = pow(r, 2.0) - 1.0;
@@ -141,6 +141,51 @@ static dfloat asbfManufacturedForcingFunction(asbf_t *asbf, dfloat x, dfloat y, 
   d2qdy2 = sin(x)*exp(z)*((2.0*cos(y) - 4.0*y*sin(y))*twor2mR2m1 + 8.0*y*y*cos(y) - cos(y)*r2mR2*r2m1);
   d2qdz2 = sin(x)*cos(y)*exp(z)*((2.0 + 4.0*z)*twor2mR2m1 + 8.0*z*z + r2mR2*r2m1);
   f = -d2qdx2 - d2qdy2 - d2qdz2 + asbf->lambda*q;
+#else
+  // Appropriate BCs:  Neumann-Neumann
+  dfloat q, dqdr, d2qdr2, dqdphi, d2qdphi2, d2qdtheta2;
+  dfloat lapq, lapqr, lapqtheta, lapqphi;
+  dfloat p, dpdr, d2pdr2;
+  dfloat s, dsdphi, d2sdphi2;
+
+  p = r*(pow(r, 2.0)/3.0 - ((1.0 + asbf->R)/2.0)*r + asbf->R);
+  dpdr = (1.0 - r)*(asbf->R - r);
+  d2pdr2 = 2.0*r - (1.0 + asbf->R);
+
+  s = pow(phi, 2.0)*pow(phi - M_PI, 2.0);
+  dsdphi = 2.0*phi*(phi - M_PI)*(2.0*phi - M_PI);
+  d2sdphi2 = 12.0*pow(phi, 2.0) - 12.0*M_PI*phi + 2.0*M_PI*M_PI;
+
+  q = sin(theta)*s*p;
+  dqdr = sin(theta)*s*dpdr;
+  d2qdr2 = sin(theta)*s*d2pdr2;
+  d2qdtheta2 = -sin(theta)*s*p;
+  dqdphi = sin(theta)*dsdphi*p;
+  d2qdphi2 = sin(theta)*d2sdphi2*p;
+
+  lapqr = d2qdr2 + (2.0/r)*dqdr;
+  lapqphi = (1.0/pow(r, 2.0))*d2qdphi2;
+
+  if (fabs(phi) < 1.0e-13) {
+    // Use series near 0.
+    lapqtheta = -(sin(theta)*p/pow(r, 2.0))*(M_PI*M_PI - 2.0*M_PI*phi + (1.0 + M_PI*M_PI/3.0)*pow(phi, 2.0));
+    lapqphi += (sin(theta)*cos(phi)*p/pow(r, 2.0))*(2.0*M_PI*M_PI - 6.0*M_PI*phi + (4.0 + M_PI*M_PI/3.0)*pow(phi, 2.0));
+  } else if (fabs(phi - M_PI) < 1.0e-13) {
+    // Use series near pi.
+    //
+    // TODO:  We get cancellation error here.  Do we care?
+    dfloat h = phi - M_PI;
+    lapqtheta = -(sin(theta)*p/pow(r, 2.0))*(M_PI*M_PI - 2.0*M_PI*h + (1.0 + M_PI*M_PI/3.0)*pow(h, 2.0));
+    lapqphi += (sin(theta)*cos(phi)*p/pow(r, 2.0))*(-2.0*M_PI*M_PI - 6.0*M_PI*h - (4.0 + M_PI*M_PI/3.0)*pow(h, 2.0));
+  } else {
+    // We're away from the singularities, so the usual formulae apply.
+    lapqtheta = d2qdtheta2/(pow(r, 2.0)*pow(sin(phi), 2.0));
+    lapqphi += (cos(phi)/(pow(r, 2.0)*sin(phi)))*dqdphi;
+  }
+
+  lapq = lapqr + lapqtheta + lapqphi;
+
+  f = -lapq + asbf->lambda*q;
 #endif
 
   return f;

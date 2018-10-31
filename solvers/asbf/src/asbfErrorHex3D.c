@@ -264,12 +264,29 @@ static void asbfManufacturedSolution(asbf_t *asbf,
                                      dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
 {
   dfloat r, theta, phi;
+  dfloat drdx, drdy, drdz;
+  dfloat dthetadx, dthetady, dthetadz;
+  dfloat dphidx, dphidy, dphidz;
 
   r     = sqrt(x*x + y*y + z*z);
   theta = atan2(y, x);
   phi   = acos(z/r);
 
+  drdx = cos(theta)*sin(phi);
+  drdy = sin(theta)*sin(phi);
+  drdz = cos(phi);
+
+  dthetadx = -sin(theta)/(r*sin(phi));
+  dthetady = cos(theta)/(r*sin(phi));
+  dthetadz = 0;
+
+  dphidx = cos(theta)*cos(phi)/r;
+  dphidy = sin(theta)*cos(phi)/r;
+  dphidz = -sin(phi)/r;
+
 #if 0
+  // NB:  This solution assumes asbf->R == 1.5.
+  // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat k1 = 6.283185307179586;
   dfloat k2 = 18.849555921538759;
   dfloat k3 = 25.132741228718345;
@@ -280,7 +297,8 @@ static void asbfManufacturedSolution(asbf_t *asbf,
   *dqdx = dqdr*x/r;
   *dqdy = dqdr*y/r;
   *dqdz = dqdr*z/r;
-#else
+#elif 0
+  // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
   dfloat r2m1       = pow(r, 2.0) - 1.0;
   dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(asbf->R, 2.0) - 1.0;
@@ -289,6 +307,44 @@ static void asbfManufacturedSolution(asbf_t *asbf,
   *dqdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1); 
   *dqdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
   *dqdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
+#else
+  // Appropriate BCs:  Neumann-Neumann
+  dfloat dqdr, dqdtheta, dqdphi;
+  dfloat dqdthetadthetadx, dqdthetadthetady;
+  dfloat p, dpdr, s, dsdphi;
+
+  p = r*(pow(r, 2.0)/3.0 - ((1.0 + asbf->R)/2.0)*r + asbf->R);
+  dpdr = (1.0 - r)*(asbf->R - r);
+
+  s = pow(phi, 2.0)*pow(phi - M_PI, 2.0);
+  dsdphi = 2.0*phi*(phi - M_PI)*(2.0*phi - M_PI);
+
+  *q = sin(theta)*s*p;
+
+  dqdr = sin(theta)*s*dpdr;
+  dqdtheta = cos(theta)*s*p;
+  dqdphi = sin(theta)*dsdphi*p;
+
+  if (fabs(phi) < 1.0e-13) {
+    // Use series near 0.
+    dqdthetadthetadx = -(sin(theta)*cos(theta)*p/r)*(M_PI*M_PI*phi - 2*M_PI*phi*phi);
+    dqdthetadthetady = (cos(theta)*cos(theta)*p/r)*(M_PI*M_PI*phi - 2*M_PI*phi*phi);
+  } else if (fabs(phi - M_PI) < 1.0e-13) {
+    // Use series near pi.
+    //
+    // TODO:  We get cancellation error here.  Do we care?
+    dfloat h = phi - M_PI;
+    dqdthetadthetadx = -(sin(theta)*cos(theta)*p/r)*(-M_PI*M_PI*h - 2*M_PI*h*h);
+    dqdthetadthetady = (cos(theta)*cos(theta)*p/r)*(-M_PI*M_PI*h - 2*M_PI*h*h);
+  } else {
+    // We're away from the singularites, so the usual formulae apply.
+    dqdthetadthetadx = dqdtheta*dthetadx;
+    dqdthetadthetady = dqdtheta*dthetady;
+  }
+
+  *dqdx = dqdr*drdx + dqdthetadthetadx + dqdphi*dphidx;
+  *dqdy = dqdr*drdy + dqdthetadthetady + dqdphi*dphidy;
+  *dqdz = dqdr*drdz + dqdphi*dphidz;
 #endif
 
   return;
