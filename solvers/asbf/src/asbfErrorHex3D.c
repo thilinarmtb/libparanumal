@@ -307,7 +307,7 @@ static void asbfManufacturedSolution(asbf_t *asbf,
   *dqdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1); 
   *dqdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
   *dqdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
-#else
+#elif 0
   // Appropriate BCs:  Neumann-Neumann
   dfloat dqdr, dqdtheta, dqdphi;
   dfloat dqdthetadthetadx, dqdthetadthetady;
@@ -338,6 +338,37 @@ static void asbfManufacturedSolution(asbf_t *asbf,
     dqdthetadthetady = (cos(theta)*cos(theta)*p/r)*(-M_PI*M_PI*h - 2*M_PI*h*h);
   } else {
     // We're away from the singularites, so the usual formulae apply.
+    dqdthetadthetadx = dqdtheta*dthetadx;
+    dqdthetadthetady = dqdtheta*dthetady;
+  }
+
+  *dqdx = dqdr*drdx + dqdthetadthetadx + dqdphi*dphidx;
+  *dqdy = dqdr*drdy + dqdthetadthetady + dqdphi*dphidy;
+  *dqdz = dqdr*drdz + dqdphi*dphidz;
+#else
+  // NB:  This solution may only work for asbf->R not too much bigger than 1.
+  // Appropriate BCs:  Neumann-Neumann
+  dfloat dqdr, dqdtheta, dqdphi;
+  dfloat dqdthetadthetadx, dqdthetadthetady;
+  dfloat p, dpdr, s, dsdphi;
+
+  p = r*(pow(r, 2.0)/3.0 - ((1.0 + asbf->R)/2.0)*r + asbf->R);
+  dpdr = (1.0 - r)*(asbf->R - r);
+
+  s = pow(phi, 3.0)*pow(phi - M_PI, 3.0);
+  dsdphi = 3.0*pow(phi, 2.0)*pow(phi - M_PI, 2.0)*(2.0*phi - M_PI);
+
+  *q = sin(theta)*s*p;
+
+  dqdr = sin(theta)*s*dpdr;
+  dqdtheta = cos(theta)*s*p;
+  dqdphi = sin(theta)*dsdphi*p;
+
+  if ((fabs(phi) < 1.0e-13) || (fabs(phi - M_PI) < 1.0e-13)) {
+    // Near poles, the Laplacian is approximately zero.
+    dqdthetadthetadx = 0;
+    dqdthetadthetady = 0;
+  } else {
     dqdthetadthetadx = dqdtheta*dthetadx;
     dqdthetadthetady = dqdtheta*dthetady;
   }
