@@ -39,6 +39,15 @@ void insRunEXTBDF(ins_t *ins){
   dfloat oldDt = ins->dt;
   ins->dt *= 100;
 
+  dfloat totalTime           = 0.f; 
+  dfloat totalTimeStart      = 0.f; 
+  dfloat velocityTime        = 0.f; 
+  dfloat velocityTimeStart   = 0.f;
+  dfloat velocityRhsTime     = 0.f;
+
+
+  totalTimeStart   = MPI_Wtime(); 
+
   if (mesh->rank==0) printf("Number of Timesteps: %d\n", ins->NtimeSteps);
   // for(int tstep=0;tstep<NstokesSteps;++tstep){
   //   if(tstep<1) 
@@ -94,7 +103,8 @@ void insRunEXTBDF(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
-  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  // for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<1000;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 
@@ -121,12 +131,18 @@ void insRunEXTBDF(ins_t *ins){
     }
 
     insGradient (ins, time, ins->o_P, ins->o_GP);
-    
+
+
+    velocityTimeStart   = MPI_Wtime();
     for(int v = 0; v<ins->NVfields; v++){
       const int velId = v; 
+      dfloat velocityRhsStart = MPI_Wtime();
       insVelocityRhs(ins, time+ins->dt, ins->Nstages, velId);
+      velocityRhsTime += (MPI_Wtime() - velocityRhsStart);
       insVelocitySolve(ins, time+ins->dt, ins->Nstages, velId, ins->o_rkU);
     }
+
+    velocityTime   += (MPI_Wtime() -velocityTimeStart );
 
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
@@ -231,7 +247,9 @@ void insRunEXTBDF(ins_t *ins){
   }
   occaTimerToc(mesh->device,"INS");
 
+  totalTime   = MPI_Wtime() - totalTimeStart; 
 
+  printf("%.4e %.4e %.4e \n", totalTime, velocityTime, velocityRhsTime);
   dfloat finalTime = ins->NtimeSteps*ins->dt;
   printf("\n");
 

@@ -35,6 +35,29 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
+#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
+{                                   \
+  if(bc==1){                        \
+    *(uB) = 0.f;                    \
+    *(vB) = 0.f;                    \
+  } else if(bc==2){                 \
+    *(uB) = p_ubar;                 \
+    *(vB) = p_vbar;                 \
+  } else if(bc==3){                 \
+    *(uB) = uM;                     \
+    *(vB) = vM;                     \
+  } else if(bc==4){                 \
+    *(uB) = 0.f;                    \
+    *(vB) = vM;                     \
+  } else if(bc==5){                 \
+    *(uB) = uM;                     \
+    *(vB) = 0.f;                    \
+  }                                 \
+}
+
+
+// Boundary conditions
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
 #define insXVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, uB) \
 {                                   \
   if(bc==1){                        \

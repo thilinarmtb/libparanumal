@@ -118,5 +118,5 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage, int velId, occa::memor
   }
 
   //copy into intermediate stage storage
-  ins->o_UH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),0*ins->fieldOffset*sizeof(dfloat),0);
+  ins->o_UH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),velId*ins->fieldOffset*sizeof(dfloat),0);
 }

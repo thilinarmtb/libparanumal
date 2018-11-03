@@ -82,7 +82,7 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
 
   // gather-scatter
   if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
+    ogsGatherScatter(ins->o_rhsTmp, ogsDfloat, ogsAdd, mesh->ogs);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsTmp);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
   }
