@@ -42,8 +42,8 @@ extern "C"
               int    *INFO);
 }
 
-static void asbfScaleNodesAndWeights(asbf_t *asbf);
-static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, FILE *fp);
+static void asbfLoadRadialBasisTrue(asbf_t *asbf, FILE *fp);
+static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp);
 
 void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
 {
@@ -68,19 +68,14 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
     exit(-1);
   }
 
-  int Nrows, Ncols;
-
-  readDfloatArray(fp, "ASBF QUADRATURE NODES",
-      &(asbf->Rquad),&(asbf->Nquad), &Ncols);
-  readDfloatArray(fp, "ASBF QUADRATURE WEIGHTS",
-      &(asbf->Wquad),&(asbf->Nquad), &Ncols);
-  readDfloatArray(fp, "ASBF GLL NODES",
-      &(asbf->Rgll),&(asbf->Ngll), &Ncols);
-  readDfloatArray(fp, "ASBF PLOT NODES",
-      &(asbf->Rplot),&(asbf->Nplot), &Ncols);
-
-  asbfScaleNodesAndWeights(asbf);
-  asbfAssembleRadialVandermondeMatrices(asbf, lambda, fp);
+  if (options.compareArgs("RADIAL BASIS TYPE", "TRUE")) {
+    asbfLoadRadialBasisTrue(asbf, fp);
+  } else if (options.compareArgs("RADIAL BASIS TYPE", "DISCRETE")) {
+    asbfLoadRadialBasisDiscrete(asbf, fp);
+  } else {
+    printf("ERROR:  Unrecognized value for option ASBF BASIS.\n");
+    exit(-1);
+  }
 
   // Put the r^2 factor into the quadrature weights.
   //
@@ -149,29 +144,71 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
         kernelInfo);
 }
 
-
 /*****************************************************************************/
 
-// Scale node sets and quadrature weights from [-1, 1] to [1, R].
-static void asbfScaleNodesAndWeights(asbf_t *asbf)
+static void asbfLoadRadialBasisTrue(asbf_t *asbf, FILE *fp)
 {
-  for (int i = 0; i < asbf->Nquad; i++) {
-    asbf->Rquad[i] = (1 + asbf->Rquad[i])*((asbf->R - 1)/2) + 1;
-    asbf->Wquad[i] = asbf->Wquad[i]*(asbf->R - 1)/2;
+  dfloat *basisR, *basisLambda;    // Values of R, lambda for the cached basis.
+  int Nrows, Ncols;                // Needed by readDfloatArray().
+
+  readDfloatArray(fp, "ASBF TRUE R",
+      &basisR, &Nrows, &Ncols);
+  readDfloatArray(fp, "ASBF TRUE LAMBDA",
+      &basisLambda, &Ncols, &Ncols);
+
+  // Make sure the parameters match those corresponding to the cached basis.
+  //
+  // TODO:  These checks might need tolerances to avoid floating-point issues.
+  if ((asbf->lambda != *basisLambda) || (asbf->R != *basisR)) {
+    printf("ERROR:  Basis R = %f, lambda = %f; got R = %f, lambda = %f.\n",
+           *basisR, *basisLambda, asbf->R, asbf->lambda);
+    printf("Please recompute the true eigenfunction basis.");
+    exit(-1);
   }
 
-  for (int i = 0; i < asbf->Ngll; i++)
-    asbf->Rgll[i] = (1 + asbf->Rgll[i])*((asbf->R - 1)/2) + 1;
-  for (int i = 0; i < asbf->Nplot; i++)
-    asbf->Rplot[i] = (1 + asbf->Rplot[i])*((asbf->R - 1)/2) + 1;
+  // Load the basis data.
+  if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+    // Dirichlet BCs on both spheres.
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET QUADRATURE NODES",
+        &(asbf->Rquad), &(asbf->Nquad), &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET QUADRATURE WEIGHTS",
+        &(asbf->Wquad), &(asbf->Nquad), &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET GLL NODES",
+        &(asbf->Rgll), &(asbf->Ngll), &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET PLOT NODES",
+        &(asbf->Rplot), &(asbf->Nplot), &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET EIGENVALUES",
+        &(asbf->eigenvalues), &(asbf->Nmodes), &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET QUADRATURE VANDERMONDE",
+        &(asbf->Bquad), &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET QUADRATURE DERIVATIVE VANDERMONDE",
+        &(asbf->DBquad), &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET GLL VANDERMONDE",
+        &(asbf->Bgll), &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET GLL DERIVATIVE VANDERMONDE",
+        &(asbf->DBgll), &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET PLOT VANDERMONDE",
+        &(asbf->Bplot), &Nrows, &Ncols);
+    readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET PLOT DERIVATIVE VANDERMONDE",
+        &(asbf->DBplot), &Nrows, &Ncols);
+  } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+    // Neumann BCs on both spheres.
+    printf("Neumann-Neumann boundary conditions not implemented.\n");
+    exit(-1);
+  } else {
+    printf("Type-{%d, %d} boundary conditions not implmented.\n", 
+           asbf->BCType[1], asbf->BCType[2]);
+    exit(-1);
+  }
+
+  // We're done. Clean up.
+  free(basisR);
+  free(basisLambda);
 }
 
 // Compute the Vandermonde matrices for the radial basis functions and their
-// derivatives over the various node sets.  This must be called AFTER the node
-// sets have been read from the setup file and scaled into [1, R].
-//
-// TODO:  Neumann boundary conditions.
-static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, FILE *fp)
+// derivatives over the various node sets.
+static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp)
 {
   dfloat *Tquad, *Tgll, *Tplot;    // Initial basis Vandermonde matrices.
   dfloat *DTquad, *DTgll, *DTplot; // Initial basis derivative Vandermondes.
@@ -185,41 +222,63 @@ static void asbfAssembleRadialVandermondeMatrices(asbf_t *asbf, dfloat lambda, F
   char JOBZ, UPLO;
   dfloat *W, *WORK;
 
+  // Load the various node sets and quadrature weights.
+  readDfloatArray(fp, "ASBF DISCRETE QUADRATURE NODES",
+      &(asbf->Rquad),&(asbf->Nquad), &Ncols);
+  readDfloatArray(fp, "ASBF DISCRETE QUADRATURE WEIGHTS",
+      &(asbf->Wquad),&(asbf->Nquad), &Ncols);
+  readDfloatArray(fp, "ASBF DISCRETE GLL NODES",
+      &(asbf->Rgll),&(asbf->Ngll), &Ncols);
+  readDfloatArray(fp, "ASBF DISCRETE PLOT NODES",
+      &(asbf->Rplot),&(asbf->Nplot), &Ncols);
+
+  // Scale nodes and weights from [-1, 1] to [1 R].
+  for (int i = 0; i < asbf->Nquad; i++) {
+    asbf->Rquad[i] = (1 + asbf->Rquad[i])*((asbf->R - 1)/2) + 1;
+    asbf->Wquad[i] = asbf->Wquad[i]*(asbf->R - 1)/2;
+  }
+
+  for (int i = 0; i < asbf->Ngll; i++)
+    asbf->Rgll[i] = (1 + asbf->Rgll[i])*((asbf->R - 1)/2) + 1;
+  for (int i = 0; i < asbf->Nplot; i++)
+    asbf->Rplot[i] = (1 + asbf->Rplot[i])*((asbf->R - 1)/2) + 1;
+
   Nmodes = asbf->Nmodes;
   Nquad  = asbf->Nquad;
   Ngll   = asbf->Ngll;
   Nplot  = asbf->Nplot;
 
+  // Load the initial basis matrices.
   if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
     // Dirichlet BCs on both spheres.
-    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE VANDERMONDE",
         &Tquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE DERIVATIVE VANDERMONDE",
         &DTquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET GLL VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET GLL VANDERMONDE",
         &Tgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET GLL DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET GLL DERIVATIVE VANDERMONDE",
         &DTgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET PLOT VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET PLOT VANDERMONDE",
         &Tplot, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS DIRICHLET-DIRICHLET PLOT DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET PLOT DERIVATIVE VANDERMONDE",
         &DTplot, &Nrows, &Ncols);
 
     C1 = pow((asbf->R - 1)/2, 2);
     C2 = (asbf->R - 1)/2;
   } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
     // Neumann BCs on both spheres.
-    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN QUADRATURE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN QUADRATURE VANDERMONDE",
         &Tquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN QUADRATURE DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN QUADRATURE DERIVATIVE VANDERMONDE",
         &DTquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN GLL VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN GLL VANDERMONDE",
         &Tgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN GLL DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN GLL DERIVATIVE VANDERMONDE",
         &DTgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN PLOT VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT VANDERMONDE",
         &Tplot, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF INITIAL BASIS NEUMANN-NEUMANN PLOT DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT DERIVATIVE VANDERMONDE",
         &DTplot, &Nrows, &Ncols);
 
     C1 = pow((asbf->R - 1), 3)/8;

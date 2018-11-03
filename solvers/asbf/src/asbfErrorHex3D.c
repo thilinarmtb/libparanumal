@@ -297,7 +297,7 @@ static void asbfManufacturedSolution(asbf_t *asbf,
   *dqdx = dqdr*x/r;
   *dqdy = dqdr*y/r;
   *dqdz = dqdr*z/r;
-#elif 0
+#elif 1
   // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
   dfloat r2m1       = pow(r, 2.0) - 1.0;
