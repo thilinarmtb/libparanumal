@@ -112,6 +112,7 @@ SOFTWARE.
 @kernel void insVelocityRhsEXTBDFTri2D(const dlong Nelements,
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  MM,
+                                const int velId, 
                                 const dfloat idt,
                                 const dfloat inu,
                                 @restrict const  dfloat *  extbdfA,
@@ -121,14 +122,11 @@ SOFTWARE.
                                 @restrict const  dfloat *  U,
                                 @restrict const  dfloat *  NU,
                                 @restrict const  dfloat *  GP,
-                                      @restrict dfloat *  rhsU,
-                                      @restrict dfloat *  rhsV,
-                                      @restrict dfloat *  rhsW){
+                                @restrict        dfloat *  rhsTmp){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    @shared dfloat s_rhsU[p_NblockV][p_Np];
-    @shared dfloat s_rhsV[p_NblockV][p_Np];
+    @shared dfloat s_rhsTmp[p_NblockV][p_Np];
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
@@ -139,40 +137,28 @@ SOFTWARE.
 
           if (p_SUBCYCLING) {
             //NU holds \hat{U} after subcycling
-            const dfloat NUm = NU[id+0*fieldOffset];
-            const dfloat NVm = NU[id+1*fieldOffset];
-
-            s_rhsU[es][n] = J*inu*idt*NUm;
-            s_rhsV[es][n] = J*inu*idt*NVm;
+            const dfloat NUTmp = NU[id+velId*fieldOffset];
+            
+            s_rhsTmp[es][n] = J*inu*idt*NUTmp;
 
             for (int s=0;s<p_Nstages;s++) {
               // GP
-              const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-
-              s_rhsU[es][n] -= J*inu*extbdfC[s]*GPx;
-              s_rhsV[es][n] -= J*inu*extbdfC[s]*GPy;
+              const dfloat GPTmp  = GP[id+velId*fieldOffset+s*p_NVfields*fieldOffset];
+              s_rhsTmp[es][n]    -= J*inu*extbdfC[s]*GPTmp;
             }
 
           } else {
-            s_rhsU[es][n] = 0.;
-            s_rhsV[es][n] = 0.;
+            s_rhsTmp[es][n] = 0.f;
 
             for (int s=0;s<p_Nstages;s++) {
               //U 
-              const dfloat Um  = U[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              const dfloat Vm  = U[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-
+              const dfloat UTmp   = U [id+velId*fieldOffset+s*p_NVfields*fieldOffset];
               // NU
-              const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-
+              const dfloat NUTmp  = NU[id+velId*fieldOffset+s*p_NVfields*fieldOffset];
               // GP
-              const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat GPTmp  = GP[id+velId*fieldOffset+s*p_NVfields*fieldOffset];
 
-              s_rhsU[es][n] += J*inu*(idt*extbdfB[s]*Um - extbdfA[s]*NUm - extbdfC[s]*GPx);
-              s_rhsV[es][n] += J*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*NVm - extbdfC[s]*GPy);
+              s_rhsTmp[es][n] += J*inu*(idt*extbdfB[s]*UTmp - extbdfA[s]*NUTmp - extbdfC[s]*GPTmp);
             }
           }
         }
@@ -189,16 +175,14 @@ SOFTWARE.
           // Multiplay with Mass Matrix
           const dlong id = e*p_Np+n;
 
-          dfloat rhsu = 0.f, rhsv = 0.f;
+          dfloat rhstmp = 0.f; 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
-              rhsu  += M*s_rhsU[es][i];
-              rhsv  += M*s_rhsV[es][i];
+              rhstmp  += M*s_rhsTmp[es][i];
             }
           // Update
-          rhsU[id] = rhsu;
-          rhsV[id] = rhsv;
+          rhsTmp[id] = rhstmp;
         }
       }
     }

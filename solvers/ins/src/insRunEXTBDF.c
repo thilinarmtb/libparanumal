@@ -40,53 +40,53 @@ void insRunEXTBDF(ins_t *ins){
   ins->dt *= 100;
 
   if (mesh->rank==0) printf("Number of Timesteps: %d\n", ins->NtimeSteps);
-  for(int tstep=0;tstep<NstokesSteps;++tstep){
-    if(tstep<1) 
-      extbdfCoefficents(ins,tstep+1);
-    else if(tstep<2 && ins->temporalOrder>=2) 
-      extbdfCoefficents(ins,tstep+1);
-    else if(tstep<3 && ins->temporalOrder>=3) 
-      extbdfCoefficents(ins,tstep+1);
+  // for(int tstep=0;tstep<NstokesSteps;++tstep){
+  //   if(tstep<1) 
+  //     extbdfCoefficents(ins,tstep+1);
+  //   else if(tstep<2 && ins->temporalOrder>=2) 
+  //     extbdfCoefficents(ins,tstep+1);
+  //   else if(tstep<3 && ins->temporalOrder>=3) 
+  //     extbdfCoefficents(ins,tstep+1);
 
-    insGradient (ins, 0, ins->o_P, ins->o_GP);
+  //   insGradient (ins, 0, ins->o_P, ins->o_GP);
 
-    insVelocityRhs  (ins, 0, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
-    insVelocitySolve(ins, 0, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+  //   insVelocityRhs  (ins, 0, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
+  //   insVelocitySolve(ins, 0, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-    insPressureRhs  (ins, 0, ins->Nstages);
-    insPressureSolve(ins, 0, ins->Nstages); 
+  //   insPressureRhs  (ins, 0, ins->Nstages);
+  //   insPressureSolve(ins, 0, ins->Nstages); 
 
-    insPressureUpdate(ins, 0, ins->Nstages, ins->o_rkP);
-    insGradient(ins, 0, ins->o_rkP, ins->o_rkGP);
+  //   insPressureUpdate(ins, 0, ins->Nstages, ins->o_rkP);
+  //   insGradient(ins, 0, ins->o_rkP, ins->o_rkGP);
 
-    //cycle history
-    for (int s=ins->Nstages;s>1;s--) {
-      ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-      ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
-                                  (s-1)*ins->Ntotal*sizeof(dfloat), 
-                                  (s-2)*ins->Ntotal*sizeof(dfloat));
-    }
+  //   //cycle history
+  //   for (int s=ins->Nstages;s>1;s--) {
+  //     ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+  //                                 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+  //                                 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+  //     ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
+  //                                 (s-1)*ins->Ntotal*sizeof(dfloat), 
+  //                                 (s-2)*ins->Ntotal*sizeof(dfloat));
+  //   }
 
-    //copy updated pressure
-    ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
+  //   //copy updated pressure
+  //   ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
 
-    //update velocity
-    insVelocityUpdate(ins, 0, ins->Nstages, ins->o_rkGP, ins->o_rkU);
+  //   //update velocity
+  //   insVelocityUpdate(ins, 0, ins->Nstages, ins->o_rkGP, ins->o_rkU);
 
-    //copy updated pressure
-    ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
+  //   //copy updated pressure
+  //   ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
-    //cycle rhs history
-    for (int s=ins->Nstages;s>1;s--) {
-      ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-    }
+  //   //cycle rhs history
+  //   for (int s=ins->Nstages;s>1;s--) {
+  //     ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+  //                             (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+  //                             (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+  //   }
 
-    if (mesh->rank==0) printf("\rSstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
-  }
+  //   if (mesh->rank==0) printf("\rSstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+  // }
 
   if (mesh->rank==0) printf("\n");
 
@@ -113,15 +113,6 @@ void insRunEXTBDF(ins_t *ins){
     dfloat time = ins->startTime + tstep*ins->dt;
 
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
-
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_U);
-#endif
     
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
@@ -130,28 +121,12 @@ void insRunEXTBDF(ins_t *ins){
     }
 
     insGradient (ins, time, ins->o_P, ins->o_GP);
-
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_GP);
-#endif
     
-    
-    insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
-    insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
-
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_rkU);
-#endif
+    for(int v = 0; v<ins->NVfields; v++){
+      const int velId = v; 
+      insVelocityRhs(ins, time+ins->dt, ins->Nstages, velId);
+      insVelocitySolve(ins, time+ins->dt, ins->Nstages, velId, ins->o_rkU);
+    }
 
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
@@ -159,14 +134,6 @@ void insRunEXTBDF(ins_t *ins){
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
 
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_rkGP);
-#endif
     
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
@@ -185,14 +152,13 @@ void insRunEXTBDF(ins_t *ins){
     insVelocityUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkGP, ins->o_rkU);
 
     if(mesh->dim==3){
-      if(ins->elementType == QUADRILATERALS ||
-	 ins->elementType == TRIANGLES){
-	ins->constrainKernel(mesh->Nelements,
-			     offset,
-			     mesh->o_x,
-			     mesh->o_y,
-			     mesh->o_z,
-			     ins->o_rkU);
+      if(ins->elementType == QUADRILATERALS || ins->elementType == TRIANGLES){
+        ins->constrainKernel(mesh->Nelements,
+                             offset,
+                             mesh->o_x,
+                             mesh->o_y,
+                             mesh->o_z,
+                             ins->o_rkU);
       }
     }
       

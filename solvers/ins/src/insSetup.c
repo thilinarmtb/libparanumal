@@ -226,10 +226,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->P     = (dfloat*) calloc(              ins->Nstages*Ntotal,sizeof(dfloat));
 
   //rhs storage
-  ins->rhsU  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
-  ins->rhsV  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
-  ins->rhsW  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
-  ins->rhsP  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  ins->rhsTmp   = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  // ins->rhsU  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  // ins->rhsV  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  // ins->rhsW  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  // ins->rhsP  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
 
   //additional field storage
   ins->NU   = (dfloat*) calloc(ins->NVfields*(ins->Nstages+1)*Ntotal,sizeof(dfloat));
@@ -242,10 +243,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->rkP  = (dfloat*) calloc(              Ntotal,sizeof(dfloat));
   ins->PI   = (dfloat*) calloc(              Ntotal,sizeof(dfloat));
   
-  ins->rkNU = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
-  ins->rkLU = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
-  ins->rkGP = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
-
+  if(options.compareArgs("TIME DISCRETIZATION", "ARK")){
+    ins->rkNU = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
+    ins->rkLU = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
+    ins->rkGP = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
+  }
   //plotting fields
   ins->Vort = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
   ins->Div  = (dfloat*) calloc(              Nlocal,sizeof(dfloat));
@@ -734,8 +736,8 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     }
   }
 
-  // ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); !!!!!!!!!!!!!!!!!
-  // ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); !!!!!!!!!!!!!!!!!
+  ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); 
+  ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); 
 
   for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (ins->VmapB[n] == 1E9) {
@@ -824,10 +826,11 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   }
 
   // MEMORY ALLOCATION
-  ins->o_rhsU  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsU);
-  ins->o_rhsV  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsV);
-  ins->o_rhsW  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsW);
-  ins->o_rhsP  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsP);
+  ins->o_rhsTmp  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsTmp);
+  // ins->o_rhsU  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsU);
+  // ins->o_rhsV  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsV);
+  // ins->o_rhsW  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsW);
+  // ins->o_rhsP  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsP);
 
   ins->o_NU    = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->NU);
   ins->o_LU    = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->LU);
@@ -839,14 +842,17 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   ins->o_rkP   = mesh->device.malloc(              Ntotal*sizeof(dfloat), ins->rkP);
   ins->o_PI    = mesh->device.malloc(              Ntotal*sizeof(dfloat), ins->PI);
   
-  ins->o_rkNU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkNU);
-  ins->o_rkLU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkLU);
-  ins->o_rkGP  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkGP);
+  // will go over that again
+  if(options.compareArgs("TIME INTEGRATOR", "ARK")){
+    ins->o_rkNU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkNU);
+    ins->o_rkLU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkLU);
+  }
 
+  ins->o_rkGP  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkGP);
   //storage for helmholtz solves
   ins->o_UH = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  ins->o_VH = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  ins->o_WH = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  // ins->o_VH = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  // ins->o_WH = mesh->device.malloc(Ntotal*sizeof(dfloat));
 
   //plotting fields
   ins->o_Vort = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Vort);

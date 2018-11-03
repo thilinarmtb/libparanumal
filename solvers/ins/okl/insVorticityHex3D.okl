@@ -30,8 +30,8 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13,
                 dfloat &eig1, dfloat &eig2, dfloat &eig3){
 //
 const dfloat TOL = 1.0e-16; 
-const dfloat p1 = a12*a12 + a13*a13 + a23*a23; 
-const dfloat q = (a11 + a22 + a33)/3.f; 
+const dfloat p1  = a12*a12 + a13*a13 + a23*a23; 
+const dfloat q   = (a11 + a22 + a33)/3.f; 
 
 if (p1 < TOL){
    // A is diagonal.

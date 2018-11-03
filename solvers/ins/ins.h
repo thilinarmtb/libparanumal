@@ -85,7 +85,9 @@ typedef struct {
   dfloat *U, *P;
   dfloat *NU, *LU, *GP;
   dfloat *GU;   
-  dfloat *rhsU, *rhsV, *rhsW, *rhsP;   
+  dfloat *rhsU, *rhsV, *rhsW, *rhsP; // will be deprecated  
+  dfloat *rhsTmp;  
+
   dfloat *rkU, *rkP, *PI;
   dfloat *rkNU, *rkLU, *rkGP;
   
@@ -163,12 +165,14 @@ typedef struct {
   occa::kernel constrainKernel;
   
   occa::memory o_U, o_P;
-  occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP; 
+  occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP;  // will be deprecated
+  occa::memory o_rhsTmp; 
 
   occa::memory o_NU, o_LU, o_GP;
   occa::memory o_GU;
 
-  occa::memory o_UH, o_VH, o_WH;
+  occa::memory o_UH, o_VH, o_WH; // will be deprecated
+
   occa::memory o_rkU, o_rkP, o_PI;
   occa::memory o_rkNU, o_rkLU, o_rkGP;
 
@@ -231,7 +235,7 @@ typedef struct {
 
 ins_t *insSetup(mesh_t *mesh, setupAide options);
 
-void insRunARK(ins_t *ins);
+// void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
@@ -246,8 +250,9 @@ void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
 void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
 void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);
 
-void insVelocityRhs  (ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);
-void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
+void insVelocityRhs  (ins_t *ins, dfloat time, int stage, int velId); 
+void insVelocitySolve(ins_t *ins, dfloat time, int stage, int velId, occa::memory o_rkU);
+// void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
 void insVelocityUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkGP, occa::memory o_rkU);
 
 void insPressureRhs  (ins_t *ins, dfloat time, int stage);

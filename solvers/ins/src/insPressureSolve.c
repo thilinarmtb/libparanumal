@@ -53,7 +53,7 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             mesh->o_y,
                             mesh->o_z,
                             ins->o_PmapB,
-                            ins->o_rhsP);
+                            ins->o_rhsTmp);
   } else if(ins->pOptions.compareArgs("DISCRETIZATION","IPDG") && !quad3D) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
     ins->pressureRhsIpdgBCKernel(mesh->Nelements,
@@ -74,7 +74,7 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                                   mesh->o_Dmatrices,
                                   mesh->o_LIFTT,
                                   mesh->o_MM,
-                                  ins->o_rhsP);
+                                  ins->o_rhsTmp);
     occaTimerToc(mesh->device,"PoissonRhsIpdg");
   }
 
@@ -83,12 +83,12 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
   // gather-scatter
   if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
-    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsTmp);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
   }
 
   occaTimerTic(mesh->device,"Pr Solve");
-  ins->NiterP = ellipticSolve(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI); 
+  ins->NiterP = ellipticSolve(solver, 0.0, ins->presTOL, ins->o_rhsTmp, ins->o_PI); 
   occaTimerToc(mesh->device,"Pr Solve"); 
 
  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {

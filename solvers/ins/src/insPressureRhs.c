@@ -31,7 +31,7 @@ void insPressureRhs(ins_t *ins, dfloat time, int stage){
   mesh_t *mesh = ins->mesh;
 
   // rhsP = Div Uhat
-  insDivergence(ins, time, ins->o_rkU, ins->o_rhsP);
+  insDivergence(ins, time, ins->o_rkU, ins->o_rhsTmp);
   
   // rhsP = -MM*Div Uhat/pa_ss dt
   //dfloat g0 = 1.0/ins->prkA[stage->ins->Nstages+stage];
@@ -40,7 +40,7 @@ void insPressureRhs(ins_t *ins, dfloat time, int stage){
                               mesh->o_vgeo,
                               mesh->o_MM,
                               ins->idt,  
-                              ins->o_rhsP);
+                              ins->o_rhsTmp);
   occaTimerToc(mesh->device,"PoissonRhsForcing");
 
 #if 0
