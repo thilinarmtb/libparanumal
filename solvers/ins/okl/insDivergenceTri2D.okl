@@ -130,7 +130,7 @@ SOFTWARE.
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+              insAdvectionDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
               uP = 2.f*uP-uM;        
               vP = 2.f*vP-vM;         
             }

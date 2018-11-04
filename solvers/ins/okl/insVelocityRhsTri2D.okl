@@ -29,6 +29,7 @@ SOFTWARE.
                                 const int stage,  
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  MM,
+                                const int velId, 
                                 const dfloat idt,
                                 const dfloat inu,
                                 @restrict const  dfloat *  erkA,
@@ -40,14 +41,11 @@ SOFTWARE.
                                 @restrict const  dfloat *  NU,
                                 @restrict const  dfloat *  LU,
                                 @restrict const  dfloat *  GP,
-                                      @restrict dfloat *  rhsU,
-                                      @restrict dfloat *  rhsV,
-                                      @restrict dfloat *  rhsW){
+                                      @restrict dfloat *  rhsTmp){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    @shared dfloat s_rhsU[p_NblockV][p_Np];
-    @shared dfloat s_rhsV[p_NblockV][p_Np];
+    @shared dfloat s_rhsTmp[p_NblockV][p_Np];
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
@@ -56,27 +54,19 @@ SOFTWARE.
           const dlong id = n + p_Np*e;
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
-          s_rhsU[es][n] = idt*U[id + 0*fieldOffset];
-          s_rhsV[es][n] = idt*U[id + 1*fieldOffset];
-
+          s_rhsTmp[es][n] = idt*U[id + velId*fieldOffset];
           dfloat prkAs = prkA[stage*(p_Nstages+1)+stage];
           for (int s=0;s<stage;s++) {
             // NU
-            s_rhsU[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsV[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
-
+            s_rhsTmp[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+velId*fieldOffset + s*p_NVfields*fieldOffset];
             // LU
-            s_rhsU[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsV[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
-
+            s_rhsTmp[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+velId*fieldOffset + s*p_NVfields*fieldOffset];
             // GP
             dfloat prkAB = prkA[stage*(p_Nstages+1)+s]+prkAs*prkB[stage*(p_Nstages+1)+s];
-            s_rhsU[es][n] -= prkAB*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsV[es][n] -= prkAB*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsTmp[es][n] -= prkAB*GP[id+velId*fieldOffset + s*p_NVfields*fieldOffset];
           }
 
-          s_rhsU[es][n] *= J*inu/irkA[stage*(p_Nstages+1)+stage];
-          s_rhsV[es][n] *= J*inu/irkA[stage*(p_Nstages+1)+stage];
+          s_rhsTmp[es][n] *= J*inu/irkA[stage*(p_Nstages+1)+stage];
         }
       }
     }
@@ -91,16 +81,14 @@ SOFTWARE.
           // Multiplay with Mass Matrix
           const dlong id = e*p_Np+n;
 
-          dfloat rhsu = 0.f, rhsv = 0.f;
+          dfloat rhstmp = 0.f; 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
-              rhsu  += M*s_rhsU[es][i];
-              rhsv  += M*s_rhsV[es][i];
+              rhstmp  += M*s_rhsTmp[es][i];
             }
           // Update
-          rhsU[id] = rhsu;
-          rhsV[id] = rhsv;
+          rhsTmp[id] = rhstmp;
         }
       }
     }

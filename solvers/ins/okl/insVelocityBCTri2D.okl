@@ -76,14 +76,8 @@ SOFTWARE.
 
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          if(velId==0){
-            insXVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &uP);
-            insXVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny,0.f, 0.f, &dudxP, &dudyP);        
-          }
-          else if(velId==1){
-            insYVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &uP);
-            insYVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny,0.f, 0.f, &dudxP, &dudyP);        
-          }
+          insVelocityDirichletConditions2D(bc, velId, time, x[idM], y[idM], nx, ny, 0.f, &uP);
+          insVelocityNeumannConditions2D(bc, velId, time, x[idM], y[idM], nx, ny,0.f, 0.f, &dudxP, &dudyP);        
         }
 
         const dfloat du = uP;
@@ -235,14 +229,8 @@ SOFTWARE.
 
         const int bc = mapB[idM];
         if(bc>0) {
-          if(velId==0){
-            insXVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &uP);
-            insXVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny,0.f, 0.f, &dudxP, &dudyP);        
-          }
-          else if(velId==1){
-            insYVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &uP);
-            insYVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny,0.f, 0.f, &dudxP, &dudyP);        
-          }
+          insVelocityDirichletConditions2D(bc, velId, time, x[idM], y[idM], nx, ny, 0.f, &uP);
+          insVelocityNeumannConditions2D(bc, velId, time, x[idM], y[idM], nx, ny,0.f, 0.f, &dudxP, &dudyP);        
         }
 
         s_u[nid] = uP;
@@ -318,12 +306,7 @@ SOFTWARE.
         const dfloat ny = sgeo[sid+p_NYID];
 
         dfloat uP = 0.f;
-
-        if(velId==0)
-          insXVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, &uP);        
-        if(velId==1)
-          insYVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, &uP);        
-        
+        insVelocityDirichletConditions2D(bc,velId,time, x[idM], y[idM], nx, ny, uM, &uP);                
         U[idM] = uP;
       }    
     }

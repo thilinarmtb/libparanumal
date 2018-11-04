@@ -35,7 +35,7 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
+#define insAdvectionDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
 {                                   \
   if(bc==1){                        \
     *(uB) = 0.f;                    \
@@ -58,65 +58,31 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define insXVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, uB) \
+#define insVelocityDirichletConditions2D(bc, velId, t, x, y, nx, ny, uM, uB) \
 {                                   \
   if(bc==1){                        \
     *(uB) = 0.f;                    \
   } else if(bc==2){                 \
-    *(uB) = p_ubar;                 \
+    if(velId==0)                    \
+      *(uB) = p_ubar;               \
+    else                            \
+      *(uB) = p_vbar;               \
   } else if(bc==3){                 \
     *(uB) = uM;                     \
   } else if(bc==4){                 \
+    if(velId==0)                    \
     *(uB) = 0.f;                    \
-  } else if(bc==5){                 \
+    else                            \
     *(uB) = uM;                     \
-  }                                 \
-}
-
-// Boundary conditions
-/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define insYVelocityDirichletConditions2D(bc, t, x, y, nx, ny, vM, vB) \
-{                                   \
-  if(bc==1){                        \
-    *(vB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(vB) = p_vbar;                 \
-  } else if(bc==3){                 \
-    *(vB) = vM;                     \
-  } else if(bc==4){                 \
-    *(vB) = vM;                     \
   } else if(bc==5){                 \
-    *(vB) = 0.f;                    \
+    if(velId==0)                    \
+    *(uB) = uM;                     \
+    else                            \
+    *(uB) = 0.f;                    \
   }                                 \
 }
 
-
-#define insVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  } else if(bc==3){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==4){                        \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==5){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  }                                        \
-}
-
-#define insXVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM,uxB, uyB) \
+#define insVelocityNeumannConditions2D(bc, velId, t, x, y, nx, ny, uxM, uyM,uxB, uyB) \
 {                                          \
   if(bc==1 || bc==2){                      \
     *(uxB) = uxM;                          \
@@ -125,30 +91,24 @@ SOFTWARE.
     *(uxB) = 0.f;                          \
     *(uyB) = 0.f;                          \
   } else if(bc==4){                        \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
+    if(velId==0){                          \
+      *(uxB) = uxM;                        \
+      *(uyB) = uyM;                        \
+    }else{                                 \
+      *(uxB) = 0.f;                        \
+      *(uyB) = 0.f;                        \
+    }                                      \
   } else if(bc==5){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
+    if(velId==0){                          \
+      *(uxB) = 0.f;                        \
+      *(uyB) = 0.f;                        \
+    }else{                                 \
+      *(uxB) = uxM;                        \
+      *(uyB) = uyM;                        \
+    }                                      \
   }                                        \
 }
 
-#define insYVelocityNeumannConditions2D(bc, t, x, y, nx, ny, vxM, vyM, vxB, vyB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  } else if(bc==3){                        \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==4){                        \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==5){                        \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  }                                        \
-}
 
 
 #define insPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
