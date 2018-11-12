@@ -66,9 +66,11 @@ int asbfSolve(asbf_t *asbf, setupAide options)
     asbf->o_x.copyTo(asbf->q3D + asbf->Ntotal*m);
 
     asbf->o_x.copyTo(mesh->q);
-    char fileName2D[BUFSIZ];
-    sprintf(fileName2D, "bah_%05d.vtu", m);
-    meshPlotVTU3D(mesh, fileName2D, 0);
+
+    // Plot solutions for each mode.
+    //char fileName2D[BUFSIZ];
+    //sprintf(fileName2D, "bah_%05d.vtu", m);
+    //meshPlotVTU3D(mesh, fileName2D, 0);
   }
 
 #if 0

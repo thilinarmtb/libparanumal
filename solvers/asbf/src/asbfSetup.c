@@ -53,6 +53,21 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
+  // Set up radial mesh (PIECEWISEDISCRETE basis only).
+  dfloat R;
+  options.getArgs("OUTER RADIUS", R);
+  if (options.compareArgs("RADIAL BASIS TYPE", "PIECEWISEDISCRETE")) {
+    asbf->Nradelements = 3;
+    dfloat h = (R - 1.0)/asbf->Nradelements;
+    asbf->Rbreaks = (dfloat*)calloc(asbf->Nradelements + 1, sizeof(dfloat));
+    asbf->Rbreaks[0] = 1.0;
+    for (int i = 1; i < asbf->Nradelements; i++)
+      asbf->Rbreaks[i] = 1.0 + i*h;
+    asbf->Rbreaks[asbf->Nradelements] = R;
+  } else {
+    asbf->Rbreaks = NULL;
+  }
+
   // Boundary conditions.
   //   BCType[0] = 0
   //   BCType[1] = Radial BC at inner sphere.

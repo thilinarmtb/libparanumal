@@ -53,7 +53,7 @@ typedef struct {
   int Ngll;   // number of ASBF gll nodes
   int Nplot;  // number of ASBF plotting points
 
-  dfloat R;   // outer radius of shell; must have R > 1.
+  dfloat R;      // outer radius of shell; must have R > 1.
 
   dfloat *eigenvalues; // generalzied eigenvalues of discrete r^2 weighted 1D Laplacian on [1,1.5]
 
@@ -78,6 +78,11 @@ typedef struct {
   // Boundary conditions:  three integers {0, BCInner, BCOuter}.  Set BCInner
   // and BCOuter to 1 or 2 for Dirichlet or Neumann conditions, respectively.
   int *BCType;
+
+  // Variables for piecewise discrete basis.
+  int Nradelements; // number of radial elements
+  int Nqrad;        // number of nodes on each radial element.
+  dfloat *Rbreaks;  // radial mesh breakpoints
   /*********/
 
   dfloat lambda;      // helmhotz solver -lap(u) + lamda u

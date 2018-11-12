@@ -92,10 +92,13 @@ int main(int argc, char **argv){
   asbfSolve(asbf, options);
 
   // plot solution and compute error 
+  //
+  // TODO:  Reinstate solution plot once plotting grid has been implemented for
+  // piecewise discrete basis type.
   if(asbf->elementType==QUADRILATERALS){
     dfloat errH1, errL2;
-    char fname[] = "sol";
-    asbfPlotVTU3D(asbf, fname, 0);
+    //char fname[] = "sol";
+    //asbfPlotVTU3D(asbf, fname, 0);
     asbfErrorHex3D(asbf, asbf->q3D, &errH1, &errL2);
     printf("%g, %g %%%% abs H1 error norm, L2 error norm\n", errH1, errL2);
   }

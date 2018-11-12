@@ -61,6 +61,27 @@ function writeASBFData(N)
   writeFloatMatrix(fid, VTplot,  'ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT VANDERMONDE');
   writeFloatMatrix(fid, VDTplot, 'ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT DERIVATIVE VANDERMONDE');
 
+  %%%%%%%%%% PIECEWISE DISCRETE EIGENFUNCTION BASIS %%%%%%%%%%
+
+  Rquad = [-1 ; roots(diff(legpoly(N + 4))) ; 1];
+  T = chebpoly(0:(N + 4));
+  V = T(Rquad);
+  L = T*inv(V);
+  Wquad = sum(L).';
+  
+  Rtrue = [-1 ; roots(diff(legpoly(N))) ; 1];
+  T = chebpoly(0:N);
+  V = T(Rtrue);
+  L = T*inv(V);
+  
+  V = feval(L, Rquad);
+  VD = feval(diff(L), Rquad);
+
+  writeFloatMatrix(fid, Rquad, 'ASBF PIECEWISE DISCRETE QUADRATURE NODES');
+  writeFloatMatrix(fid, Wquad, 'ASBF PIECEWISE DISCRETE QUADRATURE WEIGHTS');
+  writeFloatMatrix(fid, V,     'ASBF PIECEWISE DISCRETE QUADRATURE VANDERMONDE');
+  writeFloatMatrix(fid, VD,    'ASBF PIECEWISE DISCRETE QUADRATURE DERIVATIVE VANDERMONDE');
+  
   %%%%%%%%%% TRUE EIGENFUNCTION BASIS %%%%%%%%%%
 
   % TODO:  Is it possible to remove the hard-coded dependence on R and lambda?

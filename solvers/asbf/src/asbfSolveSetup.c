@@ -42,8 +42,9 @@ extern "C"
               int    *INFO);
 }
 
-static void asbfLoadRadialBasisTrue(asbf_t *asbf, FILE *fp);
-static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp);
+static void asbfLoadRadialBasisTrue(asbf_t *asbf);
+static void asbfLoadRadialBasisGlobalDiscrete(asbf_t *asbf);
+static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf);
 
 void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
 {
@@ -59,21 +60,14 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
 
   options.getArgs("RADIAL EXPANSION MODES", asbf->Nmodes);
 
-  char fname[BUFSIZ];
-  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
-
-  FILE *fp = fopen(fname, "r");
-  if (!fp) {
-    printf("ERROR: Cannot open file: '%s'\n", fname);
-    exit(-1);
-  }
-
   if (options.compareArgs("RADIAL BASIS TYPE", "TRUE")) {
-    asbfLoadRadialBasisTrue(asbf, fp);
-  } else if (options.compareArgs("RADIAL BASIS TYPE", "DISCRETE")) {
-    asbfLoadRadialBasisDiscrete(asbf, fp);
+    asbfLoadRadialBasisTrue(asbf);
+  } else if (options.compareArgs("RADIAL BASIS TYPE", "GLOBALDISCRETE")) {
+    asbfLoadRadialBasisGlobalDiscrete(asbf);
+  } else if (options.compareArgs("RADIAL BASIS TYPE", "PIECEWISEDISCRETE")) {
+    asbfLoadRadialBasisPiecewiseDiscrete(asbf);
   } else {
-    printf("ERROR:  Unrecognized value for option ASBF BASIS.\n");
+    printf("ERROR:  Unrecognized value for option RADIAL BASIS TYPE.\n");
     exit(-1);
   }
 
@@ -82,8 +76,6 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   // TODO:  Fix other codes so this can be removed.
   for (int i = 0; i < asbf->Nquad; i++)
     asbf->Wquad[i] *= pow(asbf->Rquad[i], 2);
-
-  fclose(fp);
 
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
@@ -146,10 +138,19 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
 
 /*****************************************************************************/
 
-static void asbfLoadRadialBasisTrue(asbf_t *asbf, FILE *fp)
+static void asbfLoadRadialBasisTrue(asbf_t *asbf)
 {
   dfloat *basisR, *basisLambda;    // Values of R, lambda for the cached basis.
   int Nrows, Ncols;                // Needed by readDfloatArray().
+  FILE *fp;                        // Pointer to open data file.
+  char fname[BUFSIZ];              // Path to data file.
+
+  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
+  fp = fopen(fname, "r");
+  if (!fp) {
+    printf("ERROR: Cannot open file: '%s'\n", fname);
+    exit(-1);
+  }
 
   readDfloatArray(fp, "ASBF TRUE R",
       &basisR, &Nrows, &Ncols);
@@ -204,11 +205,11 @@ static void asbfLoadRadialBasisTrue(asbf_t *asbf, FILE *fp)
   // We're done. Clean up.
   free(basisR);
   free(basisLambda);
+
+  fclose(fp);
 }
 
-// Compute the Vandermonde matrices for the radial basis functions and their
-// derivatives over the various node sets.
-static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp)
+static void asbfLoadRadialBasisGlobalDiscrete(asbf_t *asbf)
 {
   dfloat *Tquad, *Tgll, *Tplot;    // Initial basis Vandermonde matrices.
   dfloat *DTquad, *DTgll, *DTplot; // Initial basis derivative Vandermondes.
@@ -216,11 +217,20 @@ static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp)
   dfloat C1, C2;                   // Scaling constants (e.g., Jacobian).
   int Nrows, Ncols;                // Needed by readDfloatArray().
   int Nmodes, Nquad, Ngll, Nplot;  // Local copies of variables from asbf.
+  FILE *fp;                        // Pointer to open data file.
+  char fname[BUFSIZ];              // Path to data file.
 
   // Variables needed for dsygv_()---see LAPACK documentation.
   int ITYPE, N, LDA, LDB, LWORK, INFO;
   char JOBZ, UPLO;
   dfloat *W, *WORK;
+
+  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", asbf->Nmodes);
+  fp = fopen(fname, "r");
+  if (!fp) {
+    printf("ERROR: Cannot open file: '%s'\n", fname);
+    exit(-1);
+  }
 
   // Load the various node sets and quadrature weights.
   readDfloatArray(fp, "ASBF GLOBAL DISCRETE QUADRATURE NODES",
@@ -390,4 +400,188 @@ static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp)
   free(DTquad);
   free(DTgll);
   free(DTplot);
+
+  fclose(fp);
+}
+
+
+// WARNING:  This will not do the right thing if Nradelements == 1.
+//
+// TODO:  Fix this.
+static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
+{
+  dfloat *Rquadb, *Wquadb;    // Base quadrature nodes and weights.
+  dfloat *Bquadb, *DBquadb;   // Base Vandermonde matrices.
+  dfloat r, J;                // Radial variable and Jacobian factor.
+  dfloat *A, *B;              // Matrices for GEVP.
+  int N, Nradelements, Nqrad; // Local copies of variables from asbf.
+  int Nmodes;
+  int Nrows, Ncols;           // Needed by readDfloatArray().
+  int ind, off;               // Variables to assist with indexing.
+  FILE *fp;                   // Pointer to open data file.
+  char fname[BUFSIZ];         // Path to data file.
+
+  // Variables needed for dsygv_()---see LAPACK documentation.
+  int ITYPE, M, LDA, LDB, LWORK, INFO;
+  char JOBZ, UPLO;
+  dfloat *W, *WORK;
+
+  N = asbf->mesh->N;
+
+  sprintf(fname, DHOLMES "/solvers/asbf/data/asbfN%02d.dat", N);
+  fp = fopen(fname, "r");
+  if (!fp) {
+    printf("ERROR: Cannot open file: '%s'\n", fname);
+    exit(-1);
+  }
+
+  // Load base sets of quadrature nodes and weights and Vandermonde matrices.
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE NODES",
+      &Rquadb, &(asbf->Nqrad), &Ncols);
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE WEIGHTS",
+      &Wquadb, &(asbf->Nqrad), &Ncols);
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE VANDERMONDE",
+      &Bquadb, &Nrows, &Ncols);
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE DERIVATIVE VANDERMONDE",
+      &DBquadb, &Nrows, &Ncols);
+
+  Nradelements = asbf->Nradelements;
+  Nqrad        = asbf->Nqrad;
+
+  // Scale the base nodes and weights to get nodes and weights for each radial
+  // subinterval.
+  asbf->Nquad = Nqrad*Nradelements;
+  asbf->Rquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
+  asbf->Wquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
+  for (int e = 0; e < Nradelements; e++) {
+    J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+    for (int i = 0; i < Nqrad; i++) {
+      asbf->Rquad[e*Nqrad + i] = (Rquadb[i] + 1.0)*J + asbf->Rbreaks[e];
+      asbf->Wquad[e*Nqrad + i] = Wquadb[i]*J;
+    }
+  }
+
+  // TODO:  This code assumes Dirichlet-Dirichlet conditions.
+  asbf->Nmodes = Nradelements*N - 1;
+  Nmodes = asbf->Nmodes;
+
+  // Set up the eigenvalue problem.
+  A = (dfloat*)calloc(Nmodes*Nmodes, sizeof(dfloat));
+  B = (dfloat*)calloc(Nmodes*Nmodes, sizeof(dfloat));
+
+  off = 0;
+  J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; j++) {
+      for (int k = 0; k < Nqrad; k++) {
+        ind = (i + off)*Nmodes + (j + off);
+        r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[0];
+        A[ind] += r*r*DBquadb[k*(N + 1) + i + 1]*DBquadb[k*(N + 1) + j + 1]*Wquadb[k]/J;
+        A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i + 1]*Bquadb[k*(N + 1) + j + 1]*Wquadb[k]*J;
+        B[ind] += Bquadb[k*(N + 1) + i + 1]*Bquadb[k*(N + 1) + j + 1]*Wquadb[k]*J;
+      }
+    }
+  }
+
+  for (int e = 1; e < Nradelements - 1; e++) {
+    off = e*N - 1;
+    J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+    for (int i = 0; i < N + 1; i++) {
+      for (int j = 0; j < N + 1; j++) {
+        for (int k = 0; k < Nqrad; k++) {
+          ind = (i + off)*Nmodes + (j + off);
+          r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[e];
+          A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
+          A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+          B[ind] += Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+        }
+      }
+    }
+  }
+
+  off = Nmodes - N;
+  J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; j++) {
+      for (int k = 0; k < Nqrad; k++) {
+        ind = (i + off)*Nmodes + (j + off);
+        r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[Nradelements - 1];
+        A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
+        A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+        B[ind] += Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+      }
+    }
+  }
+
+  // Solve the eigenvalue problem.
+  ITYPE = 1;        // Solve Ax = cBx
+  JOBZ = 'V';       // Want both eigenvalues and eigenvectors.
+  UPLO = 'U';       // Assume upper triangular storage for symmetric matrices.
+  M = Nmodes;       // Matrix dimension.
+  LDA = Nmodes;     // Leading dimension of A.
+  LDB = Nmodes;     // Leading dimension of B.
+  LWORK = 4*Nmodes; // Workspace size.  (TODO:  ilaenv() for optimal value?)
+
+  W = (dfloat*)calloc(M, sizeof(dfloat));        // Eigenvalues.
+  WORK = (dfloat*)calloc(LWORK, sizeof(dfloat)); // LAPACK workspace.
+
+  dsygv_(&ITYPE, &JOBZ, &UPLO, &M, A, &LDA, B, &LDB, W, WORK, &LWORK, &INFO);
+
+  if (INFO != 0)
+    printf("Error in DSYGV (INFO = %d).\n", INFO);
+
+  // Assign eigenvalues.  (TODO:  Sort them and the modes first?)
+  asbf->eigenvalues = (dfloat*)calloc(Nmodes, sizeof(dfloat));
+  memcpy(asbf->eigenvalues, W, Nmodes*sizeof(dfloat));
+
+  // Assemble the Vandermonde matrices for the eigenmodes (global).
+  //
+  // NB:  A contains the eigenvectors, stored in column-major order.
+  asbf->Bquad = (dfloat*)calloc(asbf->Nquad*Nmodes, sizeof(dfloat));
+  asbf->DBquad = (dfloat*)calloc(asbf->Nquad*Nmodes, sizeof(dfloat));
+
+  J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
+  for (int i = 0; i < asbf->Nqrad; i++) {
+    for (int j = 0; j < Nmodes; j++) {
+      for (int k = 0; k < N; k++) {
+        ind = i*asbf->Nmodes + j;
+        asbf->Bquad[ind] += Bquadb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k];
+        asbf->DBquad[ind] += DBquadb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k]/J;
+      }
+    }
+  }
+
+  for (int e = 1; e < Nradelements - 1; e++) {
+    J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+    for (int i = 0; i < asbf->Nqrad; i++) {
+      for (int j = 0; j < Nmodes; j++) {
+        for (int k = 0; k < N + 1; k++) {
+          ind = (i + e*asbf->Nqrad)*asbf->Nmodes + j;
+          asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k - 1];
+          asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k - 1]/J;
+        }
+      }
+    }
+  }
+
+  J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
+  for (int i = 0; i < asbf->Nqrad; i++) {
+    for (int j = 0; j < Nmodes; j++) {
+      for (int k = 0; k < N; k++) {
+        ind = (i + (Nradelements - 1)*asbf->Nqrad)*asbf->Nmodes + j;
+        asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k - 1];
+        asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k - 1]/J;
+      }
+    }
+  }
+
+  // We're done.  Clean up.
+  free(A);
+  free(B);
+  free(W);
+  free(WORK);
+  free(Bquadb);
+  free(DBquadb);
+
+  fclose(fp);
 }
