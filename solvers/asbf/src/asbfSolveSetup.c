@@ -223,13 +223,13 @@ static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp)
   dfloat *W, *WORK;
 
   // Load the various node sets and quadrature weights.
-  readDfloatArray(fp, "ASBF DISCRETE QUADRATURE NODES",
+  readDfloatArray(fp, "ASBF GLOBAL DISCRETE QUADRATURE NODES",
       &(asbf->Rquad),&(asbf->Nquad), &Ncols);
-  readDfloatArray(fp, "ASBF DISCRETE QUADRATURE WEIGHTS",
+  readDfloatArray(fp, "ASBF GLOBAL DISCRETE QUADRATURE WEIGHTS",
       &(asbf->Wquad),&(asbf->Nquad), &Ncols);
-  readDfloatArray(fp, "ASBF DISCRETE GLL NODES",
+  readDfloatArray(fp, "ASBF GLOBAL DISCRETE GLL NODES",
       &(asbf->Rgll),&(asbf->Ngll), &Ncols);
-  readDfloatArray(fp, "ASBF DISCRETE PLOT NODES",
+  readDfloatArray(fp, "ASBF GLOBAL DISCRETE PLOT NODES",
       &(asbf->Rplot),&(asbf->Nplot), &Ncols);
 
   // Scale nodes and weights from [-1, 1] to [1 R].
@@ -251,34 +251,34 @@ static void asbfLoadRadialBasisDiscrete(asbf_t *asbf, FILE *fp)
   // Load the initial basis matrices.
   if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
     // Dirichlet BCs on both spheres.
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE VANDERMONDE",
         &Tquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE DERIVATIVE VANDERMONDE",
         &DTquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET GLL VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET GLL VANDERMONDE",
         &Tgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET GLL DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET GLL DERIVATIVE VANDERMONDE",
         &DTgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET PLOT VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET PLOT VANDERMONDE",
         &Tplot, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET PLOT DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET PLOT DERIVATIVE VANDERMONDE",
         &DTplot, &Nrows, &Ncols);
 
     C1 = pow((asbf->R - 1)/2, 2);
     C2 = (asbf->R - 1)/2;
   } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
     // Neumann BCs on both spheres.
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN QUADRATURE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN QUADRATURE VANDERMONDE",
         &Tquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN QUADRATURE DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN QUADRATURE DERIVATIVE VANDERMONDE",
         &DTquad, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN GLL VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN GLL VANDERMONDE",
         &Tgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN GLL DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN GLL DERIVATIVE VANDERMONDE",
         &DTgll, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT VANDERMONDE",
         &Tplot, &Nrows, &Ncols);
-    readDfloatArray(fp, "ASBF DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT DERIVATIVE VANDERMONDE",
+    readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN PLOT DERIVATIVE VANDERMONDE",
         &DTplot, &Nrows, &Ncols);
 
     C1 = pow((asbf->R - 1), 3)/8;
