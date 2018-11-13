@@ -74,8 +74,8 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
   //   BCType[2] = Radial BC at outer sphere.
   // Set to 1 for Dirichlet, 2 for Neumann.
   asbf->BCType = (int*)calloc(3, sizeof(int));
-  asbf->BCType[1] = 1;
-  asbf->BCType[2] = 1;
+  asbf->BCType[1] = 2;
+  asbf->BCType[2] = 2;
 
   asbfSolveSetup(asbf, lambda, kernelInfo);
 
@@ -144,7 +144,7 @@ static dfloat asbfManufacturedForcingFunction(asbf_t *asbf, dfloat x, dfloat y, 
   f = (k1 + asbf->lambda/k1)*sin(k1*r)/r
           + (k2 + asbf->lambda/k2)*sin(k2*r)/r
           + (k3 + asbf->lambda/k3)*sin(k3*r)/r;
-#elif 1
+#elif 0
   // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat q, d2qdx2, d2qdy2, d2qdz2;
   dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
