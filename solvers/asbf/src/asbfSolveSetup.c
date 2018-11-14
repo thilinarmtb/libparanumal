@@ -414,7 +414,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   dfloat *Bquadb, *DBquadb;   // Base Vandermonde matrices.
   dfloat r, J;                // Radial variable and Jacobian factor.
   dfloat *A, *B;              // Matrices for GEVP.
-  int N, Nradelements, Nqrad; // Local copies of variables from asbf.
+  int N, Nradelements, Nqr;   // Local copies of variables from asbf.
   int Nmodes;
   int Nrows, Ncols;           // Needed by readDfloatArray().
   int ee, es, ind, off;       // Variables to assist with indexing.
@@ -437,27 +437,27 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 
   // Load base sets of quadrature nodes and weights and Vandermonde matrices.
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE NODES",
-      &Rquadb, &(asbf->Nqrad), &Ncols);
+      &Rquadb, &(asbf->Nqr), &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE WEIGHTS",
-      &Wquadb, &(asbf->Nqrad), &Ncols);
+      &Wquadb, &(asbf->Nqr), &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE VANDERMONDE",
       &Bquadb, &Nrows, &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE DERIVATIVE VANDERMONDE",
       &DBquadb, &Nrows, &Ncols);
 
   Nradelements = asbf->Nradelements;
-  Nqrad        = asbf->Nqrad;
+  Nqr          = asbf->Nqr;
 
   // Scale the base nodes and weights to get nodes and weights for each radial
   // subinterval.
-  asbf->Nquad = Nqrad*Nradelements;
+  asbf->Nquad = Nqr*Nradelements;
   asbf->Rquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
   asbf->Wquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
   for (int e = 0; e < Nradelements; e++) {
     J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
-    for (int i = 0; i < Nqrad; i++) {
-      asbf->Rquad[e*Nqrad + i] = (Rquadb[i] + 1.0)*J + asbf->Rbreaks[e];
-      asbf->Wquad[e*Nqrad + i] = Wquadb[i]*J;
+    for (int i = 0; i < Nqr; i++) {
+      asbf->Rquad[e*Nqr + i] = (Rquadb[i] + 1.0)*J + asbf->Rbreaks[e];
+      asbf->Wquad[e*Nqr + i] = Wquadb[i]*J;
     }
   }
 
@@ -497,7 +497,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
     J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
     for (int i = 0; i < N; i++) {
       for (int j = 0; j < N; j++) {
-        for (int k = 0; k < Nqrad; k++) {
+        for (int k = 0; k < Nqr; k++) {
           ind = (i + off)*Nmodes + (j + off);
           r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[0];
           A[ind] += r*r*DBquadb[k*(N + 1) + i + 1]*DBquadb[k*(N + 1) + j + 1]*Wquadb[k]/J;
@@ -518,7 +518,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
     J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
     for (int i = 0; i < N + 1; i++) {
       for (int j = 0; j < N + 1; j++) {
-        for (int k = 0; k < Nqrad; k++) {
+        for (int k = 0; k < Nqr; k++) {
           ind = (i + off)*Nmodes + (j + off);
           r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[e];
           A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
@@ -534,7 +534,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
     J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
     for (int i = 0; i < N; i++) {
       for (int j = 0; j < N; j++) {
-        for (int k = 0; k < Nqrad; k++) {
+        for (int k = 0; k < Nqr; k++) {
           ind = (i + off)*Nmodes + (j + off);
           r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[Nradelements - 1];
           A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
@@ -574,7 +574,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 
   if (asbf->BCType[1] == 1) {
     J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
-    for (int i = 0; i < asbf->Nqrad; i++) {
+    for (int i = 0; i < asbf->Nqr; i++) {
       for (int j = 0; j < Nmodes; j++) {
         for (int k = 0; k < N; k++) {
           ind = i*asbf->Nmodes + j;
@@ -591,10 +591,10 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 
   for (int e = es; e < ee; e++) {
     J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
-    for (int i = 0; i < asbf->Nqrad; i++) {
+    for (int i = 0; i < asbf->Nqr; i++) {
       for (int j = 0; j < Nmodes; j++) {
         for (int k = 0; k < N + 1; k++) {
-          ind = (i + e*asbf->Nqrad)*asbf->Nmodes + j;
+          ind = (i + e*asbf->Nqr)*asbf->Nmodes + j;
           asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off];
           asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off]/J;
         }
@@ -604,10 +604,10 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 
   if (asbf->BCType[2] == 1) {
     J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
-    for (int i = 0; i < asbf->Nqrad; i++) {
+    for (int i = 0; i < asbf->Nqr; i++) {
       for (int j = 0; j < Nmodes; j++) {
         for (int k = 0; k < N; k++) {
-          ind = (i + (Nradelements - 1)*asbf->Nqrad)*asbf->Nmodes + j;
+          ind = (i + (Nradelements - 1)*asbf->Nqr)*asbf->Nmodes + j;
           asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off];
           asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off]/J;
         }
