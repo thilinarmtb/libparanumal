@@ -83,6 +83,7 @@ typedef struct {
   int Nradelements; // number of radial elements
   int Nqr;          // number of quadrature nodes on each radial element.
   int Nplotr;       // number of plot nodes on each radial element.
+  int Ngllr;        // number of GLL nodes on each radial element.
   dfloat *Rbreaks;  // radial mesh breakpoints
   /*********/
 

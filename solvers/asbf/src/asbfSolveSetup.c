@@ -121,13 +121,12 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
 
   asbf->meshSEM = NULL;
 
-  // TODO:  asbfExtrudeSphere needs to be rewritten to remove the assumption
-  // that asbf->Ngll == mesh->Nq.  We don't use asbf->meshSEM for anything
-  // anyway, so disable this for now.
-  //
-  // if(asbf->elementType==QUADRILATERALS){
-  //   asbfExtrudeSphere(asbf);
-  // }
+  // TODO:  Make this work for Nradelements > 1.
+  if ((asbf->elementType == QUADRILATERALS) &&
+      (options.compareArgs("RADIAL BASIS TYPE", "PIECEWISEDISCRETE")) &&
+      (asbf->Nradelements == 1)) {
+    asbfExtrudeSphere(asbf);
+  }
 
   // OKL kernels specific to asbf
   asbf->asbfReconstructKernel =
@@ -412,12 +411,13 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 {
   dfloat *Rquadb, *Wquadb;    // Base quadrature nodes and weights.
   dfloat *Rplotb;             // Base plotting nodes.
+  dfloat *Rgllb;              // Base GLL nodes.
   dfloat *Bquadb, *DBquadb;   // Base Vandermonde matrices.
   dfloat *Bplotb, *DBplotb;
   dfloat r, J;                // Radial variable and Jacobian factor.
   dfloat *A, *B;              // Matrices for GEVP.
   int N, Nradelements, Nqr;   // Local copies of variables from asbf.
-  int Nplotr, Nmodes;
+  int Nplotr, Ngllr, Nmodes;
   int Nrows, Ncols;           // Needed by readDfloatArray().
   int ee, es, ind, off, end;  // Variables to assist with indexing.
   FILE *fp;                   // Pointer to open data file.
@@ -444,6 +444,8 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
       &Wquadb, &(asbf->Nqr), &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE PLOT NODES",
       &Rplotb, &(asbf->Nplotr), &Ncols);
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE GLL NODES",
+      &Rgllb, &(asbf->Ngllr), &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE VANDERMONDE",
       &Bquadb, &Nrows, &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE DERIVATIVE VANDERMONDE",
@@ -456,14 +458,17 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   Nradelements = asbf->Nradelements;
   Nqr          = asbf->Nqr;
   Nplotr       = asbf->Nplotr;
+  Ngllr        = asbf->Ngllr;
 
   // Scale the base nodes and weights to get nodes and weights for each radial
   // subinterval.
   asbf->Nquad = Nqr*Nradelements;
   asbf->Nplot = Nplotr*Nradelements;
+  asbf->Ngll  = Ngllr*Nradelements;
   asbf->Rquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
   asbf->Wquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
   asbf->Rplot = (dfloat*)calloc(asbf->Nplot, sizeof(dfloat));
+  asbf->Rgll  = (dfloat*)calloc(asbf->Ngll, sizeof(dfloat));
   for (int e = 0; e < Nradelements; e++) {
     J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
 
@@ -474,6 +479,9 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 
     for (int i = 0; i < Nplotr; i++)
       asbf->Rplot[e*Nplotr + i] = (Rplotb[i] + 1.0)*J + asbf->Rbreaks[e];
+
+    for (int i = 0; i < Ngllr; i++)
+      asbf->Rgll[e*Ngllr + i] = (Rgllb[i] + 1.0)*J + asbf->Rbreaks[e];
   }
 
   // Determine the number of modes and set up some indexing variables.
@@ -738,6 +746,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   free(Rquadb);
   free(Wquadb);
   free(Rplotb);
+  free(Rgllb);
   free(Bquadb);
   free(DBquadb);
   free(Bplotb);
