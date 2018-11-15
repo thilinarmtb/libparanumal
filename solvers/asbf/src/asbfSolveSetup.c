@@ -419,7 +419,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   int N, Nradelements, Nqr;   // Local copies of variables from asbf.
   int Nplotr, Nmodes;
   int Nrows, Ncols;           // Needed by readDfloatArray().
-  int ee, es, ind, off;       // Variables to assist with indexing.
+  int ee, es, ind, off, end;  // Variables to assist with indexing.
   FILE *fp;                   // Pointer to open data file.
   char fname[BUFSIZ];         // Path to data file.
 
@@ -506,55 +506,84 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   // Set up the eigenvalue problem.
   A = (dfloat*)calloc(Nmodes*Nmodes, sizeof(dfloat));
   B = (dfloat*)calloc(Nmodes*Nmodes, sizeof(dfloat));
-    
-  if (asbf->BCType[1] == 1) {
-    off = 0;
+
+  if (Nradelements == 1) {
+    if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+      off = 1;
+      end = N - 1;
+    } else if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 2)) {
+      off = 1;
+      end = N;
+    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 1)) {
+      off = 0;
+      end = N;
+    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+      off = 0;
+      end = N + 1;
+    }
+
     J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
-    for (int i = 0; i < N; i++) {
-      for (int j = 0; j < N; j++) {
+    for (int i = 0; i < end; i++) {
+      for (int j = 0; j < end; j++) {
         for (int k = 0; k < Nqr; k++) {
-          ind = (i + off)*Nmodes + (j + off);
+          ind = i*Nmodes + j;
           r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[0];
-          A[ind] += r*r*DBquadb[k*(N + 1) + i + 1]*DBquadb[k*(N + 1) + j + 1]*Wquadb[k]/J;
-          A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i + 1]*Bquadb[k*(N + 1) + j + 1]*Wquadb[k]*J;
-          B[ind] += Bquadb[k*(N + 1) + i + 1]*Bquadb[k*(N + 1) + j + 1]*Wquadb[k]*J;
+          A[ind] += r*r*DBquadb[k*(N + 1) + i + off]*DBquadb[k*(N + 1) + j + off]*Wquadb[k]/J;
+          A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i + off]*Bquadb[k*(N + 1) + j + off]*Wquadb[k]*J;
+          B[ind] += Bquadb[k*(N + 1) + i + off]*Bquadb[k*(N + 1) + j + off]*Wquadb[k]*J;
         }
       }
     }
-  }
-
-  for (int e = es; e < ee; e++) {
+  } else {
     if (asbf->BCType[1] == 1) {
-      off = e*N - 1;
-    } else {
-      off = e*N;
-    }
-
-    J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
-    for (int i = 0; i < N + 1; i++) {
-      for (int j = 0; j < N + 1; j++) {
-        for (int k = 0; k < Nqr; k++) {
-          ind = (i + off)*Nmodes + (j + off);
-          r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[e];
-          A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
-          A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
-          B[ind] += Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+      off = 0;
+      J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
+      for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+          for (int k = 0; k < Nqr; k++) {
+            ind = (i + off)*Nmodes + (j + off);
+            r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[0];
+            A[ind] += r*r*DBquadb[k*(N + 1) + i + 1]*DBquadb[k*(N + 1) + j + 1]*Wquadb[k]/J;
+            A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i + 1]*Bquadb[k*(N + 1) + j + 1]*Wquadb[k]*J;
+            B[ind] += Bquadb[k*(N + 1) + i + 1]*Bquadb[k*(N + 1) + j + 1]*Wquadb[k]*J;
+          }
         }
       }
     }
-  }
 
-  if (asbf->BCType[2] == 1) {
-    off = Nmodes - N;
-    J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
-    for (int i = 0; i < N; i++) {
-      for (int j = 0; j < N; j++) {
-        for (int k = 0; k < Nqr; k++) {
-          ind = (i + off)*Nmodes + (j + off);
-          r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[Nradelements - 1];
-          A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
-          A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
-          B[ind] += Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+    for (int e = es; e < ee; e++) {
+      if (asbf->BCType[1] == 1) {
+        off = e*N - 1;
+      } else {
+        off = e*N;
+      }
+
+      J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+      for (int i = 0; i < N + 1; i++) {
+        for (int j = 0; j < N + 1; j++) {
+          for (int k = 0; k < Nqr; k++) {
+            ind = (i + off)*Nmodes + (j + off);
+            r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[e];
+            A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
+            A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+            B[ind] += Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+          }
+        }
+      }
+    }
+
+    if (asbf->BCType[2] == 1) {
+      off = Nmodes - N;
+      J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
+      for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+          for (int k = 0; k < Nqr; k++) {
+            ind = (i + off)*Nmodes + (j + off);
+            r = (Rquadb[k] + 1.0)*J + asbf->Rbreaks[Nradelements - 1];
+            A[ind] += r*r*DBquadb[k*(N + 1) + i]*DBquadb[k*(N + 1) + j]*Wquadb[k]/J;
+            A[ind] += asbf->lambda*r*r*Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+            B[ind] += Bquadb[k*(N + 1) + i]*Bquadb[k*(N + 1) + j]*Wquadb[k]*J;
+          }
         }
       }
     }
@@ -589,76 +618,113 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   asbf->Bplot = (dfloat*)calloc(asbf->Nplot*Nmodes, sizeof(dfloat));
   asbf->DBplot = (dfloat*)calloc(asbf->Nplot*Nmodes, sizeof(dfloat));
 
-  if (asbf->BCType[1] == 1) {
+  if (Nradelements == 1) {
+    if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+      off = 1;
+      end = N - 1;
+    } else if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 2)) {
+      off = 1;
+      end = N;
+    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 1)) {
+      off = 0;
+      end = N;
+    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+      off = 0;
+      end = N + 1;
+    }
+
     J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
     for (int i = 0; i < asbf->Nqr; i++) {
       for (int j = 0; j < Nmodes; j++) {
-        for (int k = 0; k < N; k++) {
+        for (int k = 0; k < end; k++) {
           ind = i*asbf->Nmodes + j;
-          asbf->Bquad[ind] += Bquadb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k];
-          asbf->DBquad[ind] += DBquadb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k]/J;
+          asbf->Bquad[ind] += Bquadb[i*(N + 1) + k + off]*A[j*asbf->Nmodes + k];
+          asbf->DBquad[ind] += DBquadb[i*(N + 1) + k + off]*A[j*asbf->Nmodes + k]/J;
         }
       }
     }
 
     for (int i = 0; i < asbf->Nplotr; i++) {
       for (int j = 0; j < Nmodes; j++) {
-        for (int k = 0; k < N; k++) {
+        for (int k = 0; k < end; k++) {
           ind = i*asbf->Nmodes + j;
-          asbf->Bplot[ind] += Bplotb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k];
-          asbf->DBplot[ind] += DBplotb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k]/J;
+          asbf->Bplot[ind] += Bplotb[i*(N + 1) + k + off]*A[j*asbf->Nmodes + k];
+          asbf->DBplot[ind] += DBplotb[i*(N + 1) + k + off]*A[j*asbf->Nmodes + k]/J;
         }
       }
     }
-
-    off = -1;
   } else {
-    off = 0;
-  }
+    if (asbf->BCType[1] == 1) {
+      J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
+      for (int i = 0; i < asbf->Nqr; i++) {
+        for (int j = 0; j < Nmodes; j++) {
+          for (int k = 0; k < N; k++) {
+            ind = i*asbf->Nmodes + j;
+            asbf->Bquad[ind] += Bquadb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k];
+            asbf->DBquad[ind] += DBquadb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k]/J;
+          }
+        }
+      }
 
-  for (int e = es; e < ee; e++) {
-    J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+      for (int i = 0; i < asbf->Nplotr; i++) {
+        for (int j = 0; j < Nmodes; j++) {
+          for (int k = 0; k < N; k++) {
+            ind = i*asbf->Nmodes + j;
+            asbf->Bplot[ind] += Bplotb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k];
+            asbf->DBplot[ind] += DBplotb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k]/J;
+          }
+        }
+      }
 
-    for (int i = 0; i < asbf->Nqr; i++) {
-      for (int j = 0; j < Nmodes; j++) {
-        for (int k = 0; k < N + 1; k++) {
-          ind = (i + e*asbf->Nqr)*asbf->Nmodes + j;
-          asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off];
-          asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off]/J;
+      off = -1;
+    } else {
+      off = 0;
+    }
+
+    for (int e = es; e < ee; e++) {
+      J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+
+      for (int i = 0; i < asbf->Nqr; i++) {
+        for (int j = 0; j < Nmodes; j++) {
+          for (int k = 0; k < N + 1; k++) {
+            ind = (i + e*asbf->Nqr)*asbf->Nmodes + j;
+            asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off];
+            asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off]/J;
+          }
+        }
+      }
+
+      for (int i = 0; i < asbf->Nplotr; i++) {
+        for (int j = 0; j < Nmodes; j++) {
+          for (int k = 0; k < N + 1; k++) {
+            ind = (i + e*asbf->Nplotr)*asbf->Nmodes + j;
+            asbf->Bplot[ind] += Bplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off];
+            asbf->DBplot[ind] += DBplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off]/J;
+          }
         }
       }
     }
 
-    for (int i = 0; i < asbf->Nplotr; i++) {
-      for (int j = 0; j < Nmodes; j++) {
-        for (int k = 0; k < N + 1; k++) {
-          ind = (i + e*asbf->Nplotr)*asbf->Nmodes + j;
-          asbf->Bplot[ind] += Bplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off];
-          asbf->DBplot[ind] += DBplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off]/J;
+    if (asbf->BCType[2] == 1) {
+      J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
+
+      for (int i = 0; i < asbf->Nqr; i++) {
+        for (int j = 0; j < Nmodes; j++) {
+          for (int k = 0; k < N; k++) {
+            ind = (i + (Nradelements - 1)*asbf->Nqr)*asbf->Nmodes + j;
+            asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off];
+            asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off]/J;
+          }
         }
       }
-    }
-  }
 
-  if (asbf->BCType[2] == 1) {
-    J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
-
-    for (int i = 0; i < asbf->Nqr; i++) {
-      for (int j = 0; j < Nmodes; j++) {
-        for (int k = 0; k < N; k++) {
-          ind = (i + (Nradelements - 1)*asbf->Nqr)*asbf->Nmodes + j;
-          asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off];
-          asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off]/J;
-        }
-      }
-    }
-
-    for (int i = 0; i < asbf->Nplotr; i++) {
-      for (int j = 0; j < Nmodes; j++) {
-        for (int k = 0; k < N; k++) {
-          ind = (i + (Nradelements - 1)*asbf->Nplotr)*asbf->Nmodes + j;
-          asbf->Bplot[ind] += Bplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off];
-          asbf->DBplot[ind] += DBplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off]/J;
+      for (int i = 0; i < asbf->Nplotr; i++) {
+        for (int j = 0; j < Nmodes; j++) {
+          for (int k = 0; k < N; k++) {
+            ind = (i + (Nradelements - 1)*asbf->Nplotr)*asbf->Nmodes + j;
+            asbf->Bplot[ind] += Bplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off];
+            asbf->DBplot[ind] += DBplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off]/J;
+          }
         }
       }
     }
