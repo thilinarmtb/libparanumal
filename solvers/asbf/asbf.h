@@ -81,7 +81,8 @@ typedef struct {
 
   // Variables for piecewise discrete basis.
   int Nradelements; // number of radial elements
-  int Nqr;          // number of nodes on each radial element.
+  int Nqr;          // number of quadrature nodes on each radial element.
+  int Nplotr;       // number of plot nodes on each radial element.
   dfloat *Rbreaks;  // radial mesh breakpoints
   /*********/
 

@@ -68,6 +68,9 @@ function writeASBFData(N)
   V = T(Rquad);
   L = T*inv(V);
   Wquad = sum(L).';
+
+  Nplot = ceil(2.5*N);
+  Rplot = linspace(-1, 1, Nplot)';
   
   Rtrue = [-1 ; roots(diff(legpoly(N))) ; 1];
   T = chebpoly(0:N);
@@ -76,11 +79,16 @@ function writeASBFData(N)
   
   V = feval(L, Rquad);
   VD = feval(diff(L), Rquad);
+  Vplot = feval(L, Rplot);
+  VDplot = feval(diff(L), Rplot);
 
-  writeFloatMatrix(fid, Rquad, 'ASBF PIECEWISE DISCRETE QUADRATURE NODES');
-  writeFloatMatrix(fid, Wquad, 'ASBF PIECEWISE DISCRETE QUADRATURE WEIGHTS');
-  writeFloatMatrix(fid, V,     'ASBF PIECEWISE DISCRETE QUADRATURE VANDERMONDE');
-  writeFloatMatrix(fid, VD,    'ASBF PIECEWISE DISCRETE QUADRATURE DERIVATIVE VANDERMONDE');
+  writeFloatMatrix(fid, Rquad,  'ASBF PIECEWISE DISCRETE QUADRATURE NODES');
+  writeFloatMatrix(fid, Wquad,  'ASBF PIECEWISE DISCRETE QUADRATURE WEIGHTS');
+  writeFloatMatrix(fid, Rquad,  'ASBF PIECEWISE DISCRETE PLOT NODES');
+  writeFloatMatrix(fid, V,      'ASBF PIECEWISE DISCRETE QUADRATURE VANDERMONDE');
+  writeFloatMatrix(fid, VD,     'ASBF PIECEWISE DISCRETE QUADRATURE DERIVATIVE VANDERMONDE');
+  writeFloatMatrix(fid, Vplot,  'ASBF PIECEWISE DISCRETE PLOT VANDERMONDE');
+  writeFloatMatrix(fid, VDplot, 'ASBF PIECEWISE DISCRETE PLOT DERIVATIVE VANDERMONDE');
   
   %%%%%%%%%% TRUE EIGENFUNCTION BASIS %%%%%%%%%%
 

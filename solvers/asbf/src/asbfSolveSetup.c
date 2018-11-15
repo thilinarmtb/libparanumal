@@ -411,11 +411,13 @@ static void asbfLoadRadialBasisGlobalDiscrete(asbf_t *asbf)
 static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 {
   dfloat *Rquadb, *Wquadb;    // Base quadrature nodes and weights.
+  dfloat *Rplotb;             // Base plotting nodes.
   dfloat *Bquadb, *DBquadb;   // Base Vandermonde matrices.
+  dfloat *Bplotb, *DBplotb;
   dfloat r, J;                // Radial variable and Jacobian factor.
   dfloat *A, *B;              // Matrices for GEVP.
   int N, Nradelements, Nqr;   // Local copies of variables from asbf.
-  int Nmodes;
+  int Nplotr, Nmodes;
   int Nrows, Ncols;           // Needed by readDfloatArray().
   int ee, es, ind, off;       // Variables to assist with indexing.
   FILE *fp;                   // Pointer to open data file.
@@ -440,25 +442,38 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
       &Rquadb, &(asbf->Nqr), &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE WEIGHTS",
       &Wquadb, &(asbf->Nqr), &Ncols);
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE PLOT NODES",
+      &Rplotb, &(asbf->Nplotr), &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE VANDERMONDE",
       &Bquadb, &Nrows, &Ncols);
   readDfloatArray(fp, "ASBF PIECEWISE DISCRETE QUADRATURE DERIVATIVE VANDERMONDE",
       &DBquadb, &Nrows, &Ncols);
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE PLOT VANDERMONDE",
+      &Bplotb, &Nrows, &Ncols);
+  readDfloatArray(fp, "ASBF PIECEWISE DISCRETE PLOT DERIVATIVE VANDERMONDE",
+      &DBplotb, &Nrows, &Ncols);
 
   Nradelements = asbf->Nradelements;
   Nqr          = asbf->Nqr;
+  Nplotr       = asbf->Nplotr;
 
   // Scale the base nodes and weights to get nodes and weights for each radial
   // subinterval.
   asbf->Nquad = Nqr*Nradelements;
+  asbf->Nplot = Nplotr*Nradelements;
   asbf->Rquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
   asbf->Wquad = (dfloat*)calloc(asbf->Nquad, sizeof(dfloat));
+  asbf->Rplot = (dfloat*)calloc(asbf->Nplot, sizeof(dfloat));
   for (int e = 0; e < Nradelements; e++) {
     J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+
     for (int i = 0; i < Nqr; i++) {
       asbf->Rquad[e*Nqr + i] = (Rquadb[i] + 1.0)*J + asbf->Rbreaks[e];
       asbf->Wquad[e*Nqr + i] = Wquadb[i]*J;
     }
+
+    for (int i = 0; i < Nplotr; i++)
+      asbf->Rplot[e*Nplotr + i] = (Rplotb[i] + 1.0)*J + asbf->Rbreaks[e];
   }
 
   // Determine the number of modes and set up some indexing variables.
@@ -571,6 +586,8 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   // NB:  A contains the eigenvectors, stored in column-major order.
   asbf->Bquad = (dfloat*)calloc(asbf->Nquad*Nmodes, sizeof(dfloat));
   asbf->DBquad = (dfloat*)calloc(asbf->Nquad*Nmodes, sizeof(dfloat));
+  asbf->Bplot = (dfloat*)calloc(asbf->Nplot*Nmodes, sizeof(dfloat));
+  asbf->DBplot = (dfloat*)calloc(asbf->Nplot*Nmodes, sizeof(dfloat));
 
   if (asbf->BCType[1] == 1) {
     J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
@@ -584,6 +601,16 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
       }
     }
 
+    for (int i = 0; i < asbf->Nplotr; i++) {
+      for (int j = 0; j < Nmodes; j++) {
+        for (int k = 0; k < N; k++) {
+          ind = i*asbf->Nmodes + j;
+          asbf->Bplot[ind] += Bplotb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k];
+          asbf->DBplot[ind] += DBplotb[i*(N + 1) + k + 1]*A[j*asbf->Nmodes + k]/J;
+        }
+      }
+    }
+
     off = -1;
   } else {
     off = 0;
@@ -591,6 +618,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
 
   for (int e = es; e < ee; e++) {
     J = (asbf->Rbreaks[e + 1] - asbf->Rbreaks[e])/2.0;
+
     for (int i = 0; i < asbf->Nqr; i++) {
       for (int j = 0; j < Nmodes; j++) {
         for (int k = 0; k < N + 1; k++) {
@@ -600,16 +628,37 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
         }
       }
     }
+
+    for (int i = 0; i < asbf->Nplotr; i++) {
+      for (int j = 0; j < Nmodes; j++) {
+        for (int k = 0; k < N + 1; k++) {
+          ind = (i + e*asbf->Nplotr)*asbf->Nmodes + j;
+          asbf->Bplot[ind] += Bplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off];
+          asbf->DBplot[ind] += DBplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + e*N + k + off]/J;
+        }
+      }
+    }
   }
 
   if (asbf->BCType[2] == 1) {
     J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
+
     for (int i = 0; i < asbf->Nqr; i++) {
       for (int j = 0; j < Nmodes; j++) {
         for (int k = 0; k < N; k++) {
           ind = (i + (Nradelements - 1)*asbf->Nqr)*asbf->Nmodes + j;
           asbf->Bquad[ind] += Bquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off];
           asbf->DBquad[ind] += DBquadb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off]/J;
+        }
+      }
+    }
+
+    for (int i = 0; i < asbf->Nplotr; i++) {
+      for (int j = 0; j < Nmodes; j++) {
+        for (int k = 0; k < N; k++) {
+          ind = (i + (Nradelements - 1)*asbf->Nplotr)*asbf->Nmodes + j;
+          asbf->Bplot[ind] += Bplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off];
+          asbf->DBplot[ind] += DBplotb[i*(N + 1) + k]*A[j*asbf->Nmodes + (Nradelements - 1)*N + k + off]/J;
         }
       }
     }
@@ -620,8 +669,13 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   free(B);
   free(W);
   free(WORK);
+  free(Rquadb);
+  free(Wquadb);
+  free(Rplotb);
   free(Bquadb);
   free(DBquadb);
+  free(Bplotb);
+  free(DBplotb);
 
   fclose(fp);
 }
