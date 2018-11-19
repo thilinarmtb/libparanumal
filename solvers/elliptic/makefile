@@ -100,6 +100,7 @@ LOBJS = \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
+../../src/meshPhysicalNodesTri3D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
 ../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPhysicalNodesTet3D.o \

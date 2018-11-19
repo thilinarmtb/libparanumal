@@ -27,6 +27,7 @@ SOFTWARE.
 #include "asbf.h"
 
 int main(int argc, char **argv){
+  setbuf(stdout, NULL);
 
   // start up MPI
   MPI_Init(&argc, &argv);
@@ -88,6 +89,7 @@ int main(int argc, char **argv){
 
   asbf_t *asbf = asbfSetup(mesh, lambda, kernelInfo, options);
 
+  /*
   // solve for asbf->q3D
   asbfSolve(asbf, options);
 
@@ -99,6 +101,73 @@ int main(int argc, char **argv){
     asbfErrorHex3D(asbf, asbf->q3D, &errH1, &errL2);
     printf("%g, %g %%%% abs H1 error norm, L2 error norm\n", errH1, errL2);
   }
+  */
+
+ /******************************/
+
+  // ?????
+  int hexBCType[7] = {0, 0, 0, 0, 0, 0, 0};
+
+  occa::properties kernelInfoHex;
+  kernelInfoHex["defines"].asObject();
+  kernelInfoHex["includes"].asArray();
+  kernelInfoHex["header"].asArray();
+  kernelInfoHex["flags"].asObject();
+
+  meshOccaSetup3D(asbf->meshSEM, options, kernelInfoHex);
+
+  elliptic_t *hexSolver = (elliptic_t*)calloc(1, sizeof(elliptic_t));
+  asbf->meshSEM->Nfields = 1;
+  
+  hexSolver->mesh = asbf->meshSEM;
+  hexSolver->options = asbf->options;
+  hexSolver->dim = 3;
+  hexSolver->elementType = HEXAHEDRA;
+  hexSolver->BCType = (int*)calloc(7, sizeof(int));
+  memcpy(hexSolver->BCType, hexBCType, 7*sizeof(int));
+
+  ellipticSolveSetup(hexSolver, asbf->lambda, kernelInfoHex);
+
+  /*
+  hlong Nall = hexSolver->mesh->Np*(hexSolver->mesh->Nelements+hexSolver->mesh->totalHaloPairs);
+  dfloat *foo = (dfloat*) malloc(Nall*sizeof(dfloat));
+  hexSolver->o_invDegree.copyTo(foo);
+  */
+
+  hexSolver->x = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, sizeof(dfloat));
+  hexSolver->r = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, sizeof(dfloat));
+
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    for (int n = 0; n < hexSolver->mesh->Np; n++) {
+      dfloat J = hexSolver->mesh->vgeo[hexSolver->mesh->Np*(e*hexSolver->mesh->Nvgeo + JID) + n];
+
+      dlong ind = e*hexSolver->mesh->Np + n;
+      dfloat xn = hexSolver->mesh->x[ind];
+      dfloat yn = hexSolver->mesh->y[ind];
+      dfloat zn = hexSolver->mesh->z[ind];
+      dfloat r = sqrt(zn*zn + yn*yn + zn*zn);
+
+      dfloat q, d2qdx2, d2qdy2, d2qdz2;
+      dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
+      dfloat r2m1       = pow(r, 2.0) - 1.0;
+      dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(asbf->R, 2.0) - 1.0;
+      
+      q = sin(xn)*cos(yn)*exp(zn)*r2mR2*r2m1;
+      d2qdx2 = cos(yn)*exp(zn)*((2.0*sin(xn) + 4.0*xn*cos(xn))*twor2mR2m1 + 8.0*xn*xn*sin(xn) - sin(xn)*r2mR2*r2m1);
+      d2qdy2 = sin(xn)*exp(zn)*((2.0*cos(yn) - 4.0*yn*sin(yn))*twor2mR2m1 + 8.0*yn*yn*cos(yn) - cos(yn)*r2mR2*r2m1);
+      d2qdz2 = sin(xn)*cos(yn)*exp(zn)*((2.0 + 4.0*zn)*twor2mR2m1 + 8.0*zn*zn + r2mR2*r2m1);
+      hexSolver->r[ind] = -d2qdx2 - d2qdy2 - d2qdz2 + asbf->lambda*q;
+    }
+  }
+  
+  hexSolver->o_r = hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*sizeof(dfloat), hexSolver->r);
+  hexSolver->o_x = hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*sizeof(dfloat), hexSolver->x);
+
+  ellipticSolve(hexSolver, asbf->lambda, asbf->pTOL, hexSolver->o_r, hexSolver->o_x);
+
+  hexSolver->o_x.copyTo(hexSolver->mesh->q);
+
+ /******************************/
  
   // close down MPI
   MPI_Finalize();

@@ -13,7 +13,7 @@ data/ellipticSineTest3D.h
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh
 #../../meshes/cavityHexH01.msh
-../../meshes/cavityHexH0075.msh
+../../meshes/cavityHexH02.msh
 
 [MESH DIMENSION]
 3
@@ -46,8 +46,8 @@ PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#IPDG
-CONTINUOUS
+IPDG
+#CONTINUOUS
 
 # can be NODAL or BERN
 [BASIS]
@@ -56,7 +56,8 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
 #JACOBI
-MULTIGRID
+#MULTIGRID
+NONE
 
 
 
@@ -106,4 +107,5 @@ STRONGNODES
 cavity
 
 [VERBOSE]
-FALSE
+#FALSE
+TRUE
