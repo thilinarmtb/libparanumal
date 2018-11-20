@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include <time.h>
 #include "asbf.h"
 
 int main(int argc, char **argv){
@@ -127,6 +128,140 @@ int main(int argc, char **argv){
   memcpy(hexSolver->BCType, hexBCType, 7*sizeof(int));
 
   ellipticSolveSetup(hexSolver, asbf->lambda, kernelInfoHex);
+
+  printf("EToB\n");
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    printf("Element %d:  ", e);
+    for (int f = 0; f < hexSolver->mesh->Nfaces; f++)
+      printf("%d  ", hexSolver->mesh->EToB[e*hexSolver->mesh->Nfaces + f]);
+    printf("\n");
+  }
+
+  printf("\n");
+
+  printf("EToV\n");
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    printf("Element %d:  ", e);
+    for (int v = 0; v < hexSolver->mesh->Nverts; v++)
+      printf("%d ", hexSolver->mesh->EToV[e*hexSolver->mesh->Nverts + v]);
+    printf("\n");
+  }
+
+  printf("\n");
+
+  printf("EToE\n");
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    printf("Element %d:  ", e);
+    for (int f = 0; f < hexSolver->mesh->Nfaces; f++)
+      printf("%d  ", hexSolver->mesh->EToE[e*hexSolver->mesh->Nfaces + f]);
+    printf("\n");
+  }
+
+  printf("\n");
+
+  printf("EToF\n");
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    printf("Element %d:  ", e);
+    for (int f = 0; f < hexSolver->mesh->Nfaces; f++)
+      printf("%d  ", hexSolver->mesh->EToF[e*hexSolver->mesh->Nfaces + f]);
+    printf("\n");
+  }
+
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    for (int f = 0; f < hexSolver->mesh->Nfaces; f++) {
+      for (int i = 0; i < hexSolver->mesh->Nfp; i++) {
+        dlong base = hexSolver->mesh->Nsgeo*(hexSolver->mesh->Nfaces*hexSolver->mesh->Nfp*e + hexSolver->mesh->Nfp*f + i);
+        if (((e == 297) && (f == 2)) || ((e == 346) && (f == 4))) {
+          printf("Element %d, Face %d, Node %02d:  normal = (% 20.15f, % 20.15f, % 20.15f), surface Jacobian = % 20.15f\n",
+                 e, f, i, hexSolver->mesh->sgeo[base + NXID], hexSolver->mesh->sgeo[base + NYID], hexSolver->mesh->sgeo[base + NZID],
+                 hexSolver->mesh->sgeo[base + SJID]);
+        }
+      }
+    }
+  }
+
+  exit(0);
+
+  //---------------------------------------------------------------------------
+
+  // Compute and dump the stiffness matrix to disk (this is too expensive).
+  /*
+  int Ntotal = hexSolver->mesh->Nelements*hexSolver->mesh->Np;
+  dfloat *x  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  dfloat *Ax = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  occa::memory o_x  = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
+  occa::memory o_Ax = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
+
+  FILE *fout = fopen("stiffmat.dat", "w");
+
+  int NN = 8;
+  printf("Ntotal = %d\n", Ntotal);
+  for (int i = 0; i < NN; i++) {
+    if (i % 10000 == 0) {
+      printf("i = %d\n", i);
+    }
+
+    x[i] = 1.0;
+    if (i > 0)
+      x[i - 1] = 0.0;
+
+    o_x.copyFrom(x);
+    ellipticOperator(hexSolver, asbf->lambda, o_x, o_Ax, "double");
+    o_Ax.copyTo(Ax);
+
+    for (int j = 0; j < NN; j++)
+      printf("%.15f\n", Ax[j]);
+    printf("\n");
+
+    //for (int j = 0; j < Ntotal; j++) {
+    //  if (fabs(Ax[j]) > 1.0e-14)
+    //    fprintf(fout, "%d %d %.16f\n", j, i, Ax[j]);
+    //}
+  }
+
+  free(x);
+  free(Ax);
+  fclose(fout);
+  */
+
+  // Check symmetry by comparing y^TAx and x^TAy for random x, y.
+  int Ntotal = hexSolver->mesh->Nelements*hexSolver->mesh->Np;
+  dfloat *x  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  dfloat *y  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  dfloat *Ax = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  dfloat *Ay = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  occa::memory o_v  = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
+  occa::memory o_Av = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
+
+  hexSolver->tau = 0.0;
+
+  srand48(67714070);
+
+  for (int i = 0; i < Ntotal; i++) {
+    x[i] = drand48();
+    y[i] = drand48();
+  }
+
+  o_v.copyFrom(x);
+  ellipticOperator(hexSolver, asbf->lambda, o_v, o_Av, "double");
+  o_Av.copyTo(Ax);
+  double ytAx = 0.0;
+  for (int i = 0; i < Ntotal; i++)
+    ytAx += y[i]*Ax[i];
+
+  o_v.copyFrom(y);
+  ellipticOperator(hexSolver, asbf->lambda, o_v, o_Av, "double");
+  o_Av.copyTo(Ay);
+  double xtAy = 0.0;
+  for (int i = 0; i < Ntotal; i++)
+    xtAy += x[i]*Ay[i];
+
+  printf("ytAx = %.15f\n", ytAx);
+  printf("xtAy = %.15f\n", xtAy);
+
+  exit(0);
+
+  //---------------------------------------------------------------------------
 
   /*
   hlong Nall = hexSolver->mesh->Np*(hexSolver->mesh->Nelements+hexSolver->mesh->totalHaloPairs);
