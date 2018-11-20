@@ -79,6 +79,7 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
   asbf->BCType[2] = 1;
 
   asbfSolveSetup(asbf, lambda, kernelInfo);
+#if 1
 
   for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
@@ -119,7 +120,7 @@ asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setu
       }
     }
   }
-
+#endif
 
   return asbf;
 }

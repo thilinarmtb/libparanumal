@@ -241,7 +241,7 @@ int main(int argc, char **argv){
   occa::memory o_v  = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
   occa::memory o_Av = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
 
-  hexSolver->tau = 0.0;
+  hexSolver->tau = 1000.0;
 
   srand48(67714070);
 
@@ -251,6 +251,13 @@ int main(int argc, char **argv){
   }
 
   o_v.copyFrom(x);
+
+  // feed o_v = S*G*o_v
+  if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+    ogsGatherScatterStart(o_v, ogsDfloat, ogsAdd, hexSolver->ogs);
+    ogsGatherScatterFinish(o_v, ogsDfloat, ogsAdd, hexSolver->ogs);
+  }
+
   ellipticOperator(hexSolver, asbf->lambda, o_v, o_Av, "double");
   o_Av.copyTo(Ax);
   double ytAx = 0.0;
@@ -258,6 +265,12 @@ int main(int argc, char **argv){
     ytAx += y[i]*Ax[i];
 
   o_v.copyFrom(y);
+  // feed o_v = S*G*o_v
+  if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+    ogsGatherScatterStart(o_v, ogsDfloat, ogsAdd, hexSolver->ogs);
+    ogsGatherScatterFinish(o_v, ogsDfloat, ogsAdd, hexSolver->ogs);
+  }
+  
   ellipticOperator(hexSolver, asbf->lambda, o_v, o_Av, "double");
   o_Av.copyTo(Ay);
   double xtAy = 0.0;

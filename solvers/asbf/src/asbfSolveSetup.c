@@ -118,7 +118,10 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   // Elliptic BCType flags should be all zero for spherical problem.
   asbf->elliptic->BCType = (int*)calloc(7, sizeof(int));
 
+#if 0
+  TW
   ellipticSolveSetup(asbf->elliptic, asbf->lambda, kernelInfoP);
+#endif
 
   asbf->meshSEM = NULL;
 
