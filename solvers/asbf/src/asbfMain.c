@@ -92,6 +92,8 @@ int main(int argc, char **argv){
 
   meshCheckHex3D(asbf->meshSEM);
 
+  meshPlotVTU3D(asbf->meshSEM, "semMesh", 0);
+  
   /*
   // solve for asbf->q3D
   asbfSolve(asbf, options);
@@ -119,7 +121,8 @@ int main(int argc, char **argv){
 
   meshOccaSetup3D(asbf->meshSEM, options, kernelInfoHex);
 
-  elliptic_t *hexSolver = (elliptic_t*)calloc(1, sizeof(elliptic_t));
+  elliptic_t *hexSolver = new elliptic_t[1];
+  //(elliptic_t*)calloc(1, sizeof(elliptic_t));
   asbf->meshSEM->Nfields = 1;
   
   hexSolver->mesh = asbf->meshSEM;

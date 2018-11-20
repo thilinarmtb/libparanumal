@@ -32,7 +32,8 @@ static dfloat asbfManufacturedForcingFunction(asbf_t *asbf, dfloat x, dfloat y, 
 
 asbf_t *asbfSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setupAide options){
 
-  asbf_t *asbf = (asbf_t*) calloc(1, sizeof(asbf_t));
+  asbf_t *asbf = new asbf_t[1];
+  // (asbf_t*) calloc(1, sizeof(asbf_t));
   asbf->mesh = mesh;
   asbf->options = options;
 

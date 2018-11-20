@@ -30,7 +30,8 @@ void asbfExtrudeSphere(asbf_t *asbf){
 
   mesh_t *mesh = asbf->mesh;
 
-  mesh_t *meshSEM = (mesh_t*) calloc(1, sizeof(mesh_t));
+  mesh_t *meshSEM = new mesh_t[1];
+  //(mesh_t*) calloc(1, sizeof(mesh_t));
 
   meshSEM->N = mesh->N;
   meshSEM->Nelements = mesh->Nelements;

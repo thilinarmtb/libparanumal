@@ -214,10 +214,15 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   //setup an unmasked gs handle
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
+  printf("HI\n");
   meshParallelGatherScatterSetup(mesh, Ntotal, mesh->globalIds, mesh->comm, verbose);
+  printf("BYE\n");
+
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+
+#if 1
   for (dlong e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) elliptic->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
@@ -232,7 +237,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     }
   }
   ogsGatherScatter(elliptic->mapB, ogsInt, ogsMin, mesh->ogs);
-
+#endif
+  
   //use the bc flags to find masked ids
   elliptic->Nmasked = 0;
   for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
@@ -259,12 +265,14 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   for (dlong n=0;n<elliptic->Nmasked;n++)
     mesh->maskedGlobalIds[elliptic->maskIds[n]] = 0;
 
+#if 1
   //use the masked ids to make another gs handle
   elliptic->ogs = ogsSetup(Ntotal, mesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
   elliptic->o_invDegree = elliptic->ogs->o_invDegree;
-
+#endif
   /*preconditioner setup */
-  elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
+  elliptic->precon = new precon_t[1];
+  //(precon_t*) calloc(1, sizeof(precon_t));
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 

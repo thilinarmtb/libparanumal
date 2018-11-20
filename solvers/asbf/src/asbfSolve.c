@@ -44,6 +44,7 @@ int asbfSolve(asbf_t *asbf, setupAide options)
 
 
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+      printf("AEAIOSEYTOE*YOE*\n");
       // gather scatter
       ogsGatherScatter(asbf->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     }

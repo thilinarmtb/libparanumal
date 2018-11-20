@@ -108,7 +108,8 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   //Solver tolerances
   asbf->pTOL = 1E-8;
 
-  asbf->elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  asbf->elliptic = new elliptic_t[1];
+  // (elliptic_t*) calloc(1, sizeof(elliptic_t));
   asbf->elliptic->mesh = mesh;
   asbf->elliptic->options = asbf->options;
   asbf->elliptic->dim = asbf->dim;
