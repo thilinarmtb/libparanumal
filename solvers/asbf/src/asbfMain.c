@@ -90,6 +90,8 @@ int main(int argc, char **argv){
 
   asbf_t *asbf = asbfSetup(mesh, lambda, kernelInfo, options);
 
+  meshCheckHex3D(asbf->meshSEM);
+
   /*
   // solve for asbf->q3D
   asbfSolve(asbf, options);
@@ -106,9 +108,9 @@ int main(int argc, char **argv){
 
  /******************************/
 
-  // ?????
-  int hexBCType[7] = {0, 0, 0, 0, 0, 0, 0};
-
+  // maps nothing->nothing, Dirichlet->Dirichlet...
+  int hexBCType[3] = {0,1,2};
+  
   occa::properties kernelInfoHex;
   kernelInfoHex["defines"].asObject();
   kernelInfoHex["includes"].asArray();
@@ -124,11 +126,13 @@ int main(int argc, char **argv){
   hexSolver->options = asbf->options;
   hexSolver->dim = 3;
   hexSolver->elementType = HEXAHEDRA;
-  hexSolver->BCType = (int*)calloc(7, sizeof(int));
-  memcpy(hexSolver->BCType, hexBCType, 7*sizeof(int));
+
+  hexSolver->BCType = (int*) calloc(3,sizeof(int));
+  memcpy(hexSolver->BCType,hexBCType,3*sizeof(int));
 
   ellipticSolveSetup(hexSolver, asbf->lambda, kernelInfoHex);
 
+#if 0
   printf("EToB\n");
   for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
     printf("Element %d:  ", e);
@@ -181,7 +185,8 @@ int main(int argc, char **argv){
   }
 
   exit(0);
-
+#endif
+  
   //---------------------------------------------------------------------------
 
   // Compute and dump the stiffness matrix to disk (this is too expensive).
@@ -258,8 +263,6 @@ int main(int argc, char **argv){
 
   printf("ytAx = %.15f\n", ytAx);
   printf("xtAy = %.15f\n", xtAy);
-
-  exit(0);
 
   //---------------------------------------------------------------------------
 

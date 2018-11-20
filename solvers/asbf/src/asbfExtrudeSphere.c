@@ -49,9 +49,15 @@ void asbfExtrudeSphere(asbf_t *asbf){
 
   meshSEM->rank = mesh->rank;
   meshSEM->size = mesh->size;
-  meshSEM->comm = mesh->comm;
+  MPI_Comm_dup(mesh->comm, &meshSEM->comm);
 
+  int maxNode = 0;
+  for(int n=0;n<mesh->Nelements*mesh->Nverts;++n){
+    maxNode = mymax(maxNode, mesh->EToV[n]);
+  }
+  
   // clone and shift nodes
+  printf("mesh->Nnodes = %d and maxNode = %d\n", mesh->Nnodes, maxNode);
   meshSEM->Nnodes = 2*mesh->Nnodes;
   meshSEM->EToV = (hlong*)  calloc(meshSEM->Nelements*meshSEM->Nverts, sizeof(hlong));
   meshSEM->EX   = (dfloat*) calloc(meshSEM->Nverts*meshSEM->Nelements, sizeof(dfloat));

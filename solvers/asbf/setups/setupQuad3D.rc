@@ -17,7 +17,7 @@ BROWN-MINION
 100.0
 
 [MESH FILE]
-../../meshes/sphereQuadH02.msh 
+../../meshes/sphereQuadH01.msh 
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
@@ -30,7 +30,7 @@ BROWN-MINION
 ISOPARAMETRIC
 
 [POLYNOMIAL DEGREE]
-8
+3
 
 [RADIAL EXPANSION MODES]
 25
