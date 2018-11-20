@@ -141,8 +141,11 @@ dfloat meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
 void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
                                       int numLevels, int *levels);
 
-#define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
+// mesh consistency checker
+void meshCheckHex3D(mesh_t *mesh);
 
+#define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
+  
 /* offsets for geometric factors */
 #define RXID 0  
 #define RYID 1  
