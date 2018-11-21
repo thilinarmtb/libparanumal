@@ -96,20 +96,10 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   asbf->o_r   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->r);
   asbf->o_x   = mesh->device.malloc(asbf->Ntotal*sizeof(dfloat), asbf->x);
 
-  // SetUp Boundary Flags types for Elliptic Solve
-  // bc = 1 -> wall
-  // bc = 2 -> inflow
-  // bc = 3 -> outflow
-  // bc = 4 -> x-aligned slip
-  // bc = 5 -> y-aligned slip
-  // bc = 6 -> z-aligned slip
-  //int pBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-
   //Solver tolerances
   asbf->pTOL = 1E-8;
 
-  asbf->elliptic = new elliptic_t[1];
-  // (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  asbf->elliptic = new elliptic_t;
   asbf->elliptic->mesh = mesh;
   asbf->elliptic->options = asbf->options;
   asbf->elliptic->dim = asbf->dim;
@@ -118,10 +108,7 @@ void asbfSolveSetup(asbf_t *asbf, dfloat lambda, occa::properties &kernelInfo)
   // Elliptic BCType flags should be all zero for spherical problem.
   asbf->elliptic->BCType = (int*)calloc(7, sizeof(int));
 
-#if 0
-  TW
   ellipticSolveSetup(asbf->elliptic, asbf->lambda, kernelInfoP);
-#endif
 
   asbf->meshSEM = NULL;
 
@@ -171,7 +158,7 @@ static void asbfLoadRadialBasisTrue(asbf_t *asbf)
   }
 
   // Load the basis data.
-  if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+  if ((asbf->innerBC == 1) && (asbf->outerBC == 1)) {
     // Dirichlet BCs on both spheres.
     readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET QUADRATURE NODES",
         &(asbf->Rquad), &(asbf->Nquad), &Ncols);
@@ -195,13 +182,13 @@ static void asbfLoadRadialBasisTrue(asbf_t *asbf)
         &(asbf->Bplot), &Nrows, &Ncols);
     readDfloatArray(fp, "ASBF TRUE DIRICHLET-DIRICHLET PLOT DERIVATIVE VANDERMONDE",
         &(asbf->DBplot), &Nrows, &Ncols);
-  } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+  } else if ((asbf->innerBC == 2) && (asbf->outerBC == 2)) {
     // Neumann BCs on both spheres.
     printf("Neumann-Neumann boundary conditions not implemented.\n");
     exit(-1);
   } else {
     printf("Type-{%d, %d} boundary conditions not implmented.\n", 
-           asbf->BCType[1], asbf->BCType[2]);
+           asbf->innerBC, asbf->outerBC);
     exit(-1);
   }
 
@@ -262,7 +249,7 @@ static void asbfLoadRadialBasisGlobalDiscrete(asbf_t *asbf)
   Nplot  = asbf->Nplot;
 
   // Load the initial basis matrices.
-  if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+  if ((asbf->innerBC == 1) && (asbf->outerBC == 1)) {
     // Dirichlet BCs on both spheres.
     readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS DIRICHLET-DIRICHLET QUADRATURE VANDERMONDE",
         &Tquad, &Nrows, &Ncols);
@@ -279,7 +266,7 @@ static void asbfLoadRadialBasisGlobalDiscrete(asbf_t *asbf)
 
     C1 = pow((asbf->R - 1)/2, 2);
     C2 = (asbf->R - 1)/2;
-  } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+  } else if ((asbf->innerBC == 2) && (asbf->outerBC == 2)) {
     // Neumann BCs on both spheres.
     readDfloatArray(fp, "ASBF GLOBAL DISCRETE INITIAL BASIS NEUMANN-NEUMANN QUADRATURE VANDERMONDE",
         &Tquad, &Nrows, &Ncols);
@@ -298,7 +285,7 @@ static void asbfLoadRadialBasisGlobalDiscrete(asbf_t *asbf)
     C2 = pow((asbf->R - 1)/2, 2);
   } else {
     printf("Type-{%d, %d} boundary conditions not implmented.\n", 
-           asbf->BCType[1], asbf->BCType[2]);
+           asbf->innerBC, asbf->outerBC);
     exit(-1);
   }
 
@@ -489,27 +476,27 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   }
 
   // Determine the number of modes and set up some indexing variables.
-  if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+  if ((asbf->innerBC == 1) && (asbf->outerBC == 1)) {
     // Dirichlet-Dirichlet
     asbf->Nmodes = Nradelements*N - 1;
-  } else if (((asbf->BCType[1] == 1) && (asbf->BCType[2] == 2)) ||
-             ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 1))) {
+  } else if (((asbf->innerBC == 1) && (asbf->outerBC == 2)) ||
+             ((asbf->innerBC == 2) && (asbf->outerBC == 1))) {
     // Dirichlet-Neumann or Neumann-Dirichlet
     asbf->Nmodes = Nradelements*N;
-  } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+  } else if ((asbf->innerBC == 2) && (asbf->outerBC == 2)) {
     // Neumann-Neumann
     asbf->Nmodes = Nradelements*N + 1;
   }
 
   Nmodes = asbf->Nmodes;
 
-  if (asbf->BCType[1] == 1) {
+  if (asbf->innerBC == 1) {
     es = 1;
   } else {
     es = 0;
   }
 
-  if (asbf->BCType[2] == 1) {
+  if (asbf->outerBC == 1) {
     ee = Nradelements - 1;
   } else {
     ee = Nradelements;
@@ -520,16 +507,16 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   B = (dfloat*)calloc(Nmodes*Nmodes, sizeof(dfloat));
 
   if (Nradelements == 1) {
-    if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+    if ((asbf->innerBC == 1) && (asbf->outerBC == 1)) {
       off = 1;
       end = N - 1;
-    } else if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 2)) {
+    } else if ((asbf->innerBC == 1) && (asbf->outerBC == 2)) {
       off = 1;
       end = N;
-    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 1)) {
+    } else if ((asbf->innerBC == 2) && (asbf->outerBC == 1)) {
       off = 0;
       end = N;
-    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+    } else if ((asbf->innerBC == 2) && (asbf->outerBC == 2)) {
       off = 0;
       end = N + 1;
     }
@@ -547,7 +534,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
       }
     }
   } else {
-    if (asbf->BCType[1] == 1) {
+    if (asbf->innerBC == 1) {
       off = 0;
       J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
       for (int i = 0; i < N; i++) {
@@ -564,7 +551,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
     }
 
     for (int e = es; e < ee; e++) {
-      if (asbf->BCType[1] == 1) {
+      if (asbf->innerBC == 1) {
         off = e*N - 1;
       } else {
         off = e*N;
@@ -584,7 +571,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
       }
     }
 
-    if (asbf->BCType[2] == 1) {
+    if (asbf->outerBC == 1) {
       off = Nmodes - N;
       J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
       for (int i = 0; i < N; i++) {
@@ -631,16 +618,16 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
   asbf->DBplot = (dfloat*)calloc(asbf->Nplot*Nmodes, sizeof(dfloat));
 
   if (Nradelements == 1) {
-    if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 1)) {
+    if ((asbf->innerBC == 1) && (asbf->outerBC == 1)) {
       off = 1;
       end = N - 1;
-    } else if ((asbf->BCType[1] == 1) && (asbf->BCType[2] == 2)) {
+    } else if ((asbf->innerBC == 1) && (asbf->outerBC == 2)) {
       off = 1;
       end = N;
-    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 1)) {
+    } else if ((asbf->innerBC == 2) && (asbf->outerBC == 1)) {
       off = 0;
       end = N;
-    } else if ((asbf->BCType[1] == 2) && (asbf->BCType[2] == 2)) {
+    } else if ((asbf->innerBC == 2) && (asbf->outerBC == 2)) {
       off = 0;
       end = N + 1;
     }
@@ -666,7 +653,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
       }
     }
   } else {
-    if (asbf->BCType[1] == 1) {
+    if (asbf->innerBC == 1) {
       J = (asbf->Rbreaks[1] - asbf->Rbreaks[0])/2.0;
       for (int i = 0; i < asbf->Nqr; i++) {
         for (int j = 0; j < Nmodes; j++) {
@@ -717,7 +704,7 @@ static void asbfLoadRadialBasisPiecewiseDiscrete(asbf_t *asbf)
       }
     }
 
-    if (asbf->BCType[2] == 1) {
+    if (asbf->outerBC == 1) {
       J = (asbf->Rbreaks[Nradelements - 1] - asbf->Rbreaks[Nradelements - 2])/2.0;
 
       for (int i = 0; i < asbf->Nqr; i++) {

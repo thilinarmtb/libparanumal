@@ -89,26 +89,27 @@ int main(int argc, char **argv){
   kernelInfo["flags"].asObject();
 
   asbf_t *asbf = asbfSetup(mesh, lambda, kernelInfo, options);
-
-  meshCheckHex3D(asbf->meshSEM);
-
-  meshPlotVTU3D(asbf->meshSEM, "semMesh", 0);
   
-  /*
   // solve for asbf->q3D
   asbfSolve(asbf, options);
 
   // plot solution and compute error 
   if(asbf->elementType==QUADRILATERALS){
     dfloat errH1, errL2;
+    /*
     char fname[] = "sol";
     asbfPlotVTU3D(asbf, fname, 0);
+    */
     asbfErrorHex3D(asbf, asbf->q3D, &errH1, &errL2);
     printf("%g, %g %%%% abs H1 error norm, L2 error norm\n", errH1, errL2);
   }
-  */
+
+  exit(0);
 
  /******************************/
+
+  meshCheckHex3D(asbf->meshSEM);
+  meshPlotVTU3D(asbf->meshSEM, "semMesh", 0);
 
   // maps nothing->nothing, Dirichlet->Dirichlet...
   occa::properties kernelInfoHex;
@@ -119,8 +120,7 @@ int main(int argc, char **argv){
 
   meshOccaSetup3D(asbf->meshSEM, options, kernelInfoHex);
 
-  elliptic_t *hexSolver = new elliptic_t[1];
-  //(elliptic_t*)calloc(1, sizeof(elliptic_t));
+  elliptic_t *hexSolver = new elliptic_t;
   asbf->meshSEM->Nfields = 1;
   
   hexSolver->mesh = asbf->meshSEM;

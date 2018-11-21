@@ -214,10 +214,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   //setup an unmasked gs handle
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
-  printf("HI\n");
   meshParallelGatherScatterSetup(mesh, Ntotal, mesh->globalIds, mesh->comm, verbose);
-  printf("BYE\n");
-
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));

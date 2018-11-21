@@ -75,9 +75,10 @@ typedef struct {
   dfloat *q3D;    // solution to screened Poisson equation for each mode
   dfloat *f;      // forcing function
 
-  // Boundary conditions:  three integers {0, BCInner, BCOuter}.  Set BCInner
-  // and BCOuter to 1 or 2 for Dirichlet or Neumann conditions, respectively.
-  int *BCType;
+  // Boundary conditions on the inner and outer sphere.  Set to 1 or 2 for
+  // Dirichlet or Neumann, respectively.
+  int innerBC;
+  int outerBC;
 
   // Variables for piecewise discrete basis.
   int Nradelements; // number of radial elements

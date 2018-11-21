@@ -41,9 +41,8 @@ void meshParallelGatherScatterSetup(mesh_t *mesh,
   MPI_Comm_rank(comm, &rank); 
   MPI_Comm_size(comm, &size); 
 
-  printf("HI2\n");
   mesh->ogs = ogsSetup(N, globalIds, comm, verbose, mesh->device);
-  printf("BYE2\n");
+
   //use the gs to find what nodes are local to this rank
   int *minRank = (int *) calloc(N,sizeof(int));
   int *maxRank = (int *) calloc(N,sizeof(int));

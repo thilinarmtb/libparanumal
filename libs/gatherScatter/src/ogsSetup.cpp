@@ -307,23 +307,13 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
   ogs->o_invDegree = device.malloc(N*sizeof(dfloat), ogs->invDegree);
   ogs->o_gatherInvDegree = device.malloc(ogs->Ngather*sizeof(dfloat), ogs->gatherInvDegree);
 
-  device.finish();
-  printf("HI2.4\n");
-  
   ogsGather(ogs->o_gatherInvDegree, ogs->o_invDegree, ogsDfloat, ogsAdd, ogs);
 
   if(ogs->Ngather)
     ogs->o_gatherInvDegree.copyTo(ogs->gatherInvDegree);
 
-  device.finish();
-  printf("HI3\n");
-    
   ogsScatter(ogs->o_invDegree, ogs->o_gatherInvDegree, ogsDfloat, ogsAdd, ogs);
 
-  device.finish();
-  printf("BYE3\n");
-
-  
   if (N) ogs->o_invDegree.copyTo(ogs->invDegree);
 
   for(dlong n=0;n<ogs->N;++n)
