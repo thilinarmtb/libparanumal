@@ -111,8 +111,6 @@ int main(int argc, char **argv){
  /******************************/
 
   // maps nothing->nothing, Dirichlet->Dirichlet...
-  int hexBCType[3] = {0,1,2};
-  
   occa::properties kernelInfoHex;
   kernelInfoHex["defines"].asObject();
   kernelInfoHex["includes"].asArray();
@@ -130,108 +128,13 @@ int main(int argc, char **argv){
   hexSolver->dim = 3;
   hexSolver->elementType = HEXAHEDRA;
 
+  int hexBCType[3] = {0,1,2};
   hexSolver->BCType = (int*) calloc(3,sizeof(int));
   memcpy(hexSolver->BCType,hexBCType,3*sizeof(int));
 
   ellipticSolveSetup(hexSolver, asbf->lambda, kernelInfoHex);
 
-#if 0
-  printf("EToB\n");
-  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
-    printf("Element %d:  ", e);
-    for (int f = 0; f < hexSolver->mesh->Nfaces; f++)
-      printf("%d  ", hexSolver->mesh->EToB[e*hexSolver->mesh->Nfaces + f]);
-    printf("\n");
-  }
-
-  printf("\n");
-
-  printf("EToV\n");
-  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
-    printf("Element %d:  ", e);
-    for (int v = 0; v < hexSolver->mesh->Nverts; v++)
-      printf("%d ", hexSolver->mesh->EToV[e*hexSolver->mesh->Nverts + v]);
-    printf("\n");
-  }
-
-  printf("\n");
-
-  printf("EToE\n");
-  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
-    printf("Element %d:  ", e);
-    for (int f = 0; f < hexSolver->mesh->Nfaces; f++)
-      printf("%d  ", hexSolver->mesh->EToE[e*hexSolver->mesh->Nfaces + f]);
-    printf("\n");
-  }
-
-  printf("\n");
-
-  printf("EToF\n");
-  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
-    printf("Element %d:  ", e);
-    for (int f = 0; f < hexSolver->mesh->Nfaces; f++)
-      printf("%d  ", hexSolver->mesh->EToF[e*hexSolver->mesh->Nfaces + f]);
-    printf("\n");
-  }
-
-  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
-    for (int f = 0; f < hexSolver->mesh->Nfaces; f++) {
-      for (int i = 0; i < hexSolver->mesh->Nfp; i++) {
-        dlong base = hexSolver->mesh->Nsgeo*(hexSolver->mesh->Nfaces*hexSolver->mesh->Nfp*e + hexSolver->mesh->Nfp*f + i);
-        if (((e == 297) && (f == 2)) || ((e == 346) && (f == 4))) {
-          printf("Element %d, Face %d, Node %02d:  normal = (% 20.15f, % 20.15f, % 20.15f), surface Jacobian = % 20.15f\n",
-                 e, f, i, hexSolver->mesh->sgeo[base + NXID], hexSolver->mesh->sgeo[base + NYID], hexSolver->mesh->sgeo[base + NZID],
-                 hexSolver->mesh->sgeo[base + SJID]);
-        }
-      }
-    }
-  }
-
-  exit(0);
-#endif
-  
   //---------------------------------------------------------------------------
-
-  // Compute and dump the stiffness matrix to disk (this is too expensive).
-  /*
-  int Ntotal = hexSolver->mesh->Nelements*hexSolver->mesh->Np;
-  dfloat *x  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
-  dfloat *Ax = (dfloat*)calloc(Ntotal, sizeof(dfloat));
-  occa::memory o_x  = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
-  occa::memory o_Ax = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
-
-  FILE *fout = fopen("stiffmat.dat", "w");
-
-  int NN = 8;
-  printf("Ntotal = %d\n", Ntotal);
-  for (int i = 0; i < NN; i++) {
-    if (i % 10000 == 0) {
-      printf("i = %d\n", i);
-    }
-
-    x[i] = 1.0;
-    if (i > 0)
-      x[i - 1] = 0.0;
-
-    o_x.copyFrom(x);
-    ellipticOperator(hexSolver, asbf->lambda, o_x, o_Ax, "double");
-    o_Ax.copyTo(Ax);
-
-    for (int j = 0; j < NN; j++)
-      printf("%.15f\n", Ax[j]);
-    printf("\n");
-
-    //for (int j = 0; j < Ntotal; j++) {
-    //  if (fabs(Ax[j]) > 1.0e-14)
-    //    fprintf(fout, "%d %d %.16f\n", j, i, Ax[j]);
-    //}
-  }
-
-  free(x);
-  free(Ax);
-  fclose(fout);
-  */
-
   // Check symmetry by comparing y^TAx and x^TAy for random x, y.
   int Ntotal = hexSolver->mesh->Nelements*hexSolver->mesh->Np;
   dfloat *x  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
@@ -241,7 +144,7 @@ int main(int argc, char **argv){
   occa::memory o_v  = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
   occa::memory o_Av = hexSolver->mesh->device.malloc(Ntotal*sizeof(dfloat));
 
-  hexSolver->tau = 1000.0;
+  hexSolver->tau = 2*pow(hexSolver->mesh->N+1,2);
 
   srand48(67714070);
 
@@ -294,12 +197,14 @@ int main(int argc, char **argv){
   for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
     for (int n = 0; n < hexSolver->mesh->Np; n++) {
       dfloat J = hexSolver->mesh->vgeo[hexSolver->mesh->Np*(e*hexSolver->mesh->Nvgeo + JID) + n];
-
+      
+      
       dlong ind = e*hexSolver->mesh->Np + n;
       dfloat xn = hexSolver->mesh->x[ind];
       dfloat yn = hexSolver->mesh->y[ind];
       dfloat zn = hexSolver->mesh->z[ind];
-      dfloat r = sqrt(zn*zn + yn*yn + zn*zn);
+
+      dfloat r = sqrt(xn*xn + yn*yn + zn*zn);
 
       dfloat q, d2qdx2, d2qdy2, d2qdz2;
       dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
@@ -310,13 +215,26 @@ int main(int argc, char **argv){
       d2qdx2 = cos(yn)*exp(zn)*((2.0*sin(xn) + 4.0*xn*cos(xn))*twor2mR2m1 + 8.0*xn*xn*sin(xn) - sin(xn)*r2mR2*r2m1);
       d2qdy2 = sin(xn)*exp(zn)*((2.0*cos(yn) - 4.0*yn*sin(yn))*twor2mR2m1 + 8.0*yn*yn*cos(yn) - cos(yn)*r2mR2*r2m1);
       d2qdz2 = sin(xn)*cos(yn)*exp(zn)*((2.0 + 4.0*zn)*twor2mR2m1 + 8.0*zn*zn + r2mR2*r2m1);
-      hexSolver->r[ind] = -d2qdx2 - d2qdy2 - d2qdz2 + asbf->lambda*q;
+
+      // Compute and dump the stiffness matrix to disk (this is too expensive).
+      hexSolver->r[ind] = J*(-d2qdx2 - d2qdy2 - d2qdz2 + asbf->lambda*q);
     }
   }
   
-  hexSolver->o_r = hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*sizeof(dfloat), hexSolver->r);
-  hexSolver->o_x = hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*sizeof(dfloat), hexSolver->x);
+  if (options.compareArgs("BASIS","NODAL"))
+    meshApplyElementMatrix(hexSolver->mesh,hexSolver->mesh->MM,hexSolver->r,hexSolver->r);
 
+  hexSolver->o_r =
+    hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*sizeof(dfloat), hexSolver->r);
+  hexSolver->o_x =
+    hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*sizeof(dfloat), hexSolver->x);
+
+  if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+    ogsGatherScatter(hexSolver->o_r, ogsDfloat, ogsAdd, hexSolver->mesh->ogs);
+    if (hexSolver->Nmasked)
+      hexSolver->mesh->maskKernel(hexSolver->Nmasked, hexSolver->o_maskIds, hexSolver->o_r);
+  }
+  
   ellipticSolve(hexSolver, asbf->lambda, asbf->pTOL, hexSolver->o_r, hexSolver->o_x);
 
   hexSolver->o_x.copyTo(hexSolver->mesh->q);
