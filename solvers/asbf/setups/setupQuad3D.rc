@@ -1,12 +1,6 @@
 [FORMAT]
 1.0
 
-[DATA FILE]
-data/insBrownMinionQuad3D.h
-
-[INITIAL CONDITION]
-BROWN-MINION
-
 [SPHERE RADIUS]
 1.0
 
@@ -26,6 +20,7 @@ BROWN-MINION
 [ELEMENT TYPE] # number of edges
 4
 
+# TODO:  This is only needed by the SEM (hex) solver.
 [ELEMENT MAP]
 ISOPARAMETRIC
 
@@ -51,61 +46,9 @@ CUDA
 [DEVICE NUMBER]
 0
 
-# can be EXTBDF1,2, or 3
-# can add SUBCYCLING to EXTBDF
-[TIME INTEGRATOR]
-#ARK2
-EXTBDF2
-
-[SUBCYCLING STEPS]
-0
-
-# can be CUBATURE or COLLOCATION
-[ADVECTION TYPE]
-#COLLOCATION
-CUBATURE
-
-[VISCOSITY]
-0.0002
-
-[UBAR]
-0.0
-
-[VBAR]
-0.0
-
-[PBAR]
-0.0
-
-[TSTEPS FOR SOLUTION OUTPUT]
-1127
-
-[START TIME]
-0
-
-[FINAL TIME]
-10
-
-[CFL]
-0.2
-
-[OUTPUT TYPE]
-#VTU
-PPM
-
-[RESTART FROM FILE]
-0
-
-[OUTPUT FILE NAME]
-fence
-
-#################################################
-########## Pressure Solver Options ##############
-#################################################
-
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
-PCG,FLEXIBLE
+PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
@@ -134,12 +77,10 @@ HALFDOFS
 # LOCALPATCH smoother can include EXACT
 # can include CHEBYSHEV for smoother acceleration
 [MULTIGRID SMOOTHER]
-DAMPEDJACOBI,CHEBYSHEV
+DAMPEDJACOBI+CHEBYSHEV
 
 [MULTIGRID CHEBYSHEV DEGREE]
 2
-
-###########################################
 
 ########## ParAlmond Options ##############
 
@@ -161,14 +102,6 @@ STRONGNODES
 
 ###########################################
 
-# compare to a reference solution. Use NONE to skip comparison
-# can be VORTEX or KOVASZNAY
-[EXACT]
-NONE
-
 [VERBOSE]
 TRUE
 #FALSE
-
-[OUTPUT FILE FORMAT]
-PPM
