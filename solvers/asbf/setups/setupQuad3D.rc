@@ -11,8 +11,8 @@
 100.0
 
 [MESH FILE]
-../../meshes/sphereQuadH01.msh 
-#../../meshes/insVortexQuad2D.msh
+#../../meshes/sphereQuadH01.msh 
+../../meshes/sphereQuadH02.msh 
 
 [MESH DIMENSION]
 3
@@ -61,8 +61,8 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-MULTIGRID
-#JACOBI
+#MULTIGRID
+JACOBI
 #SEMFEM
 #FULLALMOND
 #NONE

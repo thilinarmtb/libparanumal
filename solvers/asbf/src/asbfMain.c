@@ -91,27 +91,26 @@ int main(int argc, char **argv){
   asbf_t *asbf = asbfSetup(mesh, lambda, kernelInfo, options);
   
   // solve for asbf->q3D
+  /*
   asbfSolve(asbf, options);
 
   // plot solution and compute error 
   if(asbf->elementType==QUADRILATERALS){
     dfloat errH1, errL2;
-    /*
-    char fname[] = "sol";
-    asbfPlotVTU3D(asbf, fname, 0);
-    */
+    // char fname[] = "sol";
+    // asbfPlotVTU3D(asbf, fname, 0);
     asbfErrorHex3D(asbf, asbf->q3D, &errH1, &errL2);
     printf("%g, %g %%%% abs H1 error norm, L2 error norm\n", errH1, errL2);
   }
 
   exit(0);
+  */
 
  /******************************/
 
   meshCheckHex3D(asbf->meshSEM);
-  meshPlotVTU3D(asbf->meshSEM, "semMesh", 0);
+  //meshPlotVTU3D(asbf->meshSEM, "semMesh", 0);
 
-  // maps nothing->nothing, Dirichlet->Dirichlet...
   occa::properties kernelInfoHex;
   kernelInfoHex["defines"].asObject();
   kernelInfoHex["includes"].asArray();
@@ -128,14 +127,16 @@ int main(int argc, char **argv){
   hexSolver->dim = 3;
   hexSolver->elementType = HEXAHEDRA;
 
-  int hexBCType[3] = {0,1,2};
-  hexSolver->BCType = (int*) calloc(3,sizeof(int));
-  memcpy(hexSolver->BCType,hexBCType,3*sizeof(int));
+  int hexBCType[3] = {0, 1, 2};
+  hexSolver->BCType = (int*)calloc(3, sizeof(int));
+  memcpy(hexSolver->BCType, hexBCType, 3*sizeof(int));
 
   ellipticSolveSetup(hexSolver, asbf->lambda, kernelInfoHex);
 
   //---------------------------------------------------------------------------
   // Check symmetry by comparing y^TAx and x^TAy for random x, y.
+
+  /*
   int Ntotal = hexSolver->mesh->Nelements*hexSolver->mesh->Np;
   dfloat *x  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
   dfloat *y  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
@@ -168,6 +169,7 @@ int main(int argc, char **argv){
     ytAx += y[i]*Ax[i];
 
   o_v.copyFrom(y);
+
   // feed o_v = S*G*o_v
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     ogsGatherScatterStart(o_v, ogsDfloat, ogsAdd, hexSolver->ogs);
@@ -182,14 +184,9 @@ int main(int argc, char **argv){
 
   printf("ytAx = %.15f\n", ytAx);
   printf("xtAy = %.15f\n", xtAy);
+  */
 
   //---------------------------------------------------------------------------
-
-  /*
-  hlong Nall = hexSolver->mesh->Np*(hexSolver->mesh->Nelements+hexSolver->mesh->totalHaloPairs);
-  dfloat *foo = (dfloat*) malloc(Nall*sizeof(dfloat));
-  hexSolver->o_invDegree.copyTo(foo);
-  */
 
   hexSolver->x = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, sizeof(dfloat));
   hexSolver->r = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, sizeof(dfloat));
@@ -197,7 +194,6 @@ int main(int argc, char **argv){
   for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
     for (int n = 0; n < hexSolver->mesh->Np; n++) {
       dfloat J = hexSolver->mesh->vgeo[hexSolver->mesh->Np*(e*hexSolver->mesh->Nvgeo + JID) + n];
-      
       
       dlong ind = e*hexSolver->mesh->Np + n;
       dfloat xn = hexSolver->mesh->x[ind];
@@ -216,7 +212,6 @@ int main(int argc, char **argv){
       d2qdy2 = sin(xn)*exp(zn)*((2.0*cos(yn) - 4.0*yn*sin(yn))*twor2mR2m1 + 8.0*yn*yn*cos(yn) - cos(yn)*r2mR2*r2m1);
       d2qdz2 = sin(xn)*cos(yn)*exp(zn)*((2.0 + 4.0*zn)*twor2mR2m1 + 8.0*zn*zn + r2mR2*r2m1);
 
-      // Compute and dump the stiffness matrix to disk (this is too expensive).
       hexSolver->r[ind] = J*(-d2qdx2 - d2qdy2 - d2qdz2 + asbf->lambda*q);
     }
   }
@@ -238,6 +233,28 @@ int main(int argc, char **argv){
   ellipticSolve(hexSolver, asbf->lambda, asbf->pTOL, hexSolver->o_r, hexSolver->o_x);
 
   hexSolver->o_x.copyTo(hexSolver->mesh->q);
+
+  dfloat err = 0.0;
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    for (int i = 0; i < hexSolver->mesh->Np; i++) {
+      dfloat x = hexSolver->mesh->x[e*hexSolver->mesh->Np + i];
+      dfloat y = hexSolver->mesh->y[e*hexSolver->mesh->Np + i];
+      dfloat z = hexSolver->mesh->z[e*hexSolver->mesh->Np + i];
+
+      dfloat r          = sqrt(x*x + y*y + z*z);
+      dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
+      dfloat r2m1       = pow(r, 2.0) - 1.0;
+      dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(asbf->R, 2.0) - 1.0;
+
+      dfloat thiserr = fabs(hexSolver->mesh->q[e*hexSolver->mesh->Np + i] - sin(x)*cos(y)*exp(z)*r2mR2*r2m1);
+      //printf("error at (%g, %g, %g):  %g\n", x, y, z, thiserr);
+      err = mymax(err, thiserr);
+    }
+  }
+
+  printf("error on grid:  %g\n", err);
+
+  ellipticPlotVTUHex3D(hexSolver->mesh, "hexsol", 0);
 
  /******************************/
  
