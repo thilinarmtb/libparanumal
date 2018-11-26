@@ -106,7 +106,7 @@ int main(int argc, char **argv){
   exit(0);
   */
 
- /******************************/
+  /******************************/
 
   meshCheckHex3D(asbf->meshSEM);
   //meshPlotVTU3D(asbf->meshSEM, "semMesh", 0);
@@ -234,7 +234,15 @@ int main(int argc, char **argv){
 
   hexSolver->o_x.copyTo(hexSolver->mesh->q);
 
+  dfloat *gradx = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, 4*sizeof(dfloat));
+  occa::memory o_gradx = hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*4*sizeof(dfloat));
+  hexSolver->gradientKernel(hexSolver->mesh->Nelements, hexSolver->mesh->o_vgeo, hexSolver->mesh->o_D, hexSolver->o_x, o_gradx);
+  o_gradx.copyTo(gradx);
+
   dfloat err = 0.0;
+  dfloat graderrx = 0.0;
+  dfloat graderry = 0.0;
+  dfloat graderrz = 0.0;
   for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
     for (int i = 0; i < hexSolver->mesh->Np; i++) {
       dfloat x = hexSolver->mesh->x[e*hexSolver->mesh->Np + i];
@@ -246,17 +254,33 @@ int main(int argc, char **argv){
       dfloat r2m1       = pow(r, 2.0) - 1.0;
       dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(asbf->R, 2.0) - 1.0;
 
-      dfloat thiserr = fabs(hexSolver->mesh->q[e*hexSolver->mesh->Np + i] - sin(x)*cos(y)*exp(z)*r2mR2*r2m1);
+      dfloat q = sin(x)*cos(y)*exp(z)*r2mR2*r2m1;
+      dfloat dqdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1); 
+      dfloat dqdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
+      dfloat dqdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
+
+      dfloat thiserr = fabs(hexSolver->mesh->q[e*hexSolver->mesh->Np + i] - q);
+      dfloat thisgraderrx = fabs(gradx[e*hexSolver->mesh->Np*4 + i*4 + 0] - dqdx);
+      dfloat thisgraderry = fabs(gradx[e*hexSolver->mesh->Np*4 + i*4 + 1] - dqdy);
+      dfloat thisgraderrz = fabs(gradx[e*hexSolver->mesh->Np*4 + i*4 + 2] - dqdz);
+
       //printf("error at (%g, %g, %g):  %g\n", x, y, z, thiserr);
+
       err = mymax(err, thiserr);
+      graderrx = mymax(graderrx, thisgraderrx);
+      graderry = mymax(graderry, thisgraderry);
+      graderrz = mymax(graderrz, thisgraderrz);
     }
   }
 
   printf("error on grid:  %g\n", err);
+  printf("x-gradient error on grid:  %g\n", graderrx);
+  printf("y-gradient error on grid:  %g\n", graderry);
+  printf("z-gradient error on grid:  %g\n", graderrz);
 
-  ellipticPlotVTUHex3D(hexSolver->mesh, "hexsol", 0);
+  //ellipticPlotVTUHex3D(hexSolver->mesh, "hexsol", 0);
 
- /******************************/
+  /******************************/
  
   // close down MPI
   MPI_Finalize();
