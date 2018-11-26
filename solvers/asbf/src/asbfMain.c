@@ -27,6 +27,8 @@ SOFTWARE.
 #include <time.h>
 #include "asbf.h"
 
+void interpolateHex3D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M);
+
 int main(int argc, char **argv){
   setbuf(stdout, NULL);
 
@@ -191,6 +193,7 @@ int main(int argc, char **argv){
   hexSolver->x = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, sizeof(dfloat));
   hexSolver->r = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, sizeof(dfloat));
 
+  /* Set up the RHS. */
   for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
     for (int n = 0; n < hexSolver->mesh->Np; n++) {
       dfloat J = hexSolver->mesh->vgeo[hexSolver->mesh->Np*(e*hexSolver->mesh->Nvgeo + JID) + n];
@@ -230,15 +233,17 @@ int main(int argc, char **argv){
       hexSolver->mesh->maskKernel(hexSolver->Nmasked, hexSolver->o_maskIds, hexSolver->o_r);
   }
   
+  /* Do the solve. */
   ellipticSolve(hexSolver, asbf->lambda, asbf->pTOL, hexSolver->o_r, hexSolver->o_x);
-
   hexSolver->o_x.copyTo(hexSolver->mesh->q);
 
+  /* Compute the solution gradient. */
   dfloat *gradx = (dfloat*)calloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np, 4*sizeof(dfloat));
   occa::memory o_gradx = hexSolver->mesh->device.malloc(hexSolver->mesh->Nelements*hexSolver->mesh->Np*4*sizeof(dfloat));
   hexSolver->gradientKernel(hexSolver->mesh->Nelements, hexSolver->mesh->o_vgeo, hexSolver->mesh->o_D, hexSolver->o_x, o_gradx);
   o_gradx.copyTo(gradx);
 
+  /* Check the solution and its gradient on the grid. */
   dfloat err = 0.0;
   dfloat graderrx = 0.0;
   dfloat graderry = 0.0;
@@ -279,6 +284,108 @@ int main(int argc, char **argv){
   printf("z-gradient error on grid:  %g\n", graderrz);
 
   //ellipticPlotVTUHex3D(hexSolver->mesh, "hexsol", 0);
+
+  /* Compute the L^2 and H^1 errors. */
+  dfloat *qr = (dfloat*) calloc(hexSolver->mesh->Np, sizeof(dfloat));
+  dfloat *qs = (dfloat*) calloc(hexSolver->mesh->Np, sizeof(dfloat));
+  dfloat *qt = (dfloat*) calloc(hexSolver->mesh->Np, sizeof(dfloat));
+
+  dfloat *cubx = (dfloat*)calloc(hexSolver->mesh->cubNp, sizeof(dfloat));
+  dfloat *cuby = (dfloat*)calloc(hexSolver->mesh->cubNp, sizeof(dfloat));
+  dfloat *cubz = (dfloat*)calloc(hexSolver->mesh->cubNp, sizeof(dfloat));
+
+  dfloat *cubq = (dfloat*)calloc(hexSolver->mesh->cubNp, sizeof(dfloat));
+  dfloat *cubqr = (dfloat*)calloc(hexSolver->mesh->cubNp, sizeof(dfloat));
+  dfloat *cubqs = (dfloat*)calloc(hexSolver->mesh->cubNp, sizeof(dfloat));
+  dfloat *cubqt = (dfloat*)calloc(hexSolver->mesh->cubNp, sizeof(dfloat));
+
+  dfloat errL2 = 0.0;
+  dfloat errH1 = 0.0;
+  for (int e = 0; e < hexSolver->mesh->Nelements; e++) {
+    for (int i = 0; i < hexSolver->mesh->Nq; i++) {
+      for (int j = 0; j < hexSolver->mesh->Nq; j++) {
+        for (int k = 0; k < hexSolver->mesh->Nq; k++) {
+          int ind = i*hexSolver->mesh->Nq*hexSolver->mesh->Nq + j*hexSolver->mesh->Nq + k;
+
+          dfloat dqdr = 0.0;
+          dfloat dqds = 0.0;
+          dfloat dqdt = 0.0;
+
+          for (int n = 0; n < hexSolver->mesh->Nq; n++) {
+            dqdr += mesh->D[k*mesh->Nq + n]*hexSolver->mesh->q[e*hexSolver->mesh->Np + i*hexSolver->mesh->Nq*hexSolver->mesh->Nq + j*hexSolver->mesh->Nq + n];
+            dqds += mesh->D[j*mesh->Nq + n]*hexSolver->mesh->q[e*hexSolver->mesh->Np + i*hexSolver->mesh->Nq*hexSolver->mesh->Nq + n*hexSolver->mesh->Nq + k];
+            dqdt += mesh->D[i*mesh->Nq + n]*hexSolver->mesh->q[e*hexSolver->mesh->Np + n*hexSolver->mesh->Nq*hexSolver->mesh->Nq + j*hexSolver->mesh->Nq + k];
+          }
+
+          qr[ind] = dqdr;
+          qs[ind] = dqds;
+          qt[ind] = dqdt;
+        }
+      }
+    }
+
+    interpolateHex3D(hexSolver->mesh->cubInterp, hexSolver->mesh->q + e*hexSolver->mesh->Np, hexSolver->mesh->Nq, cubq, hexSolver->mesh->cubNq);
+    interpolateHex3D(hexSolver->mesh->cubInterp, hexSolver->mesh->x + e*hexSolver->mesh->Np, hexSolver->mesh->Nq, cubx, hexSolver->mesh->cubNq);
+    interpolateHex3D(hexSolver->mesh->cubInterp, hexSolver->mesh->y + e*hexSolver->mesh->Np, hexSolver->mesh->Nq, cuby, hexSolver->mesh->cubNq);
+
+    interpolateHex3D(hexSolver->mesh->cubInterp, hexSolver->mesh->z + e*hexSolver->mesh->Np, hexSolver->mesh->Nq, cubz, hexSolver->mesh->cubNq);
+    interpolateHex3D(hexSolver->mesh->cubInterp, qr, hexSolver->mesh->Nq, cubqr, hexSolver->mesh->cubNq);
+    interpolateHex3D(hexSolver->mesh->cubInterp, qs, hexSolver->mesh->Nq, cubqs, hexSolver->mesh->cubNq);
+    interpolateHex3D(hexSolver->mesh->cubInterp, qt, hexSolver->mesh->Nq, cubqt, hexSolver->mesh->cubNq);
+
+    for (int i = 0; i < hexSolver->mesh->cubNq; i++) {
+      for (int j = 0; j < hexSolver->mesh->cubNq; j++) {
+        for (int k = 0; k < hexSolver->mesh->cubNq; k++) {
+          hlong ind = i*hexSolver->mesh->cubNq*hexSolver->mesh->cubNq + j*hexSolver->mesh->cubNq + k;
+          dfloat x = cubx[ind];
+          dfloat y = cuby[ind];
+          dfloat z = cubz[ind];
+
+          dfloat r          = sqrt(x*x + y*y + z*z);
+          dfloat r2mR2      = pow(r, 2.0) - pow(asbf->R, 2.0);
+          dfloat r2m1       = pow(r, 2.0) - 1.0;
+          dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(asbf->R, 2.0) - 1.0;
+
+          dfloat qE = sin(x)*cos(y)*exp(z)*r2mR2*r2m1;
+          dfloat dqEdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1);
+          dfloat dqEdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
+          dfloat dqEdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
+
+          hlong gind = e*hexSolver->mesh->cubNp*hexSolver->mesh->Nvgeo + i*hexSolver->mesh->cubNq*hexSolver->mesh->cubNq + j*hexSolver->mesh->cubNq + k;
+
+          dfloat drdx = hexSolver->mesh->cubvgeo[gind + RXID*hexSolver->mesh->cubNp];
+          dfloat dsdx = hexSolver->mesh->cubvgeo[gind + SXID*hexSolver->mesh->cubNp];
+          dfloat dtdx = hexSolver->mesh->cubvgeo[gind + TXID*hexSolver->mesh->cubNp];
+
+          dfloat drdy = hexSolver->mesh->cubvgeo[gind + RYID*hexSolver->mesh->cubNp];
+          dfloat dsdy = hexSolver->mesh->cubvgeo[gind + SYID*hexSolver->mesh->cubNp];
+          dfloat dtdy = hexSolver->mesh->cubvgeo[gind + TYID*hexSolver->mesh->cubNp];
+
+          dfloat drdz = hexSolver->mesh->cubvgeo[gind + RZID*hexSolver->mesh->cubNp];
+          dfloat dsdz = hexSolver->mesh->cubvgeo[gind + SZID*hexSolver->mesh->cubNp];
+          dfloat dtdz = hexSolver->mesh->cubvgeo[gind + TZID*hexSolver->mesh->cubNp];
+
+          dfloat JW = hexSolver->mesh->cubvgeo[gind + JWID*hexSolver->mesh->cubNp];
+
+          dfloat dqdx = drdx*cubqr[ind] + dsdx*cubqs[ind] + dtdx*cubqt[ind];
+          dfloat dqdy = drdy*cubqr[ind] + dsdy*cubqs[ind] + dtdy*cubqt[ind];
+          dfloat dqdz = drdz*cubqr[ind] + dsdz*cubqs[ind] + dtdz*cubqt[ind];
+
+          dfloat errL2local = pow(qE - cubq[ind], 2);
+          dfloat errH1local = pow(dqEdx - dqdx, 2) + pow(dqEdy - dqdy, 2) + pow(dqEdz - dqdz, 2) + pow(qE - cubq[ind], 2);
+
+          errL2 += JW*errL2local;
+          errH1 += JW*errH1local;
+        }
+      }
+    }
+  }
+
+  errL2 = sqrt(errL2);
+  errH1 = sqrt(errH1);
+
+  printf("L2 error:  %g\n", errL2);
+  printf("H1 error:  %g\n", errH1);
 
   /******************************/
  
