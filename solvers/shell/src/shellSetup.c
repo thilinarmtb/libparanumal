@@ -154,20 +154,7 @@ static void shellSetupRHSSEM(shell_t *shell)
       dfloat yn = mesh->y[ind];
       dfloat zn = mesh->z[ind];
 
-      dfloat r = sqrt(xn*xn + yn*yn + zn*zn);
-
-      // TODO:  Replace this loop body with a call to shellManufacturedForcingFunction().
-      dfloat q, d2qdx2, d2qdy2, d2qdz2;
-      dfloat r2mR2      = pow(r, 2.0) - pow(shell->R, 2.0);
-      dfloat r2m1       = pow(r, 2.0) - 1.0;
-      dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(shell->R, 2.0) - 1.0;
-      
-      q = sin(xn)*cos(yn)*exp(zn)*r2mR2*r2m1;
-      d2qdx2 = cos(yn)*exp(zn)*((2.0*sin(xn) + 4.0*xn*cos(xn))*twor2mR2m1 + 8.0*xn*xn*sin(xn) - sin(xn)*r2mR2*r2m1);
-      d2qdy2 = sin(xn)*exp(zn)*((2.0*cos(yn) - 4.0*yn*sin(yn))*twor2mR2m1 + 8.0*yn*yn*cos(yn) - cos(yn)*r2mR2*r2m1);
-      d2qdz2 = sin(xn)*cos(yn)*exp(zn)*((2.0 + 4.0*zn)*twor2mR2m1 + 8.0*zn*zn + r2mR2*r2m1);
-
-      elliptic->r[ind] = J*(-d2qdx2 - d2qdy2 - d2qdz2 + shell->lambda*q);
+      elliptic->r[ind] = J*shellManufacturedForcingFunction(shell, xn, yn, zn);
     }
   }
 }

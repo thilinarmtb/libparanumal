@@ -172,21 +172,13 @@ static void shellErrorHex3DSEM(shell_t *shell, dfloat *q3D, dfloat *normErrorH1,
     for (int i = 0; i < mesh->cubNq; i++) {
       for (int j = 0; j < mesh->cubNq; j++) {
         for (int k = 0; k < mesh->cubNq; k++) {
-          // TODO:  Replace the body of this loop with a call to shellManufacturedSolution().
           hlong ind = i*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + k;
           dfloat x = cubx[ind];
           dfloat y = cuby[ind];
           dfloat z = cubz[ind];
 
-          dfloat r          = sqrt(x*x + y*y + z*z);
-          dfloat r2mR2      = pow(r, 2.0) - pow(shell->R, 2.0);
-          dfloat r2m1       = pow(r, 2.0) - 1.0;
-          dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(shell->R, 2.0) - 1.0;
-
-          dfloat qE = sin(x)*cos(y)*exp(z)*r2mR2*r2m1;
-          dfloat dqEdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1);
-          dfloat dqEdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
-          dfloat dqEdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
+          dfloat qE, dqEdx, dqEdy, dqEdz;
+          shellManufacturedSolution(shell, x, y, z, &qE, &dqEdx, &dqEdy, &dqEdz);
 
           hlong gind = e*mesh->cubNp*mesh->Nvgeo + i*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + k;
 
