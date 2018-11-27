@@ -55,6 +55,8 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
+  occa::streamTag setupStart = mesh->device.tagStream();
+
   // Set up radial mesh (PIECEWISEDISCRETE basis only).
   dfloat R;
   options.getArgs("OUTER RADIUS", R);
@@ -75,9 +77,14 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
   shell->innerBC = 1;
   shell->outerBC = 1;
 
+  occa::streamTag solveSetupStart = mesh->device.tagStream();
   shellSolveSetup(shell, lambda, kernelInfo);
+  occa::streamTag solveSetupEnd = mesh->device.tagStream();
+
+  shell->times.setup.solveSetup = mesh->device.timeBetween(solveSetupStart, solveSetupEnd);
 
   // Set up the right-hand side.
+  occa::streamTag rhsSetupStart = mesh->device.tagStream();
   if (options.compareArgs("SHELL SOLVER", "ASBF")) {
     shellSetupRHSASBF(shell);
   } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
@@ -87,6 +94,11 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
            options.getArgs("SHELL SOLVER").c_str());
     exit(-1);
   }
+  occa::streamTag rhsSetupEnd = mesh->device.tagStream();
+  shell->times.setup.rhsSetup = mesh->device.timeBetween(rhsSetupStart, rhsSetupEnd);
+
+  occa::streamTag setupEnd = mesh->device.tagStream();
+  shell->times.setup.total = mesh->device.timeBetween(setupStart, setupEnd);
 
   return shell;
 }

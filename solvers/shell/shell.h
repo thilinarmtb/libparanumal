@@ -85,6 +85,20 @@ typedef struct {
   int Nplotr;       // number of plot nodes on each radial element.
   int Ngllr;        // number of GLL nodes on each radial element.
   dfloat *Rbreaks;  // radial mesh breakpoints
+
+  // Profiling information.
+  struct {
+    struct {
+      double solveSetup;
+      double rhsSetup;
+      double total;
+    } setup;
+
+    double solve;
+
+    double total;
+  } times;
+
   /*********/
 
   dfloat lambda;    // helmhotz solver -lap(u) + lamda u

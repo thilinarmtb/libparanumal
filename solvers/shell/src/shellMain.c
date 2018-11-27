@@ -93,10 +93,53 @@ int main(int argc, char **argv)
   kernelInfo["flags"].asObject();
 
   shell_t *shell = shellSetup(mesh, lambda, kernelInfo, options);
+
+  // TODO:  If we just use mesh->device here instead of branching on the [SHELL
+  // SOLVER] option, IPDG with MULTIGRID for SEM spits out NaNs.  Why?????
+  occa::streamTag solveStart;
+  if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    solveStart = shell->mesh->device.tagStream();
+  } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    solveStart = shell->elliptic->mesh->device.tagStream();
+  }
+
   shellSolve(shell, options);
+
+  occa::streamTag solveEnd;
+  if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    solveEnd = shell->mesh->device.tagStream();
+    shell->times.solve = shell->mesh->device.timeBetween(solveStart, solveEnd);
+  } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    solveEnd = shell->elliptic->mesh->device.tagStream();
+    shell->times.solve = shell->elliptic->mesh->device.timeBetween(solveStart, solveEnd);
+  }
+
+  shell->times.total = shell->times.setup.total + shell->times.solve;
+
   shellPlotVTU3D(shell, fname, 0);
   shellErrorHex3D(shell, shell->q3D, &errH1, &errL2);
 
+  printf("------------------------\n");
+  if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    printf("N\t\t%d\n",             shell->mesh->N);
+    printf("Np\t\t%d\n",            shell->mesh->Np);
+    printf("Nelements\t%d\n",       shell->mesh->Nelements);
+    printf("Ntotal\t\t%d\n",        shell->mesh->Np*shell->mesh->Nelements);
+    printf("Setup Time\t%g\n",      shell->times.setup.total);
+    printf("Solve Time\t%g\n",      shell->times.solve);
+    printf("Total Time\t%g\n",      shell->times.total);
+    printf("Nodes/s\t\t%g\n", (1.0*shell->mesh->Np*shell->mesh->Nelements)/shell->times.total);
+  } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    printf("N\t\t%d\n",             shell->elliptic->mesh->N);
+    printf("Np\t\t%d\n",            shell->elliptic->mesh->Np);
+    printf("Nelements\t%d\n",       shell->elliptic->mesh->Nelements);
+    printf("Ntotal\t\t%d\n",        shell->elliptic->mesh->Np*shell->elliptic->mesh->Nelements);
+    printf("Setup Time\t%g\n",      shell->times.setup.total);
+    printf("Solve Time\t%g\n",      shell->times.solve);
+    printf("Total Time\t%g\n",      shell->times.total);
+    printf("Nodes/s\t\t%g\n", (1.0*shell->elliptic->mesh->Np*shell->elliptic->mesh->Nelements)/shell->times.total);
+  }
+  printf("------------------------\n");
   printf("H1 error:  %g\n", errH1);
   printf("L2 error:  %g\n", errL2);
  
