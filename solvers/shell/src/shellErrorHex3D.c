@@ -1,195 +1,62 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "shell.h"
+
+extern void interpolateQuad2D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M);
+extern void interpolateHex3D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M);
+
+static void shellErrorHex3DASBF(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2);
+static void shellErrorHex3DSEM(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2);
 
 static void shellManufacturedSolution(shell_t *shell,
                                      dfloat x, dfloat y, dfloat z, dfloat* q,
                                      dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
 
-void shellErrorHex3D(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2){
+void shellErrorHex3D(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2)
+{
+  setupAide options = shell->options;
 
+  if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    shellErrorHex3DASBF(shell, q3D, normErrorH1, normErrorL2);
+  } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    shellErrorHex3DSEM(shell, q3D, normErrorH1, normErrorL2);
+  } else {
+    printf("ERROR:  Invalid value \"%s\" for SHELL SOLVER.\n",
+           options.getArgs("SHELL SOLVER").c_str());
+    exit(-1);
+  }
+}
+
+static void shellErrorHex3DASBF(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2)
+{
   mesh_t *mesh = shell->mesh;
 
   *normErrorH1 = 0;
   *normErrorL2 = 0;
-
-#if 0
-  for (int e = 0; e < mesh->Nelements; e++){
-    for(int k=0;k<mesh->Nq;++k){
-      for(int j=0;j<mesh->Nq;++j){
-        for(int i=0;i<mesh->Nq;++i){
-
-          hlong id = e*mesh->Np +  k*mesh->Nq*mesh->Nq + j*mesh->Nq + i;
-
-          dfloat qg = mesh->q[id];
-
-          dfloat xg = mesh->x[id];
-          dfloat yg = mesh->y[id];
-          dfloat zg = mesh->z[id];
-          dfloat rg = sqrt(xg*xg + yg*yg + zg*zg);
-
-          dfloat K1 = 6.283185307179586;
-          dfloat K2 = 18.849555921538759;
-          dfloat K3 = 25.132741228718345;
-          dfloat qE = sin(K1*rg)/(K1*rg) + sin(K2*rg)/(K2*rg) + sin(K3*rg)/(K3*rg);
-          dfloat dqEdrho = cos(K1*rg)/rg - sin(K1*rg)/(K1*rg*rg) // rho is radial
-            + cos(K2*rg)/rg - sin(K2*rg)/(K2*rg*rg)
-            + cos(K3*rg)/rg - sin(K3*rg)/(K3*rg*rg);
-
-          dfloat dqEdx = dqEdrho*xg/rg;
-          dfloat dqEdy = dqEdrho*yg/rg;
-          dfloat dqEdz = dqEdrho*zg/rg;
-
-          dfloat dqdr = 0, dqds = 0, dqdt = 0;
-          for(int n=0;n<mesh->Nq;++n){
-            dqdr += mesh->D[i*mesh->Nq+n]*q[e*mesh->Np + k*mesh->Nq*mesh->Nq + j*mesh->Nq + n];
-            dqds += mesh->D[j*mesh->Nq+n]*q[e*mesh->Np + k*mesh->Nq*mesh->Nq + n*mesh->Nq + i];
-            dqdt += mesh->D[k*mesh->Nq+n]*q[e*mesh->Np + n*mesh->Nq*mesh->Nq + j*mesh->Nq + i];
-          }
-
-          hlong gid = e*mesh->Np*mesh->Nvgeo + k*mesh->Nq*mesh->Nq + j*mesh->Nq + i;
-
-          dfloat drdx = mesh->vgeo[gid + RXID*mesh->Np];
-          dfloat dsdx = mesh->vgeo[gid + SXID*mesh->Np];
-          dfloat dtdx = mesh->vgeo[gid + TXID*mesh->Np];
-
-          dfloat drdy = mesh->vgeo[gid + RYID*mesh->Np];
-          dfloat dsdy = mesh->vgeo[gid + SYID*mesh->Np];
-          dfloat dtdy = mesh->vgeo[gid + TYID*mesh->Np];
-
-          dfloat drdz = mesh->vgeo[gid + RZID*mesh->Np];
-          dfloat dsdz = mesh->vgeo[gid + SZID*mesh->Np];
-          dfloat dtdz = mesh->vgeo[gid + TZID*mesh->Np];
-
-          dfloat JW = mesh->vgeo[gid + JWID*mesh->Np];
-
-          dfloat dqdx = drdx*dqdr + dsdx*dqds + dtdx*dqdt;
-          dfloat dqdy = drdy*dqdr + dsdy*dqds + dtdy*dqdt;
-          dfloat dqdz = drdz*dqdr + dsdz*dqds + dtdz*dqdt;
-
-          dfloat localH1 = pow(dqEdx-dqdx, 2) + pow(dqEdy-dqdy, 2) + pow(dqEdz-dqdz, 2) + pow(qE-qg, 2);
-          dfloat localL2 = pow(qE-qg, 2);
-
-          normErrorH1 += JW*localH1;
-          normErrorL2 += JW*localL2;
-
-        }
-      }
-    }
-  }
-#endif
-
-#if 0
-  dfloat *cubq  = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-  dfloat *cubqr = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-  dfloat *cubqs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-  dfloat *cubqt = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-  dfloat *cubx  = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-  dfloat *cuby  = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-  dfloat *cubz  = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-
-  dfloat *qr = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  dfloat *qs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  dfloat *qt = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-
-  for(int e = 0; e < mesh->Nelements; e++){
-
-    // differentiate
-    for(int k=0;k<mesh->Nq;++k){
-      for(int j=0;j<mesh->Nq;++j){
-        for(int i=0;i<mesh->Nq;++i){
-
-          int id = k*mesh->Nq*mesh->Nq + j*mesh->Nq + i;
-
-          dfloat dqdr = 0, dqds = 0, dqdt = 0;
-          for(int n=0;n<mesh->Nq;++n){
-            dqdr += mesh->D[i*mesh->Nq+n]*q[e*mesh->Np + k*mesh->Nq*mesh->Nq + j*mesh->Nq + n];
-            dqds += mesh->D[j*mesh->Nq+n]*q[e*mesh->Np + k*mesh->Nq*mesh->Nq + n*mesh->Nq + i];
-            dqdt += mesh->D[k*mesh->Nq+n]*q[e*mesh->Np + n*mesh->Nq*mesh->Nq + j*mesh->Nq + i];
-          }
-
-          qr[id] = dqdr;
-          qs[id] = dqds;
-          qt[id] = dqdt;
-        }
-      }
-    }
-
-    void interpolateHex3D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M);
-    interpolateHex3D(mesh->cubInterp, mesh->q+e*mesh->Np, mesh->Nq, cubq, mesh->cubNq);
-    interpolateHex3D(mesh->cubInterp, mesh->x+e*mesh->Np, mesh->Nq, cubx, mesh->cubNq);
-    interpolateHex3D(mesh->cubInterp, mesh->y+e*mesh->Np, mesh->Nq, cuby, mesh->cubNq);
-    interpolateHex3D(mesh->cubInterp, mesh->z+e*mesh->Np, mesh->Nq, cubz, mesh->cubNq);
-
-    interpolateHex3D(mesh->cubInterp, qr, mesh->Nq, cubqr, mesh->cubNq);
-    interpolateHex3D(mesh->cubInterp, qs, mesh->Nq, cubqs, mesh->cubNq);
-    interpolateHex3D(mesh->cubInterp, qt, mesh->Nq, cubqt, mesh->cubNq);
-
-    for(int k=0;k<mesh->cubNq;++k){
-      for(int j=0;j<mesh->cubNq;++j){
-        for(int i=0;i<mesh->cubNq;++i){
-
-          hlong id = k*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + i;
-
-          dfloat cubqg = cubq[id];
-          dfloat cubqrg = cubqr[id];
-          dfloat cubqsg = cubqs[id];
-          dfloat cubqtg = cubqt[id];
-
-          dfloat xg = cubx[id];
-          dfloat yg = cuby[id];
-          dfloat zg = cubz[id];
-          dfloat rg = sqrt(xg*xg + yg*yg + zg*zg);
-
-          dfloat K1 = 6.283185307179586;
-          dfloat K2 = 18.849555921538759;
-          dfloat K3 = 25.132741228718345;
-          dfloat qE = sin(K1*rg)/(K1*rg) + sin(K2*rg)/(K2*rg) + sin(K3*rg)/(K3*rg);
-          dfloat dqEdrho = cos(K1*rg)/rg - sin(K1*rg)/(K1*rg*rg) // rho is radial
-            + cos(K2*rg)/rg - sin(K2*rg)/(K2*rg*rg)
-            + cos(K3*rg)/rg - sin(K3*rg)/(K3*rg*rg);
-
-          dfloat dqEdx = dqEdrho*xg/rg;
-          dfloat dqEdy = dqEdrho*yg/rg;
-          dfloat dqEdz = dqEdrho*zg/rg;
-
-          hlong gid = e*mesh->cubNp*mesh->Nvgeo + k*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + i;
-
-          dfloat drdx = mesh->cubvgeo[gid + RXID*mesh->cubNp];
-          dfloat dsdx = mesh->cubvgeo[gid + SXID*mesh->cubNp];
-          dfloat dtdx = mesh->cubvgeo[gid + TXID*mesh->cubNp];
-
-          dfloat drdy = mesh->cubvgeo[gid + RYID*mesh->cubNp];
-          dfloat dsdy = mesh->cubvgeo[gid + SYID*mesh->cubNp];
-          dfloat dtdy = mesh->cubvgeo[gid + TYID*mesh->cubNp];
-
-          dfloat drdz = mesh->cubvgeo[gid + RZID*mesh->cubNp];
-          dfloat dsdz = mesh->cubvgeo[gid + SZID*mesh->cubNp];
-          dfloat dtdz = mesh->cubvgeo[gid + TZID*mesh->cubNp];
-
-          dfloat JW = mesh->cubvgeo[gid + JWID*mesh->cubNp];
-
-          dfloat dqdx = drdx*cubqrg + dsdx*cubqsg + dtdx*cubqtg;
-          dfloat dqdy = drdy*cubqrg + dsdy*cubqsg + dtdy*cubqtg;
-          dfloat dqdz = drdz*cubqrg + dsdz*cubqsg + dtdz*cubqtg;
-
-          dfloat localH1 = pow(dqEdx-dqdx, 2) + pow(dqEdy-dqdy, 2) + pow(dqEdz-dqdz, 2) + pow(qE-cubqg, 2);
-          dfloat localL2 = pow(qE-cubqg, 2);
-
-          normErrorH1 += JW*localH1;
-          normErrorL2 += JW*localL2;
-
-        }
-      }
-    }
-  }
-
-  free(qr); free(qs); free(qt);
-  free(cubq);
-  free(cubqr); free(cubqs);   free(cubqt);
-  free(cubx); free(cuby);   free(cubz);
-
-#endif
-
-#if 1
 
   hlong cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp*shell->Nquad;
   dfloat *cubq    = (dfloat*) calloc(cubNtotal, sizeof(dfloat));
@@ -204,7 +71,6 @@ void shellErrorHex3D(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *n
   shellCubatureGradient(shell, q3D, cubq, cubdqdx, cubdqdy, cubdqdz);
 
   for(int e = 0; e < mesh->Nelements; e++){
-
     interpolateQuad2D(mesh->cubInterp, mesh->x+e*mesh->Np, mesh->Nq, cubx, mesh->cubNq);
     interpolateQuad2D(mesh->cubInterp, mesh->y+e*mesh->Np, mesh->Nq, cuby, mesh->cubNq);
     interpolateQuad2D(mesh->cubInterp, mesh->z+e*mesh->Np, mesh->Nq, cubz, mesh->cubNq);
@@ -212,7 +78,6 @@ void shellErrorHex3D(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *n
     for(int k=0;k<shell->Nquad;++k){
       for(int j=0;j<mesh->cubNq;++j){
         for(int i=0;i<mesh->cubNq;++i){
-
           int m = j*mesh->cubNq + i;
 
           hlong id = e*mesh->cubNp+m + k*(mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp;
@@ -237,12 +102,8 @@ void shellErrorHex3D(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *n
           dfloat localH1 = pow(dqEdx-dqdxg, 2) + pow(dqEdy-dqdyg, 2) + pow(dqEdz-dqdzg, 2) + pow(qE-qg, 2);
           dfloat localL2 = pow(qE-qg, 2);
 
-          //printf("dqdx = %g,%g - dqdy = %g,%g - dqdz = %g,%g - q = %g,%g - JW = %g\n",
-          //       dqEdx, dqdxg, dqEdy, dqdyg, dqEdz, dqdzg, qE, qg, JW);
-
           *normErrorH1 += JW*localH1;
           *normErrorL2 += JW*localL2;
-
         }
       }
     }
@@ -251,7 +112,111 @@ void shellErrorHex3D(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *n
   free(cubq);
   free(cubdqdx); free(cubdqdy);   free(cubdqdz);
 
-#endif
+  *normErrorH1 = sqrt(*normErrorH1);
+  *normErrorL2 = sqrt(*normErrorL2);
+}
+
+static void shellErrorHex3DSEM(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2)
+{
+  elliptic_t *elliptic = shell->elliptic;
+  mesh_t *mesh         = elliptic->mesh;
+
+  // TODO:  Move the gradient calculation to shellCubatureGradient().
+  dfloat *qr = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *qs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *qt = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+
+  dfloat *cubx = (dfloat*)calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cuby = (dfloat*)calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubz = (dfloat*)calloc(mesh->cubNp, sizeof(dfloat));
+
+  dfloat *cubq = (dfloat*)calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubqr = (dfloat*)calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubqs = (dfloat*)calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubqt = (dfloat*)calloc(mesh->cubNp, sizeof(dfloat));
+
+  *normErrorH1 = 0.0;
+  *normErrorL2 = 0.0;
+  for (int e = 0; e < mesh->Nelements; e++) {
+    for (int i = 0; i < mesh->Nq; i++) {
+      for (int j = 0; j < mesh->Nq; j++) {
+        for (int k = 0; k < mesh->Nq; k++) {
+          int ind = i*mesh->Nq*mesh->Nq + j*mesh->Nq + k;
+
+          dfloat dqdr = 0.0;
+          dfloat dqds = 0.0;
+          dfloat dqdt = 0.0;
+
+          for (int n = 0; n < mesh->Nq; n++) {
+            dqdr += mesh->D[k*mesh->Nq + n]*mesh->q[e*mesh->Np + i*mesh->Nq*mesh->Nq + j*mesh->Nq + n];
+            dqds += mesh->D[j*mesh->Nq + n]*mesh->q[e*mesh->Np + i*mesh->Nq*mesh->Nq + n*mesh->Nq + k];
+            dqdt += mesh->D[i*mesh->Nq + n]*mesh->q[e*mesh->Np + n*mesh->Nq*mesh->Nq + j*mesh->Nq + k];
+          }
+
+          qr[ind] = dqdr;
+          qs[ind] = dqds;
+          qt[ind] = dqdt;
+        }
+      }
+    }
+
+    interpolateHex3D(mesh->cubInterp, mesh->q + e*mesh->Np, mesh->Nq, cubq, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, mesh->x + e*mesh->Np, mesh->Nq, cubx, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, mesh->y + e*mesh->Np, mesh->Nq, cuby, mesh->cubNq);
+
+    interpolateHex3D(mesh->cubInterp, mesh->z + e*mesh->Np, mesh->Nq, cubz, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, qr, mesh->Nq, cubqr, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, qs, mesh->Nq, cubqs, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, qt, mesh->Nq, cubqt, mesh->cubNq);
+
+    for (int i = 0; i < mesh->cubNq; i++) {
+      for (int j = 0; j < mesh->cubNq; j++) {
+        for (int k = 0; k < mesh->cubNq; k++) {
+          // TODO:  Replace the body of this loop with a call to shellManufacturedSolution().
+          hlong ind = i*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + k;
+          dfloat x = cubx[ind];
+          dfloat y = cuby[ind];
+          dfloat z = cubz[ind];
+
+          dfloat r          = sqrt(x*x + y*y + z*z);
+          dfloat r2mR2      = pow(r, 2.0) - pow(shell->R, 2.0);
+          dfloat r2m1       = pow(r, 2.0) - 1.0;
+          dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(shell->R, 2.0) - 1.0;
+
+          dfloat qE = sin(x)*cos(y)*exp(z)*r2mR2*r2m1;
+          dfloat dqEdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1);
+          dfloat dqEdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
+          dfloat dqEdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
+
+          hlong gind = e*mesh->cubNp*mesh->Nvgeo + i*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + k;
+
+          dfloat drdx = mesh->cubvgeo[gind + RXID*mesh->cubNp];
+          dfloat dsdx = mesh->cubvgeo[gind + SXID*mesh->cubNp];
+          dfloat dtdx = mesh->cubvgeo[gind + TXID*mesh->cubNp];
+
+          dfloat drdy = mesh->cubvgeo[gind + RYID*mesh->cubNp];
+          dfloat dsdy = mesh->cubvgeo[gind + SYID*mesh->cubNp];
+          dfloat dtdy = mesh->cubvgeo[gind + TYID*mesh->cubNp];
+
+          dfloat drdz = mesh->cubvgeo[gind + RZID*mesh->cubNp];
+          dfloat dsdz = mesh->cubvgeo[gind + SZID*mesh->cubNp];
+          dfloat dtdz = mesh->cubvgeo[gind + TZID*mesh->cubNp];
+
+          dfloat JW = mesh->cubvgeo[gind + JWID*mesh->cubNp];
+
+          dfloat dqdx = drdx*cubqr[ind] + dsdx*cubqs[ind] + dtdx*cubqt[ind];
+          dfloat dqdy = drdy*cubqr[ind] + dsdy*cubqs[ind] + dtdy*cubqt[ind];
+          dfloat dqdz = drdz*cubqr[ind] + dsdz*cubqs[ind] + dtdz*cubqt[ind];
+
+          dfloat errH1local = pow(dqEdx - dqdx, 2) + pow(dqEdy - dqdy, 2) + pow(dqEdz - dqdz, 2) + pow(qE - cubq[ind], 2);
+          dfloat errL2local = pow(qE - cubq[ind], 2);
+
+          *normErrorH1 += JW*errH1local;
+          *normErrorL2 += JW*errL2local;
+        }
+      }
+    }
+  }
 
   *normErrorH1 = sqrt(*normErrorH1);
   *normErrorL2 = sqrt(*normErrorL2);

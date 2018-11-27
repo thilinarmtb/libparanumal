@@ -30,7 +30,7 @@ void shellExtrudeSphere(shell_t *shell){
 
   mesh_t *mesh = shell->mesh;
 
-  mesh_t *meshSEM = new mesh_t;
+  mesh_t *meshSEM = new mesh_t();
 
   meshSEM->N = mesh->N;
   meshSEM->Nelements = mesh->Nelements;

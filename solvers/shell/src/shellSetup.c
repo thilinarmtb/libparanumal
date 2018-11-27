@@ -28,11 +28,13 @@
 #include "omp.h"
 #include <unistd.h>
 
+static void shellSetupRHSASBF(shell_t *shell);
+static void shellSetupRHSSEM(shell_t *shell);
 static dfloat shellManufacturedForcingFunction(shell_t *shell, dfloat x, dfloat y, dfloat z);
 
-shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setupAide options){
-
-  shell_t *shell = new shell_t;
+shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, setupAide options)
+{
+  shell_t *shell = new shell_t();
   shell->mesh = mesh;
   shell->options = options;
 
@@ -56,6 +58,7 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
   // Set up radial mesh (PIECEWISEDISCRETE basis only).
   dfloat R;
   options.getArgs("OUTER RADIUS", R);
+
   if (options.compareArgs("RADIAL BASIS TYPE", "PIECEWISEDISCRETE")) {
     shell->Nradelements = 1;
     dfloat h = (R - 1.0)/shell->Nradelements;
@@ -73,6 +76,26 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
   shell->outerBC = 1;
 
   shellSolveSetup(shell, lambda, kernelInfo);
+
+  // Set up the right-hand side.
+  if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    shellSetupRHSASBF(shell);
+  } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    shellSetupRHSSEM(shell);
+  } else {
+    printf("ERROR:  Invalid value \"%s\" for SHELL SOLVER.\n",
+           options.getArgs("SHELL SOLVER").c_str());
+    exit(-1);
+  }
+
+  return shell;
+}
+
+/******************************************************************************/
+
+static void shellSetupRHSASBF(shell_t *shell)
+{
+  mesh_t *mesh = shell->mesh;
 
   for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
@@ -114,10 +137,40 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
     }
   }
 
-  return shell;
+  return;
 }
 
-/******************************************************************************/
+static void shellSetupRHSSEM(shell_t *shell)
+{
+  elliptic_t *elliptic = shell->elliptic;
+  mesh_t *mesh         = elliptic->mesh;
+
+  for (int e = 0; e < mesh->Nelements; e++) {
+    for (int n = 0; n < mesh->Np; n++) {
+      dfloat J = mesh->vgeo[mesh->Np*(e*mesh->Nvgeo + JID) + n];
+      
+      dlong ind = e*mesh->Np + n;
+      dfloat xn = mesh->x[ind];
+      dfloat yn = mesh->y[ind];
+      dfloat zn = mesh->z[ind];
+
+      dfloat r = sqrt(xn*xn + yn*yn + zn*zn);
+
+      // TODO:  Replace this loop body with a call to shellManufacturedForcingFunction().
+      dfloat q, d2qdx2, d2qdy2, d2qdz2;
+      dfloat r2mR2      = pow(r, 2.0) - pow(shell->R, 2.0);
+      dfloat r2m1       = pow(r, 2.0) - 1.0;
+      dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(shell->R, 2.0) - 1.0;
+      
+      q = sin(xn)*cos(yn)*exp(zn)*r2mR2*r2m1;
+      d2qdx2 = cos(yn)*exp(zn)*((2.0*sin(xn) + 4.0*xn*cos(xn))*twor2mR2m1 + 8.0*xn*xn*sin(xn) - sin(xn)*r2mR2*r2m1);
+      d2qdy2 = sin(xn)*exp(zn)*((2.0*cos(yn) - 4.0*yn*sin(yn))*twor2mR2m1 + 8.0*yn*yn*cos(yn) - cos(yn)*r2mR2*r2m1);
+      d2qdz2 = sin(xn)*cos(yn)*exp(zn)*((2.0 + 4.0*zn)*twor2mR2m1 + 8.0*zn*zn + r2mR2*r2m1);
+
+      elliptic->r[ind] = J*(-d2qdx2 - d2qdy2 - d2qdz2 + shell->lambda*q);
+    }
+  }
+}
 
 // NB:  This must match shellManufacturedSolution() in shellErrorHex3D.c
 static dfloat shellManufacturedForcingFunction(shell_t *shell, dfloat x, dfloat y, dfloat z)

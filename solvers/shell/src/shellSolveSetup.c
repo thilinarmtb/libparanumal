@@ -42,21 +42,44 @@ extern "C"
               int    *INFO);
 }
 
+static void shellSolveSetupASBF(shell_t *shell, dfloat lambda, occa::properties &kernelInfo);
+static void shellSolveSetupSEM(shell_t *shell, dfloat lambda, occa::properties &kernelInfo);
 static void shellLoadRadialBasisTrue(shell_t *shell);
 static void shellLoadRadialBasisGlobalDiscrete(shell_t *shell);
 static void shellLoadRadialBasisPiecewiseDiscrete(shell_t *shell);
 
+static void shellCheckSEMOperatorSymmetry(shell_t *shell);
+
 void shellSolveSetup(shell_t *shell, dfloat lambda, occa::properties &kernelInfo)
 {
-  mesh_t *mesh = shell->mesh;
   setupAide options = shell->options;
+
   shell->lambda = lambda;
+  shell->TOL = 1E-8;
 
   options.getArgs("OUTER RADIUS", shell->R);
   if (shell->R <= 1) {
     printf("ERROR:  OUTER RADIUS must be greater than 1.\n");
     exit(-1);
   }
+
+  if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    shellSolveSetupASBF(shell, lambda, kernelInfo);
+  } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    shellSolveSetupSEM(shell, lambda, kernelInfo);
+  } else {
+    printf("ERROR:  Invalid value \"%s\" for SHELL SOLVER.\n",
+           options.getArgs("SHELL SOLVER").c_str());
+    exit(-1);
+  }
+}
+
+/*****************************************************************************/
+
+static void shellSolveSetupASBF(shell_t *shell, dfloat lambda, occa::properties &kernelInfo)
+{
+  setupAide options = shell->options;
+  mesh_t *mesh = shell->mesh;
 
   options.getArgs("RADIAL EXPANSION MODES", shell->Nmodes);
 
@@ -81,6 +104,8 @@ void shellSolveSetup(shell_t *shell, dfloat lambda, occa::properties &kernelInfo
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
   shell->Ntotal = Nlocal + Nhalo;
 
+  shell->meshSEM = NULL;
+
   shell->r3D = (dfloat*) calloc(shell->Nmodes*shell->Ntotal, sizeof(dfloat));
   shell->q3D = (dfloat*) calloc(shell->Nmodes*shell->Ntotal, sizeof(dfloat));
   shell->f   = (dfloat*) calloc(shell->Nquad, sizeof(dfloat));
@@ -93,13 +118,10 @@ void shellSolveSetup(shell_t *shell, dfloat lambda, occa::properties &kernelInfo
 
   occa::properties kernelInfoP  = kernelInfo;
 
-  shell->o_r   = mesh->device.malloc(shell->Ntotal*sizeof(dfloat), shell->r);
-  shell->o_x   = mesh->device.malloc(shell->Ntotal*sizeof(dfloat), shell->x);
+  shell->o_r = mesh->device.malloc(shell->Ntotal*sizeof(dfloat), shell->r);
+  shell->o_x = mesh->device.malloc(shell->Ntotal*sizeof(dfloat), shell->x);
 
-  //Solver tolerances
-  shell->pTOL = 1E-8;
-
-  shell->elliptic = new elliptic_t;
+  shell->elliptic = new elliptic_t();
   shell->elliptic->mesh = mesh;
   shell->elliptic->options = shell->options;
   shell->elliptic->dim = shell->dim;
@@ -108,22 +130,134 @@ void shellSolveSetup(shell_t *shell, dfloat lambda, occa::properties &kernelInfo
   // Elliptic BCType flags should be all zero for spherical problem.
   shell->elliptic->BCType = (int*)calloc(7, sizeof(int));
 
-  //ellipticSolveSetup(shell->elliptic, shell->lambda, kernelInfoP);
-
-  shell->meshSEM = NULL;
-
-  // TODO:  Make this work for Nradelements > 1.
-  if ((shell->elementType == QUADRILATERALS) &&
-      (options.compareArgs("RADIAL BASIS TYPE", "PIECEWISEDISCRETE")) &&
-      (shell->Nradelements == 1)) {
-    shellExtrudeSphere(shell);
-  }
+  ellipticSolveSetup(shell->elliptic, shell->lambda, kernelInfoP);
 
   // OKL kernels specific to shell
+  /*
   shell->shellReconstructKernel =
     mesh->device.buildKernel(DSHELL "/okl/shellReconstructHex3D.okl",
         "shellReconstructHex3D",
         kernelInfo);
+  */
+}
+
+static void shellSolveSetupSEM(shell_t *shell, dfloat lambda, occa::properties &kernelInfo)
+{
+  int  Ncols;
+  char fname[BUFSIZ];
+  FILE *fp;
+
+  // Read in and scale the GLL nodes (needed by shellExtrudeSphere()).
+  sprintf(fname, DHOLMES "/solvers/shell/data/shellN%02d.dat", shell->mesh->N);
+  fp = fopen(fname, "r");
+  if (!fp) {
+    printf("ERROR: Cannot open file: '%s'\n", fname);
+    exit(-1);
+  }
+
+  readDfloatArray(fp, "SHELL PIECEWISE DISCRETE GLL NODES",
+      &(shell->Rgll), &(shell->Ngll), &Ncols);
+
+  fclose(fp);
+
+  for (int i = 0; i < shell->Ngll; i++)
+    shell->Rgll[i] = (shell->Rgll[i] + 1.0)*(shell->R - 1.0)/2.0 + 1.0;
+
+  // Compute and set shell->Ntotal (needed by shellExtrudeSphere()).
+  dlong Nlocal = shell->mesh->Np*shell->mesh->Nelements;
+  dlong Nhalo  = shell->mesh->Np*shell->mesh->totalHaloPairs;
+  shell->Ntotal = Nlocal + Nhalo;
+
+  // Generate the extruded sphere mesh.
+  //
+  // TODO:  Give a way to specify the number of radial elements.
+  if (shell->elementType == QUADRILATERALS) {
+    shellExtrudeSphere(shell);
+  } else {
+    printf("ERROR:  shellExtrudeSphere() only works for shell->elementType == QUADRILATERALS.\n");
+    exit(-1);
+  }
+
+  //meshCheckHex3D(shell->meshSEM);
+  //meshPlotVTU3D(shell->meshSEM, "semMesh", 0);
+
+  meshOccaSetup3D(shell->meshSEM, shell->options, kernelInfo);
+  shell->meshSEM->Nfields = 1;
+
+  elliptic_t *elliptic  = new elliptic_t();
+  elliptic->mesh        = shell->meshSEM;
+  elliptic->options     = shell->options;
+  elliptic->dim         = 3;
+  elliptic->elementType = HEXAHEDRA;
+
+  int BCType[3] = {0, 1, 2};
+  elliptic->BCType = (int*)calloc(3, sizeof(int));
+  memcpy(elliptic->BCType, BCType, 3*sizeof(int));
+
+  elliptic->x = (dfloat*)calloc(elliptic->mesh->Nelements*elliptic->mesh->Np, sizeof(dfloat));
+  elliptic->r = (dfloat*)calloc(elliptic->mesh->Nelements*elliptic->mesh->Np, sizeof(dfloat));
+  elliptic->o_r = elliptic->mesh->device.malloc(elliptic->mesh->Nelements*elliptic->mesh->Np*sizeof(dfloat), elliptic->r);
+  elliptic->o_x = elliptic->mesh->device.malloc(elliptic->mesh->Nelements*elliptic->mesh->Np*sizeof(dfloat), elliptic->x);
+
+  ellipticSolveSetup(elliptic, shell->lambda, kernelInfo);
+
+  shell->elliptic = elliptic;
+
+  //shellCheckSEMOperatorSymmetry(shell);
+}
+
+static void shellCheckSEMOperatorSymmetry(shell_t *shell)
+{
+  setupAide options    = shell->options;
+  elliptic_t *elliptic = shell->elliptic;
+  mesh_t *mesh         = elliptic->mesh;
+
+  // Check symmetry by comparing y^TAx and x^TAy for random x, y.
+  int Ntotal = mesh->Np*mesh->Nelements;
+  dfloat *x  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  dfloat *y  = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  dfloat *Ax = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  dfloat *Ay = (dfloat*)calloc(Ntotal, sizeof(dfloat));
+  occa::memory o_v  = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  occa::memory o_Av = mesh->device.malloc(Ntotal*sizeof(dfloat));
+
+  srand48(67714070);
+
+  for (int i = 0; i < Ntotal; i++) {
+    x[i] = drand48();
+    y[i] = drand48();
+  }
+
+  o_v.copyFrom(x);
+
+  // feed o_v = S*G*o_v
+  if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+    ogsGatherScatterStart(o_v, ogsDfloat, ogsAdd, elliptic->ogs);
+    ogsGatherScatterFinish(o_v, ogsDfloat, ogsAdd, elliptic->ogs);
+  }
+
+  ellipticOperator(elliptic, shell->lambda, o_v, o_Av, "double");
+  o_Av.copyTo(Ax);
+  double ytAx = 0.0;
+  for (int i = 0; i < Ntotal; i++)
+    ytAx += y[i]*Ax[i];
+
+  o_v.copyFrom(y);
+
+  // feed o_v = S*G*o_v
+  if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+    ogsGatherScatterStart(o_v, ogsDfloat, ogsAdd, elliptic->ogs);
+    ogsGatherScatterFinish(o_v, ogsDfloat, ogsAdd, elliptic->ogs);
+  }
+
+  ellipticOperator(elliptic, shell->lambda, o_v, o_Av, "double");
+  o_Av.copyTo(Ay);
+  double xtAy = 0.0;
+  for (int i = 0; i < Ntotal; i++)
+    xtAy += x[i]*Ay[i];
+
+  printf("ytAx = %.15f\n", ytAx);
+  printf("xtAy = %.15f\n", xtAy);
 }
 
 /*****************************************************************************/
@@ -394,10 +528,6 @@ static void shellLoadRadialBasisGlobalDiscrete(shell_t *shell)
   fclose(fp);
 }
 
-
-// WARNING:  This will not do the right thing if Nradelements == 1.
-//
-// TODO:  Fix this.
 static void shellLoadRadialBasisPiecewiseDiscrete(shell_t *shell)
 {
   dfloat *Rquadb, *Wquadb;    // Base quadrature nodes and weights.

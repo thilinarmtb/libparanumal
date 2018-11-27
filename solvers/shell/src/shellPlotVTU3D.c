@@ -30,10 +30,33 @@ SOFTWARE.
 
 #include "shell.h"
 
-// interpolate data to plot nodes and save to file (one per process
-void shellPlotVTU3D(shell_t *shell, char *fileNameBase, int fld){
+static void shellPlotVTU3DASBF(shell_t *shell, char *fileNameBase, int fld);
+static void shellPlotVTU3DSEM(shell_t *shell, char *fileNameBase, int fld);
 
+// interpolate data to plot nodes and save to file (one per process
+void shellPlotVTU3D(shell_t *shell, char *fileNameBase, int fld)
+{
+  setupAide options = shell->options;
+
+  if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    shellPlotVTU3DASBF(shell, fileNameBase, fld);
+  } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    shellPlotVTU3DSEM(shell, fileNameBase, fld);
+  } else {
+    printf("ERROR:  Invalid value \"%s\" for SHELL SOLVER.\n",
+           options.getArgs("SHELL SOLVER").c_str());
+    exit(-1);
+  }
+}
+
+static void shellPlotVTU3DASBF(shell_t *shell, char *fileNameBase, int fld)
+{
   mesh_t *mesh = shell->mesh;
+
+  if (shell->elementType != QUADRILATERALS) {
+    printf("WARNING:  Unable to generate solution plot. shellPlotVTU3D() for ASBF solver only works for elementType == QUADRILATERALS.\n");
+    return;
+  }
 
   int rank;
   rank = mesh->rank;
@@ -157,4 +180,9 @@ void shellPlotVTU3D(shell_t *shell, char *fileNameBase, int fld){
   fprintf(fp, "  </UnstructuredGrid>\n");
   fprintf(fp, "</VTKFile>\n");
   fclose(fp);
+}
+
+static void shellPlotVTU3DSEM(shell_t *shell, char *fileNameBase, int fld)
+{
+  ellipticPlotVTUHex3D(shell->elliptic->mesh, fileNameBase, fld);
 }

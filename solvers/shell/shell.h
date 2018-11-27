@@ -90,7 +90,7 @@ typedef struct {
   dfloat lambda;    // helmhotz solver -lap(u) + lamda u
 
   //solver tolerances
-  dfloat pTOL;
+  dfloat TOL;
 
   dfloat *r;
   dfloat *x;
@@ -116,5 +116,3 @@ void shellPlotVTU3D(shell_t *shell, char *fileNameBase, int fld);
 
 void shellCubatureGradient(shell_t *shell, dfloat *q3D,
 			  dfloat *cubq, dfloat *cubdqdx, dfloat *cubdqdy, dfloat *cubdqdz);
-
-void interpolateQuad2D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M);
