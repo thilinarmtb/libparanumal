@@ -35,6 +35,12 @@ static void shellErrorHex3DSEM(shell_t *shell, dfloat *q3D, dfloat *normErrorH1,
 static void shellManufacturedSolution(shell_t *shell,
                                      dfloat x, dfloat y, dfloat z, dfloat* q,
                                      dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
+static void shellManufacturedSolutionDD(shell_t *shell,
+                                     dfloat x, dfloat y, dfloat z, dfloat* q,
+                                     dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
+static void shellManufacturedSolutionNN(shell_t *shell,
+                                     dfloat x, dfloat y, dfloat z, dfloat* q,
+                                     dfloat* dqdx, dfloat* dqdy, dfloat* dqdz);
 
 void shellErrorHex3D(shell_t *shell, dfloat *q3D, dfloat *normErrorH1, dfloat *normErrorL2)
 {
@@ -220,6 +226,24 @@ static void shellManufacturedSolution(shell_t *shell,
                                      dfloat x, dfloat y, dfloat z, dfloat* q,
                                      dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
 {
+  if ((shell->innerBC == 1) && (shell->outerBC == 1)) {
+    return shellManufacturedSolutionDD(shell, x, y, z, q, dqdx, dqdy, dqdz);
+  } else if ((shell->innerBC == 2) && (shell->outerBC == 2)) {
+    return shellManufacturedSolutionNN(shell, x, y, z, q, dqdx, dqdy, dqdz);
+  } else {
+    printf("ERROR:  No manufactured solution for type-(%d, %d) BCs.\n",
+           shell->innerBC, shell->outerBC);
+    exit(-1);
+  }
+
+  return;
+}
+
+// Appropriate BCs:  Dirichlet-Dirichlet
+static void shellManufacturedSolutionDD(shell_t *shell,
+                                     dfloat x, dfloat y, dfloat z, dfloat* q,
+                                     dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
+{
   dfloat r, theta, phi;
   dfloat drdx, drdy, drdz;
   dfloat dthetadx, dthetady, dthetadz;
@@ -242,8 +266,6 @@ static void shellManufacturedSolution(shell_t *shell,
   dphidz = -sin(phi)/r;
 
 #if 0
-  // NB:  This solution assumes shell->R == 1.5.
-  // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat k1 = 6.283185307179586;
   dfloat k2 = 18.849555921538759;
   dfloat k3 = 25.132741228718345;
@@ -255,7 +277,6 @@ static void shellManufacturedSolution(shell_t *shell,
   *dqdy = dqdr*y/r;
   *dqdz = dqdr*z/r;
 #elif 1
-  // Appropriate BCs:  Dirichlet-Dirichlet
   dfloat r2mR2      = pow(r, 2.0) - pow(shell->R, 2.0);
   dfloat r2m1       = pow(r, 2.0) - 1.0;
   dfloat twor2mR2m1 = 2.0*pow(r, 2.0) - pow(shell->R, 2.0) - 1.0;
@@ -264,47 +285,37 @@ static void shellManufacturedSolution(shell_t *shell,
   *dqdx = cos(y)*exp(z)*(2.0*x*sin(x)*twor2mR2m1 + cos(x)*r2mR2*r2m1); 
   *dqdy = sin(x)*exp(z)*(2.0*y*cos(y)*twor2mR2m1 - sin(y)*r2mR2*r2m1);
   *dqdz = sin(x)*cos(y)*exp(z)*(2.0*z*twor2mR2m1 + r2mR2*r2m1);
-#elif 0
-  // Appropriate BCs:  Neumann-Neumann
-  dfloat dqdr, dqdtheta, dqdphi;
-  dfloat dqdthetadthetadx, dqdthetadthetady;
-  dfloat p, dpdr, s, dsdphi;
+#endif
 
-  p = r*(pow(r, 2.0)/3.0 - ((1.0 + shell->R)/2.0)*r + shell->R);
-  dpdr = (1.0 - r)*(shell->R - r);
+  return;
+}
 
-  s = pow(phi, 2.0)*pow(phi - M_PI, 2.0);
-  dsdphi = 2.0*phi*(phi - M_PI)*(2.0*phi - M_PI);
+static void shellManufacturedSolutionNN(shell_t *shell,
+                                     dfloat x, dfloat y, dfloat z, dfloat* q,
+                                     dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
+{
+  dfloat r, theta, phi;
+  dfloat drdx, drdy, drdz;
+  dfloat dthetadx, dthetady, dthetadz;
+  dfloat dphidx, dphidy, dphidz;
 
-  *q = sin(theta)*s*p;
+  r     = sqrt(x*x + y*y + z*z);
+  theta = atan2(y, x);
+  phi   = acos(z/r);
 
-  dqdr = sin(theta)*s*dpdr;
-  dqdtheta = cos(theta)*s*p;
-  dqdphi = sin(theta)*dsdphi*p;
+  drdx = cos(theta)*sin(phi);
+  drdy = sin(theta)*sin(phi);
+  drdz = cos(phi);
 
-  if (fabs(phi) < 1.0e-13) {
-    // Use series near 0.
-    dqdthetadthetadx = -(sin(theta)*cos(theta)*p/r)*(M_PI*M_PI*phi - 2*M_PI*phi*phi);
-    dqdthetadthetady = (cos(theta)*cos(theta)*p/r)*(M_PI*M_PI*phi - 2*M_PI*phi*phi);
-  } else if (fabs(phi - M_PI) < 1.0e-13) {
-    // Use series near pi.
-    //
-    // TODO:  We get cancellation error here.  Do we care?
-    dfloat h = phi - M_PI;
-    dqdthetadthetadx = -(sin(theta)*cos(theta)*p/r)*(-M_PI*M_PI*h - 2*M_PI*h*h);
-    dqdthetadthetady = (cos(theta)*cos(theta)*p/r)*(-M_PI*M_PI*h - 2*M_PI*h*h);
-  } else {
-    // We're away from the singularites, so the usual formulae apply.
-    dqdthetadthetadx = dqdtheta*dthetadx;
-    dqdthetadthetady = dqdtheta*dthetady;
-  }
+  dthetadx = -sin(theta)/(r*sin(phi));
+  dthetady = cos(theta)/(r*sin(phi));
+  dthetadz = 0;
 
-  *dqdx = dqdr*drdx + dqdthetadthetadx + dqdphi*dphidx;
-  *dqdy = dqdr*drdy + dqdthetadthetady + dqdphi*dphidy;
-  *dqdz = dqdr*drdz + dqdphi*dphidz;
-#else
+  dphidx = cos(theta)*cos(phi)/r;
+  dphidy = sin(theta)*cos(phi)/r;
+  dphidz = -sin(phi)/r;
+
   // NB:  This solution may only work for shell->R not too much bigger than 1.
-  // Appropriate BCs:  Neumann-Neumann
   dfloat dqdr, dqdtheta, dqdphi;
   dfloat dqdthetadthetadx, dqdthetadthetady;
   dfloat p, dpdr, s, dsdphi;
@@ -333,7 +344,6 @@ static void shellManufacturedSolution(shell_t *shell,
   *dqdx = dqdr*drdx + dqdthetadthetadx + dqdphi*dphidx;
   *dqdy = dqdr*drdy + dqdthetadthetady + dqdphi*dphidy;
   *dqdz = dqdr*drdz + dqdphi*dphidz;
-#endif
 
   return;
 }

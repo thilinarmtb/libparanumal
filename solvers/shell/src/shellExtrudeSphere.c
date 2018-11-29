@@ -91,7 +91,7 @@ void shellExtrudeSphere(shell_t *shell){
   hlong bcnt = 0;
   for(hlong e=0;e<meshSEM->Nelements;++e){
     // inner sphere surface
-    meshSEM->boundaryInfo[bcnt*5+0] = 1; // DIRICHLET 
+    meshSEM->boundaryInfo[bcnt*5+0] = shell->innerBC;
     meshSEM->boundaryInfo[bcnt*5+1] = meshSEM->EToV[e*meshSEM->Nverts+0];
     meshSEM->boundaryInfo[bcnt*5+2] = meshSEM->EToV[e*meshSEM->Nverts+1];
     meshSEM->boundaryInfo[bcnt*5+3] = meshSEM->EToV[e*meshSEM->Nverts+2];
@@ -99,7 +99,7 @@ void shellExtrudeSphere(shell_t *shell){
     ++bcnt;
 
     // outer sphere surface 
-    meshSEM->boundaryInfo[bcnt*5+0] = 1; // DIRICHLET ?
+    meshSEM->boundaryInfo[bcnt*5+0] = shell->outerBC;
     meshSEM->boundaryInfo[bcnt*5+1] = meshSEM->EToV[e*meshSEM->Nverts+0+mesh->Nverts];
     meshSEM->boundaryInfo[bcnt*5+2] = meshSEM->EToV[e*meshSEM->Nverts+1+mesh->Nverts];
     meshSEM->boundaryInfo[bcnt*5+3] = meshSEM->EToV[e*meshSEM->Nverts+2+mesh->Nverts];
