@@ -290,6 +290,7 @@ static void shellManufacturedSolutionDD(shell_t *shell,
   return;
 }
 
+// Appropriate BCs:  Neumann-Neumann
 static void shellManufacturedSolutionNN(shell_t *shell,
                                      dfloat x, dfloat y, dfloat z, dfloat* q,
                                      dfloat* dqdx, dfloat* dqdy, dfloat* dqdz)
@@ -320,8 +321,13 @@ static void shellManufacturedSolutionNN(shell_t *shell,
   dfloat dqdthetadthetadx, dqdthetadthetady;
   dfloat p, dpdr, s, dsdphi;
 
+#if 0
   p = r*(pow(r, 2.0)/3.0 - ((1.0 + shell->R)/2.0)*r + shell->R);
   dpdr = (1.0 - r)*(shell->R - r);
+#else
+  p = cos(M_PI*(r - 1.0)/(shell->R - 1.0));
+  dpdr = -M_PI*sin(M_PI*(r - 1.0)/(shell->R - 1.0))/(shell->R - 1.0);
+#endif
 
   s = pow(phi, 3.0)*pow(phi - M_PI, 3.0);
   dsdphi = 3.0*pow(phi, 2.0)*pow(phi - M_PI, 2.0)*(2.0*phi - M_PI);
