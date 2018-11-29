@@ -1,15 +1,6 @@
 [FORMAT]
 1.0
 
-[SPHERE RADIUS]
-1.0
-
-[OUTER RADIUS]
-1.5
-
-[LAMBDA]
-100.0
-
 [MESH FILE]
 #../../meshes/sphereQuadH01.msh 
 ../../meshes/sphereQuadH02.msh 
@@ -20,13 +11,30 @@
 [ELEMENT TYPE] # number of edges
 4
 
-# TODO:  This is only needed by the SEM (hex) solver.
+# For the SEM solver.
 [ELEMENT MAP]
 ISOPARAMETRIC
 
+[SPHERE RADIUS]
+1.0
+
+[OUTER RADIUS]
+1.5
+
+[LAMBDA]
+100.0
+
+[INNER BC]
+DIRICHLET
+#NEUMANN
+
+[OUTER BC]
+DIRICHLET
+#NEUMANN
+
 [SHELL SOLVER]
-#ASBF
-SEM
+ASBF
+#SEM
 
 [POLYNOMIAL DEGREE]
 7

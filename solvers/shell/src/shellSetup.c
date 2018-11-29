@@ -77,13 +77,28 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
   }
 
   // Boundary conditions.  (1 for Dirichlet, 2 for Neumann)
-  shell->innerBC = 1;
-  shell->outerBC = 1;
+  if (options.compareArgs("INNER BC", "DIRICHLET")) {
+    shell->innerBC = 1;
+  } else if (options.compareArgs("INNER BC", "NEUMANN")) {
+    shell->innerBC = 2;
+  } else {
+    printf("ERROR:  Invalid value for INNER BC option.\n");
+    exit(-1);
+  }
 
+  if (options.compareArgs("OUTER BC", "DIRICHLET")) {
+    shell->outerBC = 1;
+  } else if (options.compareArgs("OUTER BC", "NEUMANN")) {
+    shell->outerBC = 2;
+  } else {
+    printf("ERROR:  Invalid value for OUTER BC option.\n");
+    exit(-1);
+  }
+
+  // Set up the solver.
   occa::streamTag solveSetupStart = mesh->device.tagStream();
   shellSolveSetup(shell, lambda, kernelInfo);
   occa::streamTag solveSetupEnd = mesh->device.tagStream();
-
   shell->times.setup.solveSetup = mesh->device.timeBetween(solveSetupStart, solveSetupEnd);
 
   // Set up the right-hand side.
