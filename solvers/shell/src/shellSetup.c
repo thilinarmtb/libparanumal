@@ -287,4 +287,6 @@ static dfloat shellManufacturedForcingFunctionNN(shell_t *shell, dfloat x, dfloa
   }
 
   f = -lapq + shell->lambda*q;
+
+  return f;
 }
