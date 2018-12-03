@@ -25,24 +25,35 @@ ISOPARAMETRIC
 100.0
 
 [INNER BC]
-#DIRICHLET
-NEUMANN
+DIRICHLET
+#NEUMANN
 
 [OUTER BC]
-#DIRICHLET
-NEUMANN
+DIRICHLET
+#NEUMANN
 
 [SHELL SOLVER]
-ASBF
-#SEM
+#ASBF
+SEM
 
 [POLYNOMIAL DEGREE]
-11
+7
 
-[RADIAL EXPANSION MODES]
-25
+# For the SEM solver or the ASBF solver with the PIECEWISEDISCRETE basis, this
+# is the number of radial elements.  For the ASBF solver with the TRUE or
+# GLOBALDISCRETE bases, this is the length of the eigenfunction expansion in
+# the radial direction.
+[RADIAL DISCRETIZATION SIZE]
+1
 
-[RADIAL BASIS TYPE]
+# How to determine radial breakpoints.  Used by the SEM solver and the ASBF
+# solver with the PIECEWISEDISCRETE basis.  Ignored by the ASBF solver with the
+# TRUE or GLOBALDISCRETE bases.
+[RADIAL DISCRETIZATION]
+EQUISPACED
+
+# Radial basis used by the ASBF solver.  Ignored by the SEM solver.
+[ASBF RADIAL BASIS]
 #TRUE
 #GLOBALDISCRETE
 PIECEWISEDISCRETE

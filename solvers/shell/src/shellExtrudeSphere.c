@@ -26,14 +26,14 @@
 
 #include "shell.h"
 
-void shellExtrudeSphere(shell_t *shell){
-
+void shellExtrudeSphere(shell_t *shell)
+{
   mesh_t *mesh = shell->mesh;
 
   mesh_t *meshSEM = new mesh_t();
 
   meshSEM->N = mesh->N;
-  meshSEM->Nelements = mesh->Nelements;
+  meshSEM->Nelements = shell->Nradelements*mesh->Nelements;
   meshSEM->dim = 3;
   meshSEM->Nverts = 8;
   meshSEM->Nfaces = 6;
@@ -58,53 +58,63 @@ void shellExtrudeSphere(shell_t *shell){
   
   // clone and shift nodes
   printf("mesh->Nnodes = %d and maxNode = %d\n", mesh->Nnodes, maxNode);
-  meshSEM->Nnodes = 2*mesh->Nnodes;
+  meshSEM->Nnodes = (shell->Nradelements + 1)*mesh->Nnodes;
   meshSEM->EToV = (hlong*)  calloc(meshSEM->Nelements*meshSEM->Nverts, sizeof(hlong));
   meshSEM->EX   = (dfloat*) calloc(meshSEM->Nverts*meshSEM->Nelements, sizeof(dfloat));
   meshSEM->EY   = (dfloat*) calloc(meshSEM->Nverts*meshSEM->Nelements, sizeof(dfloat));
   meshSEM->EZ   = (dfloat*) calloc(meshSEM->Nverts*meshSEM->Nelements, sizeof(dfloat));
 
-  for(dlong e=0;e<meshSEM->Nelements;++e){
-    for(int n=0;n<mesh->Nverts;++n){
-      hlong id   = e*mesh->Nverts+n;
-      hlong vid1 = mesh->EToV[id];
-      hlong vid2 = vid1 + mesh->Nnodes;
+  for (dlong e = 0; e < mesh->Nelements; e++) {
+    for (int i = 0; i < shell->Nradelements; i++) {
+      dlong eSEM = e*shell->Nradelements + i;
+      dfloat rBot = shell->Rbreaks[i];
+      dfloat rTop = shell->Rbreaks[i + 1];
 
-      dfloat Rg1 = shell->Rgll[0];
-      hlong id1  = e*meshSEM->Nverts+n;
-      meshSEM->EToV[id1] = vid1;
-      meshSEM->EX[id1] = Rg1*mesh->EX[id];
-      meshSEM->EY[id1] = Rg1*mesh->EY[id];
-      meshSEM->EZ[id1] = Rg1*mesh->EZ[id];
+      for (int n = 0; n < mesh->Nverts; n++) {
+        hlong id = e*mesh->Nverts + n;
+        hlong vid = mesh->EToV[id];
 
-      dfloat Rg2 = shell->Rgll[mesh->Nq-1];
-      hlong id2  = e*meshSEM->Nverts+n+mesh->Nverts;
-      meshSEM->EToV[id2] = vid2;
-      meshSEM->EX[id2] = Rg2*mesh->EX[id];
-      meshSEM->EY[id2] = Rg2*mesh->EY[id];
-      meshSEM->EZ[id2] = Rg2*mesh->EZ[id];
+        hlong id1 = eSEM*meshSEM->Nverts + n;
+        hlong vid1 = vid + i*mesh->Nnodes;
+        meshSEM->EToV[id1] = vid1;
+        meshSEM->EX[id1] = rBot*mesh->EX[id];
+        meshSEM->EY[id1] = rBot*mesh->EY[id];
+        meshSEM->EZ[id1] = rBot*mesh->EZ[id];
+
+        hlong id2 = eSEM*meshSEM->Nverts + n + mesh->Nverts;
+        hlong vid2 = vid + (i + 1)*mesh->Nnodes;
+        meshSEM->EToV[id2] = vid2;
+        meshSEM->EX[id2] = rTop*mesh->EX[id];
+        meshSEM->EY[id2] = rTop*mesh->EY[id];
+        meshSEM->EZ[id2] = rTop*mesh->EZ[id];
+      }
     }
   }
 
   meshSEM->NboundaryFaces = 2*mesh->Nelements;
-  meshSEM->boundaryInfo = (hlong*) calloc(meshSEM->NboundaryFaces*(meshSEM->NfaceVertices+1), sizeof(hlong));
+  meshSEM->boundaryInfo = (hlong*)calloc(meshSEM->NboundaryFaces*(1 + meshSEM->NfaceVertices), sizeof(hlong));
   hlong bcnt = 0;
-  for(hlong e=0;e<meshSEM->Nelements;++e){
-    // inner sphere surface
-    meshSEM->boundaryInfo[bcnt*5+0] = shell->innerBC;
-    meshSEM->boundaryInfo[bcnt*5+1] = meshSEM->EToV[e*meshSEM->Nverts+0];
-    meshSEM->boundaryInfo[bcnt*5+2] = meshSEM->EToV[e*meshSEM->Nverts+1];
-    meshSEM->boundaryInfo[bcnt*5+3] = meshSEM->EToV[e*meshSEM->Nverts+2];
-    meshSEM->boundaryInfo[bcnt*5+4] = meshSEM->EToV[e*meshSEM->Nverts+3];
-    ++bcnt;
 
-    // outer sphere surface 
-    meshSEM->boundaryInfo[bcnt*5+0] = shell->outerBC;
-    meshSEM->boundaryInfo[bcnt*5+1] = meshSEM->EToV[e*meshSEM->Nverts+0+mesh->Nverts];
-    meshSEM->boundaryInfo[bcnt*5+2] = meshSEM->EToV[e*meshSEM->Nverts+1+mesh->Nverts];
-    meshSEM->boundaryInfo[bcnt*5+3] = meshSEM->EToV[e*meshSEM->Nverts+2+mesh->Nverts];
-    meshSEM->boundaryInfo[bcnt*5+4] = meshSEM->EToV[e*meshSEM->Nverts+3+mesh->Nverts];
-    ++bcnt;
+  for (hlong e = 0; e < mesh->Nelements; e++) {
+    // Inner sphere surface.
+    hlong eSEMInner = e*shell->Nradelements;
+    hlong idInner = eSEMInner*meshSEM->Nverts;
+    meshSEM->boundaryInfo[bcnt*5 + 0] = shell->innerBC;
+    meshSEM->boundaryInfo[bcnt*5 + 1] = meshSEM->EToV[idInner + 0];
+    meshSEM->boundaryInfo[bcnt*5 + 2] = meshSEM->EToV[idInner + 1];
+    meshSEM->boundaryInfo[bcnt*5 + 3] = meshSEM->EToV[idInner + 2];
+    meshSEM->boundaryInfo[bcnt*5 + 4] = meshSEM->EToV[idInner + 3];
+    bcnt++;
+
+    // Outer sphere surface.
+    hlong eSEMOuter = (e + 1)*shell->Nradelements - 1;
+    hlong idOuter = eSEMOuter*meshSEM->Nverts + mesh->Nverts;
+    meshSEM->boundaryInfo[bcnt*5 + 0] = shell->outerBC;
+    meshSEM->boundaryInfo[bcnt*5 + 1] = meshSEM->EToV[idOuter + 0];
+    meshSEM->boundaryInfo[bcnt*5 + 2] = meshSEM->EToV[idOuter + 1];
+    meshSEM->boundaryInfo[bcnt*5 + 3] = meshSEM->EToV[idOuter + 2];
+    meshSEM->boundaryInfo[bcnt*5 + 4] = meshSEM->EToV[idOuter + 3];
+    bcnt++;
   }
 
   // connect elements using parallel sort
@@ -119,28 +129,27 @@ void shellExtrudeSphere(shell_t *shell){
   // load reference (r,s,t) element nodes
   meshLoadReferenceNodesHex3D(meshSEM, meshSEM->N);
 
-  meshSEM->x = (dfloat*) calloc(mesh->Nq*shell->Ntotal, sizeof(dfloat));
-  meshSEM->y = (dfloat*) calloc(mesh->Nq*shell->Ntotal, sizeof(dfloat));
-  meshSEM->z = (dfloat*) calloc(mesh->Nq*shell->Ntotal, sizeof(dfloat));
-  meshSEM->q = (dfloat*) calloc(mesh->Nq*shell->Ntotal, sizeof(dfloat));
+  meshSEM->x = (dfloat*)calloc(mesh->Nq*shell->Ntotal*shell->Nradelements, sizeof(dfloat));
+  meshSEM->y = (dfloat*)calloc(mesh->Nq*shell->Ntotal*shell->Nradelements, sizeof(dfloat));
+  meshSEM->z = (dfloat*)calloc(mesh->Nq*shell->Ntotal*shell->Nradelements, sizeof(dfloat));
+  meshSEM->q = (dfloat*)calloc(mesh->Nq*shell->Ntotal*shell->Nradelements, sizeof(dfloat));
 
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  for (int e = 0; e < mesh->Nelements; e++) {
+    for (int n = 0; n < mesh->Np; n++) {
+      dfloat xbase = mesh->x[e*mesh->Np + n];
+      dfloat ybase = mesh->y[e*mesh->Np + n];
+      dfloat zbase = mesh->z[e*mesh->Np + n];
 
-      dfloat xbase = mesh->x[e*mesh->Np+n];
-      dfloat ybase = mesh->y[e*mesh->Np+n];
-      dfloat zbase = mesh->z[e*mesh->Np+n];
+      for (int i = 0; i < shell->Nradelements; i++) {
+        int eSEM = e*shell->Nradelements + i;
+        dfloat J = (shell->Rbreaks[i + 1] - shell->Rbreaks[i])/2.0;
 
-      for(int g=0;g<mesh->Nq;++g){
-        dfloat Rg = shell->Rgll[g];
-
-        // stretch coordinates
-        dfloat xg = Rg*xbase;
-        dfloat yg = Rg*ybase;
-        dfloat zg = Rg*zbase;
-        meshSEM->x[e*meshSEM->Np+g*mesh->Np+n] = xg;
-        meshSEM->y[e*meshSEM->Np+g*mesh->Np+n] = yg;
-        meshSEM->z[e*meshSEM->Np+g*mesh->Np+n] = zg;
+        for (int j = 0; j < mesh->Nq; j++) {
+          dfloat r = (shell->Rgll[j] + 1.0)*J + shell->Rbreaks[i];
+          meshSEM->x[eSEM*meshSEM->Np + j*mesh->Np + n] = r*xbase;
+          meshSEM->y[eSEM*meshSEM->Np + j*mesh->Np + n] = r*ybase;
+          meshSEM->z[eSEM*meshSEM->Np + j*mesh->Np + n] = r*zbase;
+        }
       }
     }
   }

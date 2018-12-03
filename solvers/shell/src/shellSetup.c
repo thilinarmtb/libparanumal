@@ -60,19 +60,27 @@ shell_t *shellSetup(mesh_t *mesh, dfloat lambda, occa::properties kernelInfo, se
 
   occa::streamTag setupStart = mesh->device.tagStream();
 
-  // Set up radial mesh (PIECEWISEDISCRETE basis only).
+  // Set up radial mesh.
   dfloat R;
   options.getArgs("OUTER RADIUS", R);
 
-  if (options.compareArgs("RADIAL BASIS TYPE", "PIECEWISEDISCRETE")) {
-    shell->Nradelements = 1;
-    dfloat h = (R - 1.0)/shell->Nradelements;
-    shell->Rbreaks = (dfloat*)calloc(shell->Nradelements + 1, sizeof(dfloat));
-    shell->Rbreaks[0] = 1.0;
-    for (int i = 1; i < shell->Nradelements; i++)
-      shell->Rbreaks[i] = 1.0 + i*h;
-    shell->Rbreaks[shell->Nradelements] = R;
+  if (options.compareArgs("SHELL SOLVER", "SEM") ||
+      (options.compareArgs("SHELL SOLVER", "ASBF") &&
+       options.compareArgs("ASBF RADIAL BASIS", "PIECEWISEDISCRETE"))) {
+    options.getArgs("RADIAL DISCRETIZATION SIZE", shell->Nradelements);
+    if (options.compareArgs("RADIAL DISCRETIZATION", "EQUISPACED")) {
+      dfloat h = (R - 1.0)/shell->Nradelements;
+      shell->Rbreaks = (dfloat*)calloc(shell->Nradelements + 1, sizeof(dfloat));
+      shell->Rbreaks[0] = 1.0;
+      for (int i = 1; i < shell->Nradelements; i++)
+        shell->Rbreaks[i] = 1.0 + i*h;
+      shell->Rbreaks[shell->Nradelements] = R;
+    } else {
+      printf("ERROR:  Unrecognized value for RADIAL DISCRETIZATION option.\n");
+      exit(-1);
+    }
   } else {
+    shell->Nradelements = 0;
     shell->Rbreaks = NULL;
   }
 

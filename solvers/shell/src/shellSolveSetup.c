@@ -81,16 +81,16 @@ static void shellSolveSetupASBF(shell_t *shell, dfloat lambda, occa::properties 
   setupAide options = shell->options;
   mesh_t *mesh = shell->mesh;
 
-  options.getArgs("RADIAL EXPANSION MODES", shell->Nmodes);
+  options.getArgs("RADIAL DISCRETIZATION SIZE", shell->Nmodes);
 
-  if (options.compareArgs("RADIAL BASIS TYPE", "TRUE")) {
+  if (options.compareArgs("ASBF RADIAL BASIS", "TRUE")) {
     shellLoadRadialBasisTrue(shell);
-  } else if (options.compareArgs("RADIAL BASIS TYPE", "GLOBALDISCRETE")) {
+  } else if (options.compareArgs("ASBF RADIAL BASIS", "GLOBALDISCRETE")) {
     shellLoadRadialBasisGlobalDiscrete(shell);
-  } else if (options.compareArgs("RADIAL BASIS TYPE", "PIECEWISEDISCRETE")) {
+  } else if (options.compareArgs("ASBF RADIAL BASIS", "PIECEWISEDISCRETE")) {
     shellLoadRadialBasisPiecewiseDiscrete(shell);
   } else {
-    printf("ERROR:  Unrecognized value for option RADIAL BASIS TYPE.\n");
+    printf("ERROR:  Unrecognized value for option ASBF RADIAL BASIS.\n");
     exit(-1);
   }
 
@@ -155,13 +155,12 @@ static void shellSolveSetupSEM(shell_t *shell, dfloat lambda, occa::properties &
     exit(-1);
   }
 
+  // NB:  We don't shift/scale the GLL nodes; this is handled in
+  // shellExtrudeSphere().
   readDfloatArray(fp, "SHELL PIECEWISE DISCRETE GLL NODES",
       &(shell->Rgll), &(shell->Ngll), &Ncols);
 
   fclose(fp);
-
-  for (int i = 0; i < shell->Ngll; i++)
-    shell->Rgll[i] = (shell->Rgll[i] + 1.0)*(shell->R - 1.0)/2.0 + 1.0;
 
   // Compute and set shell->Ntotal (needed by shellExtrudeSphere()).
   dlong Nlocal = shell->mesh->Np*shell->mesh->Nelements;
