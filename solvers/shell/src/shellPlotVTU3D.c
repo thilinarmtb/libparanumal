@@ -30,11 +30,11 @@ SOFTWARE.
 
 #include "shell.h"
 
-static void shellPlotVTU3DASBF(shell_t *shell, char *fileNameBase, int fld);
-static void shellPlotVTU3DSEM(shell_t *shell, char *fileNameBase, int fld);
+static void shellPlotVTU3DASBF(shell_t *shell, const char *fileNameBase, int fld);
+static void shellPlotVTU3DSEM(shell_t *shell, const char *fileNameBase, int fld);
 
 // interpolate data to plot nodes and save to file (one per process
-void shellPlotVTU3D(shell_t *shell, char *fileNameBase, int fld)
+void shellPlotVTU3D(shell_t *shell, const char *fileNameBase, int fld)
 {
   setupAide options = shell->options;
 
@@ -49,7 +49,7 @@ void shellPlotVTU3D(shell_t *shell, char *fileNameBase, int fld)
   }
 }
 
-static void shellPlotVTU3DASBF(shell_t *shell, char *fileNameBase, int fld)
+static void shellPlotVTU3DASBF(shell_t *shell, const char *fileNameBase, int fld)
 {
   mesh_t *mesh = shell->mesh;
 
@@ -72,7 +72,7 @@ static void shellPlotVTU3DASBF(shell_t *shell, char *fileNameBase, int fld)
   fprintf(fp, "  <UnstructuredGrid>\n");
 
   int Eloc = (mesh->Nq-1)*(mesh->Nq-1)*(shell->Nplot-1);
-  fprintf(fp, "    <Piece NumberOfPoints=\""dlongFormat"\" NumberOfCells=\""dlongFormat"\">\n", 
+  fprintf(fp, "    <Piece NumberOfPoints=\"" dlongFormat "\" NumberOfCells=\"" dlongFormat "\">\n",
           mesh->Nelements*mesh->Np*shell->Nplot, 
           mesh->Nelements*Eloc);
 
@@ -182,7 +182,7 @@ static void shellPlotVTU3DASBF(shell_t *shell, char *fileNameBase, int fld)
   fclose(fp);
 }
 
-static void shellPlotVTU3DSEM(shell_t *shell, char *fileNameBase, int fld)
+static void shellPlotVTU3DSEM(shell_t *shell, const char *fileNameBase, int fld)
 {
   ellipticPlotVTUHex3D(shell->elliptic->mesh, fileNameBase, fld);
 }

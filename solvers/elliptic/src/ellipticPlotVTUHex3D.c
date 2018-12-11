@@ -33,10 +33,10 @@ SOFTWARE.
 // interpolate data to plot nodes and save to file (one per process
 extern "C"
 {
-void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld);
+void ellipticPlotVTUHex3D(mesh3D *mesh, const char *fileNameBase, int fld);
 }
 
-void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
+void ellipticPlotVTUHex3D(mesh3D *mesh, const char *fileNameBase, int fld){
   
   int rank;
   rank = mesh->rank;

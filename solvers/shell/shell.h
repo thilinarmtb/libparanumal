@@ -126,7 +126,7 @@ void shellErrorHex3D(shell_t *shell, dfloat *q, dfloat *normErrorL2, dfloat *nor
 
 void shellExtrudeSphere(shell_t *shell);
 
-void shellPlotVTU3D(shell_t *shell, char *fileNameBase, int fld);
+void shellPlotVTU3D(shell_t *shell, const char *fileNameBase, int fld);
 
 void shellCubatureGradient(shell_t *shell, dfloat *q3D,
 			  dfloat *cubq, dfloat *cubdqdx, dfloat *cubdqdy, dfloat *cubdqdz);

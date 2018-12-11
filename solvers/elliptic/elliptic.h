@@ -187,7 +187,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 
 extern "C"
 {
-  void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld);
+  void ellipticPlotVTUHex3D(mesh3D *mesh, const char *fileNameBase, int fld);
 }
 
 #endif

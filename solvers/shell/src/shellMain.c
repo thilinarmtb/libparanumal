@@ -80,9 +80,6 @@ int main(int argc, char **argv)
     }
   }
 
-  char fname[] = "sol";
-  dfloat errH1, errL2;
-
   dfloat lambda;
   options.getArgs("LAMBDA", lambda);
 
@@ -116,7 +113,11 @@ int main(int argc, char **argv)
 
   shell->times.total = shell->times.setup.total + shell->times.solve;
 
-  shellPlotVTU3D(shell, fname, 0);
+  if (!options.compareArgs("OUTPUT FILE NAME", "NONE")) {
+    shellPlotVTU3D(shell, options.getArgs("OUTPUT FILE NAME").c_str(), 0);
+  }
+
+  dfloat errH1, errL2;
   shellErrorHex3D(shell, shell->q3D, &errH1, &errL2);
 
   printf("------------------------\n");
