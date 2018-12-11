@@ -21,7 +21,7 @@ BROWN-MINION
 4
 
 [POLYNOMIAL DEGREE]
-8
+10
 
 [THREAD MODEL]
 CUDA
@@ -39,7 +39,12 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+8
+
+# currently we have order(Nstages) =  2(2), 3(3), 4(5)
+# make sure >= TIME INTEGRATOR order
+[SUBCYCLING TIME ORDER]
+4
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -59,26 +64,28 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1127
+70
+#564
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+30
 
 [CFL]
-0.2
+0.3
 
 [OUTPUT TYPE]
-#VTU
-PPM
+VTU
+#PPM
 
 [RESTART FROM FILE]
 0
 
 [OUTPUT FILE NAME]
-fence
+/scratch/insQuad3DS4/sphereQuad3DS4
+#sphereQuad3D
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -134,6 +141,16 @@ CHEBYSHEV
 [VELOCITY PARALMOND PARTITION]
 STRONGNODES
 
+# can be DEFAULT or LPSCN
+[VELOCITY PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[VELOCITY PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
 ###########################################
 
 #################################################
@@ -183,9 +200,22 @@ KCYCLE
 [PRESSURE PARALMOND SMOOTHER]
 CHEBYSHEV
 
+[PARALMOND CHEBYSHEV DEGREE].
+2
+
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [PRESSURE PARALMOND PARTITION]
 STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PRESSURE PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[PRESSURE PARALMOND LPSCN ORDERING]
+MAX
+#MIN
 
 ###########################################
 

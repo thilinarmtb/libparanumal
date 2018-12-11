@@ -28,6 +28,7 @@ SOFTWARE.
 
 void BuildLocalIpdgBBDiagTri2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagTri2D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A);
+void BuildLocalIpdgDiagTri3D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagTet3D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A);
@@ -141,15 +142,25 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
           for(dlong eM=0;eM<mesh->Nelements;++eM)
             BuildLocalIpdgBBDiagTri2D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);   
         } else {
-          #pragma omp parallel for 
-          for(dlong eM=0;eM<mesh->Nelements;++eM)
-            BuildLocalIpdgDiagTri2D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np); 
+	  if(mesh->dim==2){
+#pragma omp parallel for 
+	    for(dlong eM=0;eM<mesh->Nelements;++eM){
+	      BuildLocalIpdgDiagTri2D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);
+	    }
+	  }
+	  else{
+#pragma omp parallel for 
+	    for(dlong eM=0;eM<mesh->Nelements;++eM){	      
+	      BuildLocalIpdgDiagTri3D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);
+	    }
+	  }
         } 
         break;
       case QUADRILATERALS:
         #pragma omp parallel for 
         for(dlong eM=0;eM<mesh->Nelements;++eM)
           BuildLocalIpdgDiagQuad2D(elliptic, mesh, lambda, MS, B, Br, Bs, eM, diagA + eM*mesh->Np);
+	// TW: MISSING
         break;
       case TETRAHEDRA:
         #pragma omp parallel for 
@@ -318,6 +329,132 @@ void BuildLocalIpdgDiagTri2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, 
     }
   }
 }
+
+void BuildLocalIpdgDiagTri3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A) {
+
+  dlong vbase = eM*mesh->Nvgeo;
+  dfloat drdx = mesh->vgeo[vbase+RXID];
+  dfloat drdy = mesh->vgeo[vbase+RYID];
+  dfloat drdz = mesh->vgeo[vbase+RZID];
+  dfloat dsdx = mesh->vgeo[vbase+SXID];
+  dfloat dsdy = mesh->vgeo[vbase+SYID];
+  dfloat dsdz = mesh->vgeo[vbase+SZID];
+  dfloat J = mesh->vgeo[vbase+JID];
+
+  /* start with stiffness matrix  */
+  for(int n=0;n<mesh->Np;++n){
+    A[n]  = J*lambda*mesh->MM[n*mesh->Np+n];
+    A[n] += J*drdx*drdx*mesh->Srr[n*mesh->Np+n];
+    A[n] += J*drdx*dsdx*mesh->Srs[n*mesh->Np+n];
+    A[n] += J*dsdx*drdx*mesh->Ssr[n*mesh->Np+n];
+    A[n] += J*dsdx*dsdx*mesh->Sss[n*mesh->Np+n];
+    A[n] += J*drdy*drdy*mesh->Srr[n*mesh->Np+n];
+    A[n] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+n];
+    A[n] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+n];
+    A[n] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+n];
+    A[n] += J*drdz*drdz*mesh->Srr[n*mesh->Np+n];
+    A[n] += J*drdz*dsdz*mesh->Srs[n*mesh->Np+n];
+    A[n] += J*dsdz*drdz*mesh->Ssr[n*mesh->Np+n];
+    A[n] += J*dsdz*dsdz*mesh->Sss[n*mesh->Np+n];
+  }
+
+  //add the rank boost for the allNeumann Poisson problem
+  if (elliptic->allNeumann) {
+    for(int n=0;n<mesh->Np;++n){
+      A[n] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
+    }
+  }
+
+  for (int fM=0;fM<mesh->Nfaces;fM++) {
+    // load surface geofactors for this face
+    dlong sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+    dfloat nx = mesh->sgeo[sid+NXID];
+    dfloat ny = mesh->sgeo[sid+NYID];
+    dfloat nz = mesh->sgeo[sid+NZID];
+    dfloat sJ = mesh->sgeo[sid+SJID];
+    dfloat hinv = mesh->sgeo[sid+IHID];
+
+    int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+
+    dfloat penalty = elliptic->tau*hinv;
+
+    int bcD = 0, bcN =0;
+    int bcType = 0;
+
+    if(bc>0) bcType = elliptic->BCType[bc];          //find its type (Dirichlet/Neumann)
+
+    // this needs to be double checked (and the code where these are used)
+    if(bcType==1){ // Dirichlet
+      bcD = 1;
+      bcN = 0;
+    } else if(bcType==2){ // Neumann
+      bcD = 0;
+      bcN = 1;
+    }
+
+    // mass matrix for this face
+    dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
+
+    // penalty term just involves face nodes
+    for(int n=0;n<mesh->Nfp;++n){
+      int nM = mesh->faceNodes[fM*mesh->Nfp+n];
+      
+      for(int m=0;m<mesh->Nfp;++m){
+        int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+        if (mM == nM) {
+          // OP11 = OP11 + 0.5*( gtau*mmE )
+          dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
+          A[nM] += 0.5*(1.-bcN)*(1.+bcD)*penalty*MSfnm;
+        }
+      }
+    }
+
+    // now add differential surface terms
+    for(int n=0;n<mesh->Nfp;++n){
+      int nM = mesh->faceNodes[fM*mesh->Nfp+n];
+
+      for(int i=0;i<mesh->Nfp;++i){
+        int iM = mesh->faceNodes[fM*mesh->Nfp+i];
+
+        dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
+
+        dfloat DxMim = drdx*mesh->Dr[iM*mesh->Np+nM] + dsdx*mesh->Ds[iM*mesh->Np+nM];
+        dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+nM] + dsdy*mesh->Ds[iM*mesh->Np+nM];
+	dfloat DzMim = drdz*mesh->Dr[iM*mesh->Np+nM] + dsdz*mesh->Ds[iM*mesh->Np+nM];
+
+        // OP11 = OP11 + 0.5*( - mmE*Dn1)
+        A[nM] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
+        A[nM] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
+	A[nM] += -0.5*nz*(1+bcD)*(1-bcN)*MSfni*DzMim;
+      }
+    }
+
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Nfp;++m){
+        int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+
+        if (mM==n) {
+          for(int i=0;i<mesh->Nfp;++i){
+            int iM = mesh->faceNodes[fM*mesh->Nfp+i];
+
+            dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
+
+            dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
+            dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
+	    dfloat DzMin = drdz*mesh->Dr[iM*mesh->Np+n] + dsdz*mesh->Ds[iM*mesh->Np+n];
+
+            // OP11 = OP11 + (- Dn1'*mmE );
+            A[n] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
+            A[n] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
+	    A[n] +=  -0.5*ny*(1+bcD)*(1-bcN)*DzMin*MSfim;
+          }
+        }
+      }
+    }
+  }
+}
+
+
 
 void BuildLocalIpdgPatchAxTri2D(elliptic_t* elliptic, mesh_t* mesh, int basisNp, dfloat *basis, dfloat lambda,
                         dfloat *MS, dlong eM, dfloat *A);

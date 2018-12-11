@@ -46,10 +46,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
   if(elliptic->dim==3){
-    if(elliptic->elementType != QUADRILATERALS)
-      meshOccaSetup3D(mesh, options, kernelInfo);
+    if(elliptic->elementType == TRIANGLES)
+      meshOccaSetupTri3D(mesh, options, kernelInfo);
+    else if(elliptic->elementType == QUADRILATERALS)
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
     else
-      meshOccaSetupQuad3D(mesh, options, kernelInfo); 
+      meshOccaSetup3D(mesh, options, kernelInfo);
   } 
   else
     meshOccaSetup2D(mesh, options, kernelInfo);

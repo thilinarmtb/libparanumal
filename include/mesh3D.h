@@ -94,6 +94,9 @@ void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kern
 void meshOccaSetupQuad3D(mesh_t *mesh, setupAide &newOptions, occa::properties &kernelInfo);
 void meshOccaSetupTri3D(mesh_t *mesh, setupAide &newOptions, occa::properties &kernelInfo);
 
+void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kernelInfo);
+void meshOccaCloneDevice(mesh_t *donorMesh, mesh_t *mesh);
+
 // functions that call OCCA kernels
 void occaTest3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 
@@ -143,6 +146,8 @@ void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
 
 // mesh consistency checker
 void meshCheckHex3D(mesh_t *mesh);
+
+void interpolateHex3D(dfloat *Inter, dfloat *x, int N, dfloat *Ix, int M);
 
 #define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
   

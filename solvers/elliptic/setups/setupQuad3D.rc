@@ -5,7 +5,7 @@
 data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/sphereQuadH01.msh
+../../meshes/sphereQuadH02.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +14,7 @@ data/ellipticHomogeneous3D.h
 4
 
 [POLYNOMIAL DEGREE]
-3
+5
 
 [SPHERE RADIUS]
 1.0
@@ -29,7 +29,7 @@ CUDA
 0
 
 [LAMBDA]
-1
+100
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
@@ -50,6 +50,7 @@ MULTIGRID
 #FULLALMOND
 #JACOBI
 #NONE
+#SEMFEM
 
 ########## MULTIGRID Options ##############
 
@@ -87,6 +88,16 @@ CHEBYSHEV
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [PARALMOND PARTITION]
 STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[PARALMOND LPSCN ORDERING]
+MAX
+#MIN
 
 ###########################################
 

@@ -88,6 +88,7 @@ LOBJS = \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshGeometricFactorsTri2D.o \
+../../src/meshGeometricFactorsTri3D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
 ../../src/meshGeometricFactorsQuad3D.o \
 ../../src/meshGeometricPartition2D.o \
@@ -107,12 +108,14 @@ LOBJS = \
 ../../src/meshParallelConsecutiveGlobalNumbering.o\
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelReaderTri2D.o \
+../../src/meshParallelReaderTri3D.o \
 ../../src/meshParallelReaderQuad2D.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshParallelReaderTet3D.o \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
+../../src/meshPhysicalNodesTri3D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
 ../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPhysicalNodesTet3D.o \
@@ -121,12 +124,15 @@ LOBJS = \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshPrint3D.o \
+../../src/meshSetup.o \
 ../../src/meshSetupTri2D.o \
+../../src/meshSetupTri3D.o \
 ../../src/meshSetupQuad2D.o \
 ../../src/meshSetupQuad3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
+../../src/meshSurfaceGeometricFactorsTri3D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \

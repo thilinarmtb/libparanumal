@@ -114,7 +114,7 @@ void bnsRun(bns_t *bns, setupAide &options){
     for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
         tic_out = MPI_Wtime();
 
-      if(bns->reportFlag){
+      if(bns->reportFlag && bns->reportStep){
         if((tstep%bns->reportStep)==0){ 
           dfloat time =0; 
           if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
@@ -140,7 +140,6 @@ void bnsRun(bns_t *bns, setupAide &options){
             time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));     
           else
             time = bns->startTime + tstep*bns->dt;
-          
          bnsError(bns, tstep, options);
         }
       }
@@ -161,6 +160,7 @@ void bnsRun(bns_t *bns, setupAide &options){
         bnsLSERKStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "LSERK");
 
+#if 0
       if(!(tstep%100)){
         bns->o_q.copyTo(bns->q);
         for(int fld=0;fld<bns->Nfields;++fld){
@@ -172,10 +172,11 @@ void bnsRun(bns_t *bns, setupAide &options){
               minq = mymin(minq, bns->q[id + fld*mesh->Np]);
             }
           }
-        if(fld==0)
-        printf("fld %d in [%g,%g]\n", fld, minq, maxq);
+	  if(fld==0)
+	    printf("fld %d in [%g,%g]\n", fld, minq, maxq);
         }
       }
+#endif
     }
 
       

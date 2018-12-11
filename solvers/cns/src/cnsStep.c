@@ -265,7 +265,10 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                          cns->o_viscousStresses, 
                          cns->o_rhsq);
     }
-    
+
+    if(cns->elementType==QUADRILATERALS && mesh->dim==3){
+      cns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, cns->o_rhsq);
+    }
     // update solution using Runge-Kutta
     // rkrhsq_rk = rhsq
     // if rk==6 

@@ -5,7 +5,7 @@
 data/cnsUniform2D.h
 
 [MESH FILE]
-../../meshes/sphereQuadH01a.msh
+../../meshes/sphereQuadH01.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +14,7 @@ data/cnsUniform2D.h
 4
 
 [POLYNOMIAL DEGREE]
-8
+10
 
 [SPHERE RADIUS]
 1.0
@@ -51,8 +51,8 @@ DOPRI5
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
-#CUBATURE
-COLLOCATION
+CUBATURE
+#COLLOCATION
 
 [VISCOSITY]
 0.0002
@@ -80,7 +80,7 @@ COLLOCATION
 
 #set to 0.0 to ignore
 [TIME OUTPUT INTERVAL]
-0.1
+0.05
 
 #set to 0 to ignore
 [TSTEP OUTPUT INTERVAL]
@@ -93,10 +93,12 @@ COLLOCATION
 0
 
 [OUTPUT FILE NAME]
-sphereQuad3D
+/scratch/cnsQuad3D/cnsQuad3D
+#sphereQuad3D
 
 [OUTPUT FILE FORMAT]
-PPM
+VTU
+#PPM
 
 [VERBOSE]
 TRUE

@@ -51,7 +51,6 @@ int main(int argc, char **argv){
   options.getArgs("MESH DIMENSION", dim);
 
   // set up mesh
-   // set up mesh
   mesh_t *mesh;
   switch(elementType){
     case TRIANGLES:

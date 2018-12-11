@@ -30,6 +30,8 @@ int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildIpdgTri2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
                             dfloat lambda, nonZero_t **A, dlong *nnzA, hlong *globalStarts);
+void ellipticBuildIpdgTri3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
+                            dfloat lambda, nonZero_t **A, dlong *nnzA, hlong *globalStarts);
 void ellipticBuildIpdgQuad2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
                             dfloat lambda, nonZero_t **A, dlong *nnzA, hlong *globalStarts);
 void ellipticBuildIpdgQuad3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
@@ -45,13 +47,19 @@ void ellipticBuildIpdg(elliptic_t *elliptic, int basisNp, dfloat *basis,
                        dfloat lambda, nonZero_t **A, dlong *nnzA, hlong *globalStarts){
 
   switch(elliptic->elementType){
-  case TRIANGLES:
-    ellipticBuildIpdgTri2D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); break;
+  case TRIANGLES:{
+    if(elliptic->dim==2)
+      ellipticBuildIpdgTri2D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
+    else
+      ellipticBuildIpdgTri3D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts);
+
+    break;
+  }
   case QUADRILATERALS:{
     if(elliptic->dim==2)
-    ellipticBuildIpdgQuad2D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
+      ellipticBuildIpdgQuad2D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
     else
-    ellipticBuildIpdgQuad3D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
+      ellipticBuildIpdgQuad3D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
     break;
   }  
   case TETRAHEDRA:
@@ -353,6 +361,301 @@ void ellipticBuildIpdgTri2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   free(SM); free(SP);
   free(MS);
 }
+
+void ellipticBuildIpdgTri3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
+                            dfloat lambda, nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+
+  mesh_t *mesh = elliptic->mesh;
+  setupAide options = elliptic->options;
+
+  int rankM = mesh->rank;
+  
+  int Np = mesh->Np;
+  int Nfp = mesh->Nfp;
+  int Nfaces = mesh->Nfaces;
+  dlong Nelements = mesh->Nelements;
+
+  if(!basis) { // default to degree N Lagrange basis
+    basisNp = Np;
+    basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
+    for(int n=0;n<basisNp;++n){
+      basis[n+n*basisNp] = 1;
+    }
+  }
+
+  // number of degrees of freedom on this rank
+  hlong Nnum = Np*Nelements;
+
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(hlong));
+
+  // every degree of freedom has its own global id
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
+  for(int r=0;r<mesh->size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  /* so find number of elements on each rank */
+  dlong *rankNelements = (dlong*) calloc(mesh->size, sizeof(dlong));
+  hlong *rankStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
+  MPI_Allgather(&Nelements, 1, MPI_DLONG,
+    rankNelements, 1, MPI_DLONG, mesh->comm);
+  //find offsets
+  for(int r=0;r<mesh->size;++r){
+    rankStarts[r+1] = rankStarts[r]+rankNelements[r];
+  }
+  //use the offsets to set a global id
+  for (dlong e =0;e<Nelements;e++) {
+    for (int n=0;n<Np;n++) {
+      globalIds[e*Np +n] = n + (e + rankStarts[rankM])*Np;
+    }
+  }
+
+  /* do a halo exchange of global node numbers */
+  if (mesh->totalHaloPairs) {
+    hlong *idSendBuffer = (hlong *) calloc(Np*mesh->totalHaloPairs,sizeof(hlong));
+    meshHaloExchange(mesh, Np*sizeof(hlong), globalIds, idSendBuffer, globalIds + Nelements*Np);
+    free(idSendBuffer);
+  }
+
+  dlong nnzLocalBound = basisNp*basisNp*(1+Nfaces)*Nelements;
+
+  // drop tolerance for entries in sparse storage
+  dfloat tol = 1e-8;
+
+  // surface mass matrices MS = MM*LIFT
+  dfloat *MS = (dfloat *) calloc(Nfaces*Nfp*Nfp,sizeof(dfloat));
+  for (int f=0;f<Nfaces;f++) {
+    for (int n=0;n<Nfp;n++) {
+      int fn = mesh->faceNodes[f*Nfp+n];
+
+      for (int m=0;m<Nfp;m++) {
+        dfloat MSnm = 0;
+
+        for (int i=0;i<Np;i++){
+          MSnm += mesh->MM[fn+i*Np]*mesh->LIFT[i*Nfp*Nfaces+f*Nfp+m];
+        }
+        MS[m+n*Nfp + f*Nfp*Nfp]  = MSnm;
+      }
+    }
+  }
+
+
+  // reset non-zero counter
+  dlong nnz = 0;
+
+  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+
+  dfloat *SM = (dfloat*) calloc(Np*Np,sizeof(dfloat));
+  dfloat *SP = (dfloat*) calloc(Np*Np,sizeof(dfloat));
+
+  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+
+  // loop over all elements
+  for(dlong eM=0;eM<Nelements;++eM){
+
+    dlong vbase = eM*mesh->Nvgeo;
+    dfloat drdx = mesh->vgeo[vbase+RXID];
+    dfloat drdy = mesh->vgeo[vbase+RYID];
+    dfloat drdz = mesh->vgeo[vbase+RZID];
+    dfloat dsdx = mesh->vgeo[vbase+SXID];
+    dfloat dsdy = mesh->vgeo[vbase+SYID];
+    dfloat dsdz = mesh->vgeo[vbase+SZID];
+    dfloat J = mesh->vgeo[vbase+JID];
+
+    /* start with stiffness matrix  */
+    for(int n=0;n<Np;++n){
+      for(int m=0;m<Np;++m){
+        SM[n*Np+m]  = J*lambda*mesh->MM[n*Np+m];
+        SM[n*Np+m] += J*drdx*drdx*mesh->Srr[n*Np+m];
+        SM[n*Np+m] += J*drdx*dsdx*mesh->Srs[n*Np+m];
+        SM[n*Np+m] += J*dsdx*drdx*mesh->Ssr[n*Np+m];
+        SM[n*Np+m] += J*dsdx*dsdx*mesh->Sss[n*Np+m];
+
+        SM[n*Np+m] += J*drdy*drdy*mesh->Srr[n*Np+m];
+        SM[n*Np+m] += J*drdy*dsdy*mesh->Srs[n*Np+m];
+        SM[n*Np+m] += J*dsdy*drdy*mesh->Ssr[n*Np+m];
+        SM[n*Np+m] += J*dsdy*dsdy*mesh->Sss[n*Np+m];
+
+        SM[n*Np+m] += J*drdz*drdz*mesh->Srr[n*Np+m];
+        SM[n*Np+m] += J*drdz*dsdz*mesh->Srs[n*Np+m];
+        SM[n*Np+m] += J*dsdz*drdz*mesh->Ssr[n*Np+m];
+        SM[n*Np+m] += J*dsdz*dsdz*mesh->Sss[n*Np+m];
+
+      }
+    }
+
+    for (int fM=0;fM<Nfaces;fM++) {
+
+      for (int n=0;n<Np*Np;n++) SP[n] =0;
+
+      // load surface geofactors for this face
+      dlong sid = mesh->Nsgeo*(eM*Nfaces+fM);
+      dfloat nx = mesh->sgeo[sid+NXID];
+      dfloat ny = mesh->sgeo[sid+NYID];
+      dfloat nz = mesh->sgeo[sid+NZID];
+      dfloat sJ = mesh->sgeo[sid+SJID];
+      dfloat hinv = mesh->sgeo[sid+IHID];
+      dfloat penalty = elliptic->tau*hinv;
+
+      dlong eP = mesh->EToE[eM*Nfaces+fM];
+      if (eP < 0) eP = eM;
+
+      dlong vbaseP = eP*mesh->Nvgeo;
+      dfloat drdxP = mesh->vgeo[vbaseP+RXID];
+      dfloat drdyP = mesh->vgeo[vbaseP+RYID];
+      dfloat drdzP = mesh->vgeo[vbaseP+RZID];
+      dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
+      dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
+      dfloat dsdzP = mesh->vgeo[vbaseP+SZID];
+
+      int bcD = 0, bcN =0;
+      int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
+      int bcType = 0;
+
+      if(bc>0) bcType = elliptic->BCType[bc];          //find its type (Dirichlet/Neumann)
+
+      // this needs to be double checked (and the code where these are used)
+      if(bcType==1){ // Dirichlet
+        bcD = 1;
+        bcN = 0;
+      } else if(bcType==2){ // Neumann
+        bcD = 0;
+        bcN = 1;
+      }
+
+      // reset eP
+      eP = mesh->EToE[eM*Nfaces+fM];
+
+      // mass matrix for this face
+      dfloat *MSf = MS+fM*Nfp*Nfp;
+
+      // penalty term just involves face nodes
+      for(int n=0;n<Nfp;++n){
+        for(int m=0;m<Nfp;++m){
+          dlong idM = eM*Nfp*Nfaces+fM*Nfp+m;
+          int nM = mesh->faceNodes[fM*Nfp+n];
+          int mM = mesh->faceNodes[fM*Nfp+m];
+          int mP  = (int) (mesh->vmapP[idM]%Np);
+
+          dfloat MSfnm = sJ*MSf[n*Nfp+m];
+
+          SM[nM*Np+mM] +=  0.5*(1.-bcN)*(1.+bcD)*penalty*MSfnm;
+          SP[nM*Np+mP] += -0.5*(1.-bcN)*(1.-bcD)*penalty*MSfnm;
+        }
+      }
+
+      // now add differential surface terms
+      for(int n=0;n<Nfp;++n){
+        for(int m=0;m<Np;++m){
+          int nM = mesh->faceNodes[fM*Nfp+n];
+
+          for(int i=0;i<Nfp;++i){
+            int iM = mesh->faceNodes[fM*Nfp+i];
+            int iP = (int) (mesh->vmapP[i + fM*Nfp+eM*Nfp*Nfaces]%Np);
+
+            dfloat MSfni = sJ*MSf[n*Nfp+i]; // surface Jacobian built in
+
+            dfloat DxMim = drdx*mesh->Dr[iM*Np+m] + dsdx*mesh->Ds[iM*Np+m];
+            dfloat DyMim = drdy*mesh->Dr[iM*Np+m] + dsdy*mesh->Ds[iM*Np+m];
+	    dfloat DzMim = drdz*mesh->Dr[iM*Np+m] + dsdz*mesh->Ds[iM*Np+m];
+	    
+            dfloat DxPim = drdxP*mesh->Dr[iP*Np+m] + dsdxP*mesh->Ds[iP*Np+m];
+            dfloat DyPim = drdyP*mesh->Dr[iP*Np+m] + dsdyP*mesh->Ds[iP*Np+m];
+	    dfloat DzPim = drdzP*mesh->Dr[iP*Np+m] + dsdzP*mesh->Ds[iP*Np+m];
+
+            // OP11 = OP11 + 0.5*( - mmE*Dn1)
+            SM[nM*Np+m] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
+            SM[nM*Np+m] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
+	    SM[nM*Np+m] += -0.5*nz*(1+bcD)*(1-bcN)*MSfni*DzMim;
+
+            SP[nM*Np+m] += -0.5*nx*(1-bcD)*(1-bcN)*MSfni*DxPim;
+            SP[nM*Np+m] += -0.5*ny*(1-bcD)*(1-bcN)*MSfni*DyPim;
+	    SP[nM*Np+m] += -0.5*nz*(1-bcD)*(1-bcN)*MSfni*DzPim;
+          }
+        }
+      }
+
+      for(int n=0;n<Np;++n){
+        for(int m=0;m<Nfp;++m){
+          int mM = mesh->faceNodes[fM*Nfp+m];
+          int mP = (int) (mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np);
+
+          for(int i=0;i<Nfp;++i){
+            int iM = mesh->faceNodes[fM*Nfp+i];
+
+            dfloat MSfim = sJ*MSf[i*Nfp+m];
+
+            dfloat DxMin = drdx*mesh->Dr[iM*Np+n] + dsdx*mesh->Ds[iM*Np+n];
+            dfloat DyMin = drdy*mesh->Dr[iM*Np+n] + dsdy*mesh->Ds[iM*Np+n];
+	    dfloat DzMin = drdz*mesh->Dr[iM*Np+n] + dsdz*mesh->Ds[iM*Np+n];
+
+            SM[n*Np+mM] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
+            SM[n*Np+mM] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
+	    SM[n*Np+mM] +=  -0.5*nz*(1+bcD)*(1-bcN)*DzMin*MSfim;
+
+            SP[n*Np+mP] +=  +0.5*nx*(1-bcD)*(1-bcN)*DxMin*MSfim;
+            SP[n*Np+mP] +=  +0.5*ny*(1-bcD)*(1-bcN)*DyMin*MSfim;
+	    SP[n*Np+mP] +=  +0.5*nz*(1-bcD)*(1-bcN)*DzMin*MSfim;
+          }
+        }
+      }
+
+      // store non-zeros for off diagonal block
+      for(int j=0;j<basisNp;++j){
+        for(int i=0;i<basisNp;++i){
+          dfloat val = 0;
+          for(int n=0;n<Np;++n){
+            for(int m=0;m<Np;++m){
+              val += basis[n*Np+j]*SP[n*Np+m]*basis[m*Np+i];
+            }
+          }
+
+          if(fabs(val)>tol){
+            (*A)[nnz].row = globalIds[eM*Np + j];
+            (*A)[nnz].col = globalIds[eP*Np + i];
+            (*A)[nnz].val = val;
+            (*A)[nnz].ownerRank = rankM;
+            ++nnz;
+          }
+        }
+      }
+    }
+    // store non-zeros for diagonal block
+    for(int j=0;j<basisNp;++j){
+      for(int i=0;i<basisNp;++i){
+        dfloat val = 0;
+        for(int n=0;n<Np;++n){
+          for(int m=0;m<Np;++m){
+            val += basis[n*Np+j]*SM[n*Np+m]*basis[m*Np+i];
+          }
+        }
+
+        if(fabs(val)>tol){
+          (*A)[nnz].row = globalIds[eM*Np + j];
+          (*A)[nnz].col = globalIds[eM*Np + i];
+          (*A)[nnz].val = val;
+          (*A)[nnz].ownerRank = rankM;
+          ++nnz;
+        }
+      }
+    }
+  }
+
+  //printf("nnz = %d\n", nnz);
+
+  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
+  *nnzA = nnz;
+
+  if(rankM==0) printf("done.\n");
+
+  free(globalIds);
+
+  free(SM); free(SP);
+  free(MS);
+}
+
+
 
 void ellipticBuildIpdgQuad2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
                             dfloat lambda, nonZero_t **A, dlong *nnzA, hlong *globalStarts){

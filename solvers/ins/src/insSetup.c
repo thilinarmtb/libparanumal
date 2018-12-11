@@ -270,6 +270,51 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       ins->cUd = (dfloat *) calloc(ins->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
     else 
       ins->cUd = ins->U;
+
+    // Prepare RK stages for Subcycling Part
+    
+    int Sorder = 4; // Defaulting to LSERK 4(5) 
+    
+    options.getArgs("SUBCYCLING TIME ORDER", Sorder);
+    if(Sorder==2){
+      ins->SNrk     = 2; 
+      dfloat rka[2] = {0.0,     1.0 };
+      dfloat rkb[2] = {0.5,     0.5 };
+      dfloat rkc[2] = {0.0,     1.0 };
+      //
+      ins->Srka = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      ins->Srkb = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      ins->Srkc = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      //
+      memcpy(ins->Srka, rka, ins->SNrk*sizeof(dfloat));
+      memcpy(ins->Srkb, rkb, ins->SNrk*sizeof(dfloat));
+      memcpy(ins->Srkc, rkc, ins->SNrk*sizeof(dfloat));
+    }else if(Sorder ==3){
+      // Using Williamson 3rd order scheme converted to low storage since the better truncation 
+      ins->SNrk     = 3; 
+      dfloat rka[3] = {0.0,     -5.0/9.0,  -153.0/128.0};
+      dfloat rkb[3] = {1.0/3.0, 15.0/16.0,    8.0/15.0 };
+      dfloat rkc[3] = {0.0,      1.0/3.0,     3.0/4.0  };
+      //
+      ins->Srka = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      ins->Srkb = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      ins->Srkc = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      //
+      memcpy(ins->Srka, rka, ins->SNrk*sizeof(dfloat));
+      memcpy(ins->Srkb, rkb, ins->SNrk*sizeof(dfloat));
+      memcpy(ins->Srkc, rkc, ins->SNrk*sizeof(dfloat));
+    }else{
+      ins->SNrk     = 5; 
+      ins->Srka = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      ins->Srkb = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      ins->Srkc = (dfloat*) calloc(ins->SNrk, sizeof(dfloat));
+      // Asumes initialized in mesh, can be moved here
+      for(int rk=0; rk<ins->SNrk; rk++){
+        ins->Srka[rk] = mesh->rka[rk]; 
+        ins->Srkb[rk] = mesh->rkb[rk]; 
+        ins->Srkc[rk] = mesh->rkc[rk]; 
+      }
+    }
   }
 
   dfloat rho  = 1.0 ;  // Give density for getting actual pressure in nondimensional solve
@@ -385,16 +430,32 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   dfloat hmin = 1e9, hmax = 0;
   dfloat umax = 0;
   for(dlong e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
-      dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-      dfloat sJ   = mesh->sgeo[sid + SJID];
-      dfloat invJ = mesh->sgeo[sid + IJID];
 
-      dfloat hest = 2./(sJ*invJ);
+    if(ins->elementType==TRIANGLES || ins->elementType == TETRAHEDRA){
+      for(int f=0;f<mesh->Nfaces;++f){
+        dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+        dfloat sJ   = mesh->sgeo[sid + SJID];
+        dfloat invJ = mesh->sgeo[sid + IJID];
 
-      hmin = mymin(hmin, hest);
-      hmax = mymax(hmax, hest);
+        dfloat hest = 2./(sJ*invJ);
+
+        hmin = mymin(hmin, hest);
+        hmax = mymax(hmax, hest);
+      }
+    }else{
+      for(int f=0;f<mesh->Nfaces;++f){
+        for(int n=0; n<mesh->Nfp; n++){
+        dlong sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n);
+        dfloat sJ   = mesh->sgeo[sid + SJID];
+        dfloat invJ = mesh->sgeo[sid + IJID];
+
+        dfloat hest = 2./(sJ*invJ);
+
+        hmin = mymin(hmin, hest);
+        hmax = mymax(hmax, hest);
+      }
     }
+  }
 
      // dfloat maxMagVecLoc = 0;
 
