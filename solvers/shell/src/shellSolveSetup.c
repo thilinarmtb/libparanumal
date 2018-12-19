@@ -132,6 +132,22 @@ static void shellSolveSetupASBF(shell_t *shell, dfloat lambda, occa::properties 
 
   ellipticSolveSetup(shell->elliptic, shell->lambda, kernelInfoP);
 
+  // Set up Jacobi preconditioners for the higher-order eigenmodes.
+  if (shell->Nmodes > SHELL_ASBF_JACOBI_CROSSOVER) {
+    int Nprecon = shell->Nmodes - SHELL_ASBF_JACOBI_CROSSOVER;
+
+    // TODO:  This is probably not the right way to allocate these---need to
+    // check the copying semantics for precon_t.
+    shell->preconJacobi = (precon_t*)calloc(Nprecon, sizeof(precon_t));
+    for (int i = 0; i < Nprecon; i++) {
+      dfloat *invDiagA;
+      ellipticBuildJacobi(shell->elliptic, shell->eigenvalues[SHELL_ASBF_JACOBI_CROSSOVER + i], &invDiagA);
+      memcpy(shell->preconJacobi + i, shell->elliptic->precon, sizeof(precon_t));
+      shell->preconJacobi[i].o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+      free(invDiagA);
+    }
+  }
+
   // OKL kernels specific to shell
   /*
   shell->shellReconstructKernel =

@@ -66,14 +66,10 @@ static int shellSolveASBF(shell_t *shell, setupAide options)
     dfloat lambdam = shell->eigenvalues[m];
     printf("LAMBDAM[%02d] = %.3f\n", m, lambdam);
 
-    // build precon
-    if(m>5){
-      elliptic->options.setArgs("PRECONDITIONER","JACOBI");
-      dfloat *invDiagA;
-      ellipticBuildJacobi(elliptic,lambdam,&invDiagA);
-      elliptic->precon->o_invDiagA =
-        mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
-      free(invDiagA);
+    // Switch to JACOBI for high-order modes.
+    if (m >= SHELL_ASBF_JACOBI_CROSSOVER) {
+      elliptic->options.setArgs("PRECONDITIONER", "JACOBI");
+      elliptic->precon = shell->preconJacobi + (m - SHELL_ASBF_JACOBI_CROSSOVER);
     }
 
     ellipticSolve(elliptic, lambdam, shell->TOL, shell->o_r, shell->o_x);
