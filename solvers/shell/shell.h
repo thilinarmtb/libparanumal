@@ -46,7 +46,7 @@ typedef struct {
   mesh_t     *mesh;
   mesh_t     *meshSEM;  // 3D hex SEM mesh
   elliptic_t *elliptic;
-  precon_t   *preconJacobi;
+  precon_t   *precon;
   
   setupAide options;
 

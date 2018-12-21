@@ -43,6 +43,7 @@ extern "C"
 }
 
 static void shellSolveSetupASBF(shell_t *shell, dfloat lambda, occa::properties &kernelInfo);
+static void shellPreconditionerSetupASBF(shell_t *shell);
 static void shellSolveSetupSEM(shell_t *shell, dfloat lambda, occa::properties &kernelInfo);
 static void shellLoadRadialBasisTrue(shell_t *shell);
 static void shellLoadRadialBasisGlobalDiscrete(shell_t *shell);
@@ -130,23 +131,12 @@ static void shellSolveSetupASBF(shell_t *shell, dfloat lambda, occa::properties 
   // Elliptic BCType flags should be all zero for spherical problem.
   shell->elliptic->BCType = (int*)calloc(7, sizeof(int));
 
+  // Prevent the preconditioners from being built in ellipticSolveSetup().
+  shell->elliptic->options.setArgs("PRECONDITIONER", "NONE");
+
   ellipticSolveSetup(shell->elliptic, shell->lambda, kernelInfoP);
 
-  // Set up Jacobi preconditioners for the higher-order eigenmodes.
-  if (shell->Nmodes > SHELL_ASBF_JACOBI_CROSSOVER) {
-    int Nprecon = shell->Nmodes - SHELL_ASBF_JACOBI_CROSSOVER;
-
-    // TODO:  This is probably not the right way to allocate these---need to
-    // check the copying semantics for precon_t.
-    shell->preconJacobi = (precon_t*)calloc(Nprecon, sizeof(precon_t));
-    for (int i = 0; i < Nprecon; i++) {
-      dfloat *invDiagA;
-      ellipticBuildJacobi(shell->elliptic, shell->eigenvalues[SHELL_ASBF_JACOBI_CROSSOVER + i], &invDiagA);
-      memcpy(shell->preconJacobi + i, shell->elliptic->precon, sizeof(precon_t));
-      shell->preconJacobi[i].o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
-      free(invDiagA);
-    }
-  }
+  shellPreconditionerSetupASBF(shell);
 
   // OKL kernels specific to shell
   /*
@@ -155,6 +145,76 @@ static void shellSolveSetupASBF(shell_t *shell, dfloat lambda, occa::properties 
         "shellReconstructHex3D",
         kernelInfo);
   */
+}
+
+// TODO:  Move this to its own file?
+//
+// TODO:  Report memory allocation statistics (as is done in ellipticSolveSetup()).
+//
+// TODO:  Implement JACOBI crossover.
+static void shellPreconditionerSetupASBF(shell_t *shell)
+{
+  long long int bytesBefore, bytesAfter;
+
+  mesh_t *mesh = shell->mesh;
+
+  shell->precon = new precon_t[shell->Nmodes];
+
+  // Copy the kernels that were set in ellipticSolveSetup().
+  for (int i = 0; i < shell->Nmodes; i++) {
+    (shell->precon + i)->coarsenKernel                 = shell->elliptic->precon->coarsenKernel;
+    (shell->precon + i)->prolongateKernel              = shell->elliptic->precon->prolongateKernel;
+    (shell->precon + i)->blockJacobiKernel             = shell->elliptic->precon->blockJacobiKernel;
+    (shell->precon + i)->partialblockJacobiKernel      = shell->elliptic->precon->partialblockJacobiKernel;
+    (shell->precon + i)->approxBlockJacobiSolverKernel = shell->elliptic->precon->approxBlockJacobiSolverKernel;
+  }
+
+  bytesBefore = mesh->device.memoryAllocated();
+
+  if (shell->options.compareArgs("PRECONDITIONER", "NONE")) {
+    return;
+  } else if (shell->options.compareArgs("PRECONDITIONER", "JACOBI")) {
+    dfloat *invDiagA;
+    for (int i = 0; i < shell->Nmodes; i++) {
+      printf("shell:  Building JACOBI preconditioner for mode %d.\n", i);
+      ellipticBuildJacobi(shell->elliptic, shell->eigenvalues[i], &invDiagA);
+      (shell->precon + i)->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+      free(invDiagA);
+    }
+  } else {
+    dfloat *invDiagA;
+    int iswitch = shell->Nmodes;
+
+    if (!shell->options.compareArgs("ASBF JACOBI SWITCHOVER", "NONE")) {
+      shell->options.getArgs("ASBF JACOBI SWITCHOVER", iswitch);
+    }
+
+    if (shell->options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
+      for (int i = 0; i < iswitch; i++) {
+        printf("shell:  Building MULTIGRID preconditioner for mode %d.\n", i);
+        ellipticMultiGridSetup(shell->elliptic, shell->precon + i, shell->eigenvalues[i]);
+      }
+    } else if (shell->options.compareArgs("PRECONDITIONER", "SEMFEM")) {
+      for (int i = 0; i < iswitch; i++) {
+        printf("shell:  Building SEMFEM preconditioner for mode %d.\n", i);
+        ellipticSEMFEMSetup(shell->elliptic, shell->precon + i, shell->eigenvalues[i]);
+      }
+    } else {
+      printf("ERROR:  Preconditioner %s not supported for shell.\n",
+          shell->options.getArgs("PRECONDITIONER").c_str());
+      MPI_Finalize();
+      exit(-1);
+    }
+
+    for (int i = iswitch; i < shell->Nmodes; i++) {
+      printf("shell:  Building JACOBI preconditioner for mode %d.\n", i);
+      ellipticBuildJacobi(shell->elliptic, shell->eigenvalues[i], &invDiagA);
+      (shell->precon + i)->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+      free(invDiagA);
+    }
+  }
+
+  bytesAfter = mesh->device.memoryAllocated();
 }
 
 static void shellSolveSetupSEM(shell_t *shell, dfloat lambda, occa::properties &kernelInfo)

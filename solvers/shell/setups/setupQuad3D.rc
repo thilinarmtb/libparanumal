@@ -58,6 +58,12 @@ EQUISPACED
 #GLOBALDISCRETE
 PIECEWISEDISCRETE
 
+# For the ASBF solver, the index of the mode at which to switch the
+# preconditioner to JACOBI, e.g., a value of 0 uses JACOBI for all modes.  Set
+# to NONE to disable the switchover.  Ignored by the SEM solver.
+[ASBF JACOBI SWITCHOVER]
+NONE
+
 [THREAD MODEL]
 CUDA
 #OpenMP

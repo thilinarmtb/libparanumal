@@ -46,10 +46,17 @@ static int shellSolveASBF(shell_t *shell, setupAide options)
 {
   mesh_t *mesh         = shell->mesh;
   elliptic_t *elliptic = shell->elliptic;
+  int mswitch          = shell->Nmodes;
 
   mesh->q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->totalHaloPairs), sizeof(dfloat));
-  for(int m=0;m<shell->Nmodes;++m){
 
+  elliptic->options.setArgs("PRECONDITIONER", shell->options.getArgs("PRECONDITIONER"));
+  if (!shell->options.compareArgs("ASBF JACOBI SWITCHOVER", "NONE") &&
+      !shell->options.compareArgs("PRECONDITIONER", "JACOBI")) {
+    shell->options.getArgs("ASBF JACOBI SWITCHOVER", mswitch);
+  }
+
+  for(int m=0;m<shell->Nmodes;++m){
     // integrate agains surface basis (assume scaled by J)
     if (options.compareArgs("BASIS","NODAL")){
       meshApplyElementMatrix(mesh,mesh->MM,shell->r3D+shell->Ntotal*m, shell->r3D+shell->Ntotal*m);
@@ -62,24 +69,21 @@ static int shellSolveASBF(shell_t *shell, setupAide options)
       ogsGatherScatter(shell->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     }
 
-    //dfloat lambdam = shell->lambda + shell->eigenvalues[m];
     dfloat lambdam = shell->eigenvalues[m];
     printf("LAMBDAM[%02d] = %.3f\n", m, lambdam);
 
-    // Switch to JACOBI for high-order modes.
-    if (m >= SHELL_ASBF_JACOBI_CROSSOVER) {
+    if (m >= mswitch)
       elliptic->options.setArgs("PRECONDITIONER", "JACOBI");
-      elliptic->precon = shell->preconJacobi + (m - SHELL_ASBF_JACOBI_CROSSOVER);
-    }
 
+    elliptic->precon = shell->precon + m;
     ellipticSolve(elliptic, lambdam, shell->TOL, shell->o_r, shell->o_x);
-    shell->o_x.copyTo(shell->q3D + shell->Ntotal*m);
 
-    shell->o_x.copyTo(mesh->q);
+    shell->o_x.copyTo(shell->q3D + shell->Ntotal*m);
 
     // Plot solutions for each mode.
     //char fileName2D[BUFSIZ];
     //sprintf(fileName2D, "bah_%05d.vtu", m);
+    //shell->o_x.copyTo(mesh->q);
     //meshPlotVTU3D(mesh, fileName2D, 0);
   }
 }
