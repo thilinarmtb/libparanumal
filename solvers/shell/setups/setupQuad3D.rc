@@ -37,7 +37,7 @@ NEUMANN
 SEM
 
 [POLYNOMIAL DEGREE]
-6
+4
 
 # For the SEM solver or the ASBF solver with the PIECEWISEDISCRETE basis, this
 # is the number of radial elements.  For the ASBF solver with the TRUE or
@@ -79,10 +79,13 @@ CUDA
 [KRYLOV SOLVER]
 PCG+FLEXIBLE
 
+[KRYLOV SOLVER TOLERANCE]
+1.0e-8
+
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-IPDG
-#CONTINUOUS
+CONTINUOUS
+#IPDG
 
 # can be NODAL or BERN
 [BASIS]

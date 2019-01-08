@@ -56,7 +56,8 @@ void shellSolveSetup(shell_t *shell, dfloat lambda, occa::properties &kernelInfo
   setupAide options = shell->options;
 
   shell->lambda = lambda;
-  shell->TOL = 1E-8;
+
+  options.getArgs("KRYLOV SOLVER TOLERANCE", shell->TOL);
 
   options.getArgs("OUTER RADIUS", shell->R);
   if (shell->R <= 1) {
