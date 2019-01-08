@@ -33,12 +33,6 @@ SOFTWARE.
 #include "mesh3D.h"
 #include "elliptic.h"
 
-// For the ASBF shell solver, always use JACOBI for modes indexed this and
-// higher.
-//
-// TODO:  This should be handled in the setup file.
-#define SHELL_ASBF_JACOBI_CROSSOVER 6
-
 typedef struct {
 
   int dim, elementType;
