@@ -215,6 +215,8 @@ static void shellPreconditionerSetupASBF(shell_t *shell)
   }
 
   bytesAfter = mesh->device.memoryAllocated();
+
+  shell->preconBytes = bytesAfter - bytesBefore;
 }
 
 static void shellSolveSetupSEM(shell_t *shell, dfloat lambda, occa::properties &kernelInfo)
@@ -277,6 +279,7 @@ static void shellSolveSetupSEM(shell_t *shell, dfloat lambda, occa::properties &
   ellipticSolveSetup(elliptic, shell->lambda, kernelInfo);
 
   shell->elliptic = elliptic;
+  shell->preconBytes = elliptic->precon->preconBytes;
 
   //shellCheckSEMOperatorSymmetry(shell);
 }

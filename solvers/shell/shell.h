@@ -99,6 +99,8 @@ typedef struct {
     double total;
   } times;
 
+  long long int preconBytes;
+
   /*********/
 
   dfloat lambda;    // helmhotz solver -lap(u) + lamda u

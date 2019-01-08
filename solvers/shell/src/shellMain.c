@@ -130,6 +130,7 @@ int main(int argc, char **argv)
     printf("Solve Time\t%g\n",      shell->times.solve);
     printf("Total Time\t%g\n",      shell->times.total);
     printf("Nodes/s\t\t%g\n", (1.0*shell->mesh->Np*shell->mesh->Nelements)/shell->times.solve);
+    printf("Precon. memory\t%lld\n", shell->preconBytes);
   } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
     printf("N\t\t%d\n",             shell->elliptic->mesh->N);
     printf("Np\t\t%d\n",            shell->elliptic->mesh->Np);
@@ -139,6 +140,7 @@ int main(int argc, char **argv)
     printf("Solve Time\t%g\n",      shell->times.solve);
     printf("Total Time\t%g\n",      shell->times.total);
     printf("Nodes/s\t\t%g\n", (1.0*shell->elliptic->mesh->Np*shell->elliptic->mesh->Nelements)/shell->times.solve);
+    printf("Precon. memory\t%lld\n", shell->preconBytes);
   }
   printf("------------------------\n");
   printf("H1 error:  %g\n", errH1);
