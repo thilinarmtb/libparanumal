@@ -267,10 +267,17 @@ static dfloat shellManufacturedForcingFunctionNN(shell_t *shell, dfloat x, dfloa
   p = r*(pow(r, 2.0)/3.0 - ((1.0 + shell->R)/2.0)*r + shell->R);
   dpdr = (1.0 - r)*(shell->R - r);
   d2pdr2 = 2.0*r - (1.0 + shell->R);
-#else
+#elif 0
   p = cos(M_PI*(r - 1.0)/(shell->R - 1.0));
   dpdr = -M_PI*sin(M_PI*(r - 1.0)/(shell->R - 1.0))/(shell->R - 1.0);
   d2pdr2 = -M_PI*M_PI*cos(M_PI*(r - 1.0)/(shell->R - 1.0))/pow(shell->R - 1.0, 2.0);
+#else
+  dfloat a, b;
+  a = (exp(0.5) - exp(shell->R/2.0))/(4.0*shell->R - 4.0);
+  b = (2.0*exp(shell->R/2.0) - 2.0*shell->R*exp(0.5))/(4.0*shell->R - 4.0);
+  p = exp(r/2.0) + a*pow(r, 2.0) + b*r;
+  dpdr = 0.5*exp(r/2.0) + 2.0*r*a + b;
+  d2pdr2 = 0.25*exp(r/2.0) + 2.0*a;
 #endif
 
   s = pow(phi, 3.0)*pow(phi - M_PI, 3.0);

@@ -324,9 +324,15 @@ static void shellManufacturedSolutionNN(shell_t *shell,
 #if 0
   p = r*(pow(r, 2.0)/3.0 - ((1.0 + shell->R)/2.0)*r + shell->R);
   dpdr = (1.0 - r)*(shell->R - r);
-#else
+#elif 0
   p = cos(M_PI*(r - 1.0)/(shell->R - 1.0));
   dpdr = -M_PI*sin(M_PI*(r - 1.0)/(shell->R - 1.0))/(shell->R - 1.0);
+#else
+  dfloat a, b;
+  a = (exp(0.5) - exp(shell->R/2.0))/(4.0*shell->R - 4.0);
+  b = (2.0*exp(shell->R/2.0) - 2.0*shell->R*exp(0.5))/(4.0*shell->R - 4.0);
+  p = exp(r/2.0) + a*pow(r, 2.0) + b*r;
+  dpdr = 0.5*exp(r/2.0) + 2.0*r*a + b;
 #endif
 
   s = pow(phi, 3.0)*pow(phi - M_PI, 3.0);
