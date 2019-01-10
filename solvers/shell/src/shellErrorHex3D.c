@@ -321,18 +321,32 @@ static void shellManufacturedSolutionNN(shell_t *shell,
   dfloat dqdthetadthetadx, dqdthetadthetady;
   dfloat p, dpdr, s, dsdphi;
 
+#if 1
 #if 0
   p = r*(pow(r, 2.0)/3.0 - ((1.0 + shell->R)/2.0)*r + shell->R);
   dpdr = (1.0 - r)*(shell->R - r);
 #elif 0
   p = cos(M_PI*(r - 1.0)/(shell->R - 1.0));
   dpdr = -M_PI*sin(M_PI*(r - 1.0)/(shell->R - 1.0))/(shell->R - 1.0);
-#else
+#elif 0
   dfloat a, b;
   a = (exp(0.5) - exp(shell->R/2.0))/(4.0*shell->R - 4.0);
   b = (2.0*exp(shell->R/2.0) - 2.0*shell->R*exp(0.5))/(4.0*shell->R - 4.0);
   p = exp(r/2.0) + a*pow(r, 2.0) + b*r;
   dpdr = 0.5*exp(r/2.0) + 2.0*r*a + b;
+#elif 0
+  dfloat a, b;
+  a = (exp(1.0) - exp(shell->R))/(2.0*shell->R - 2.0);
+  b = (2.0*exp(shell->R) - 2.0*shell->R*exp(1.0))/(2.0*shell->R - 2.0);
+  p = cos(M_PI*(r - 1.0)/(shell->R - 1.0)) + exp(r) + a*pow(r, 2.0) + b*r;
+  dpdr = -M_PI*sin(M_PI*(r - 1.0)/(shell->R - 1.0))/(shell->R - 1.0) + exp(r) + 2.0*r*a + b;
+#else
+  dfloat a, b, c;
+  a = 2.0;
+  b = a*(cos(a) - cos(a*shell->R))/(2.0*shell->R - 2.0);
+  c = a*(2.0*cos(a*shell->R) - 2.0*shell->R*cos(a))/(2.0*shell->R - 2.0);
+  p = sin(a*r) + b*pow(r, 2.0) + c*r;
+  dpdr = a*cos(a*r) + 2.0*b*r + c;
 #endif
 
   s = pow(phi, 3.0)*pow(phi - M_PI, 3.0);
@@ -352,6 +366,25 @@ static void shellManufacturedSolutionNN(shell_t *shell,
     dqdthetadthetadx = dqdtheta*dthetadx;
     dqdthetadthetady = dqdtheta*dthetady;
   }
+#else
+  dfloat a, b;
+  a = (exp(0.5) - exp(shell->R/2.0))/(4.0*shell->R - 4.0);
+  b = (2.0*exp(shell->R/2.0) - 2.0*shell->R*exp(0.5))/(4.0*shell->R - 4.0);
+  p = exp(r/2.0) + a*pow(r, 2.0) + b*r;
+  dpdr = 0.5*exp(r/2.0) + 2.0*r*a + b;
+
+  s = pow(sin(phi), 2.0);
+  dsdphi = sin(2.0*phi);
+
+  *q = sin(theta)*s*p;
+
+  dqdr = sin(theta)*s*dpdr;
+  dqdtheta = cos(theta)*s*p;
+  dqdphi = sin(theta)*dsdphi*p;
+
+  dqdthetadthetadx = -p*cos(theta)*sin(theta)*sin(phi)/r;
+  dqdthetadthetady = p*cos(theta)*cos(theta)*sin(phi)/r;
+#endif
 
   *dqdx = dqdr*drdx + dqdthetadthetadx + dqdphi*dphidx;
   *dqdy = dqdr*drdy + dqdthetadthetady + dqdphi*dphidy;

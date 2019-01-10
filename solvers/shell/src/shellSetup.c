@@ -263,6 +263,7 @@ static dfloat shellManufacturedForcingFunctionNN(shell_t *shell, dfloat x, dfloa
   dfloat p, dpdr, d2pdr2;
   dfloat s, dsdphi, d2sdphi2;
 
+#if 1
 #if 0
   p = r*(pow(r, 2.0)/3.0 - ((1.0 + shell->R)/2.0)*r + shell->R);
   dpdr = (1.0 - r)*(shell->R - r);
@@ -271,13 +272,28 @@ static dfloat shellManufacturedForcingFunctionNN(shell_t *shell, dfloat x, dfloa
   p = cos(M_PI*(r - 1.0)/(shell->R - 1.0));
   dpdr = -M_PI*sin(M_PI*(r - 1.0)/(shell->R - 1.0))/(shell->R - 1.0);
   d2pdr2 = -M_PI*M_PI*cos(M_PI*(r - 1.0)/(shell->R - 1.0))/pow(shell->R - 1.0, 2.0);
-#else
+#elif 0
   dfloat a, b;
   a = (exp(0.5) - exp(shell->R/2.0))/(4.0*shell->R - 4.0);
   b = (2.0*exp(shell->R/2.0) - 2.0*shell->R*exp(0.5))/(4.0*shell->R - 4.0);
   p = exp(r/2.0) + a*pow(r, 2.0) + b*r;
   dpdr = 0.5*exp(r/2.0) + 2.0*r*a + b;
   d2pdr2 = 0.25*exp(r/2.0) + 2.0*a;
+#elif 0
+  dfloat a, b;
+  a = (exp(1.0) - exp(shell->R))/(2.0*shell->R - 2.0);
+  b = (2.0*exp(shell->R) - 2.0*shell->R*exp(1.0))/(2.0*shell->R - 2.0);
+  p = cos(M_PI*(r - 1.0)/(shell->R - 1.0)) + exp(r) + a*pow(r, 2.0) + b*r;
+  dpdr = -M_PI*sin(M_PI*(r - 1.0)/(shell->R - 1.0))/(shell->R - 1.0) + exp(r) + 2.0*r*a + b;
+  d2pdr2 = -M_PI*M_PI*cos(M_PI*(r - 1.0)/(shell->R - 1.0))/pow(shell->R - 1.0, 2.0) + exp(r) + 2.0*a;
+#else
+  dfloat a, b, c;
+  a = 2.0;
+  b = a*(cos(a) - cos(a*shell->R))/(2.0*shell->R - 2.0);
+  c = a*(2.0*cos(a*shell->R) - 2.0*shell->R*cos(a))/(2.0*shell->R - 2.0);
+  p = sin(a*r) + b*pow(r, 2.0) + c*r;
+  dpdr = a*cos(a*r) + 2.0*b*r + c;
+  d2pdr2 = -pow(a, 2.0)*sin(a*r) + 2.0*b;
 #endif
 
   s = pow(phi, 3.0)*pow(phi - M_PI, 3.0);
@@ -300,6 +316,34 @@ static dfloat shellManufacturedForcingFunctionNN(shell_t *shell, dfloat x, dfloa
     lapqtheta = d2qdtheta2/(pow(r, 2.0)*pow(sin(phi), 2.0));
     lapq = lapqr + lapqtheta + lapqphi;
   }
+#else
+  dfloat a, b;
+  a = (exp(0.5) - exp(shell->R/2.0))/(4.0*shell->R - 4.0);
+  b = (2.0*exp(shell->R/2.0) - 2.0*shell->R*exp(0.5))/(4.0*shell->R - 4.0);
+  p = exp(r/2.0) + a*pow(r, 2.0) + b*r;
+  dpdr = 0.5*exp(r/2.0) + 2.0*r*a + b;
+  d2pdr2 = 0.25*exp(r/2.0) + 2.0*a;
+
+  s = pow(sin(phi), 2.0);
+  dsdphi = sin(2.0*phi);
+  d2sdphi2 = 2.0*cos(2.0*phi);
+
+  q = sin(theta)*s*p;
+  dqdr = sin(theta)*s*dpdr;
+  d2qdr2 = sin(theta)*s*d2pdr2;
+  d2qdtheta2 = -sin(theta)*s*p;
+  dqdphi = sin(theta)*dsdphi*p;
+  d2qdphi2 = sin(theta)*d2sdphi2*p;
+
+  dfloat dqdphiosinphi, d2qdtheta2osinphi2;
+  dqdphiosinphi = sin(theta)*2.0*cos(phi)*p;
+  d2qdtheta2osinphi2 = -sin(theta)*p;
+
+  lapqr = d2qdr2 + (2.0/r)*dqdr;
+  lapqphi = (1.0/pow(r, 2.0))*d2qdphi2 + (cos(phi)/pow(r, 2.0))*dqdphiosinphi;
+  lapqtheta = d2qdtheta2osinphi2/pow(r, 2.0);
+  lapq = lapqr + lapqtheta + lapqphi;
+#endif
 
   f = -lapq + shell->lambda*q;
 
