@@ -122,16 +122,19 @@ int main(int argc, char **argv)
 
   printf("------------------------\n");
   if (options.compareArgs("SHELL SOLVER", "ASBF")) {
+    int Ndofs = shell->Nmodes*shell->mesh->Nelements*shell->mesh->Np;
     printf("N\t\t%d\n",             shell->mesh->N);
     printf("Np\t\t%d\n",            shell->mesh->Np);
     printf("Nelements\t%d\n",       shell->mesh->Nelements);
     printf("Ntotal\t\t%d\n",        shell->mesh->Np*shell->mesh->Nelements);
+    printf("Nmodes\t\t%d\n",        shell->Nmodes);
     printf("Setup Time\t%g\n",      shell->times.setup.total);
     printf("Solve Time\t%g\n",      shell->times.solve);
     printf("Total Time\t%g\n",      shell->times.total);
-    printf("Nodes/s\t\t%g\n", (1.0*shell->mesh->Np*shell->mesh->Nelements)/shell->times.solve);
+    printf("Nodes/s\t\t%g\n", (1.0*Ndofs)/shell->times.solve);
     printf("Precon. memory\t%lld\n", shell->preconBytes);
   } else if (options.compareArgs("SHELL SOLVER", "SEM")) {
+    int Ndofs = shell->elliptic->mesh->Nelements*shell->elliptic->mesh->Np;
     printf("N\t\t%d\n",             shell->elliptic->mesh->N);
     printf("Np\t\t%d\n",            shell->elliptic->mesh->Np);
     printf("Nelements\t%d\n",       shell->elliptic->mesh->Nelements);
@@ -139,7 +142,7 @@ int main(int argc, char **argv)
     printf("Setup Time\t%g\n",      shell->times.setup.total);
     printf("Solve Time\t%g\n",      shell->times.solve);
     printf("Total Time\t%g\n",      shell->times.total);
-    printf("Nodes/s\t\t%g\n", (1.0*shell->elliptic->mesh->Np*shell->elliptic->mesh->Nelements)/shell->times.solve);
+    printf("Nodes/s\t\t%g\n", (1.0*Ndofs)/shell->times.solve);
     printf("Precon. memory\t%lld\n", shell->preconBytes);
   }
   printf("------------------------\n");
