@@ -96,6 +96,9 @@ typedef struct {
 
     double solve;
 
+    double solveApplyMM;
+    double solvePCG;
+
     double total;
   } times;
 

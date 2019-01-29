@@ -58,9 +58,12 @@ static int shellSolveASBF(shell_t *shell, setupAide options)
 
   for(int m=0;m<shell->Nmodes;++m){
     // integrate agains surface basis (assume scaled by J)
+    occa::streamTag applyMMStart = mesh->device.tagStream();
     if (options.compareArgs("BASIS","NODAL")){
       meshApplyElementMatrix(mesh,mesh->MM,shell->r3D+shell->Ntotal*m, shell->r3D+shell->Ntotal*m);
     }
+    occa::streamTag applyMMEnd = mesh->device.tagStream();
+    shell->times.solveApplyMM += mesh->device.timeBetween(applyMMStart, applyMMEnd);
 
     shell->o_r.copyFrom(shell->r3D + shell->Ntotal*m);
 
@@ -76,7 +79,10 @@ static int shellSolveASBF(shell_t *shell, setupAide options)
       elliptic->options.setArgs("PRECONDITIONER", "JACOBI");
 
     elliptic->precon = shell->precon + m;
+    occa::streamTag ellipticStart = mesh->device.tagStream();
     ellipticSolve(elliptic, lambdam, shell->TOL, shell->o_r, shell->o_x);
+    occa::streamTag ellipticEnd = mesh->device.tagStream();
+    shell->times.solvePCG += mesh->device.timeBetween(ellipticStart, ellipticEnd);
 
     shell->o_x.copyTo(shell->q3D + shell->Ntotal*m);
 
@@ -95,8 +101,11 @@ static int shellSolveSEM(shell_t *shell, setupAide options)
   elliptic_t *elliptic = shell->elliptic;
   mesh_t *mesh         = elliptic->mesh;
 
+  occa::streamTag applyMMStart = mesh->device.tagStream();
   if (options.compareArgs("BASIS", "NODAL"))
     meshApplyElementMatrix(mesh, mesh->MM, elliptic->r, elliptic->r);
+  occa::streamTag applyMMEnd = mesh->device.tagStream();
+  shell->times.solveApplyMM = mesh->device.timeBetween(applyMMStart, applyMMEnd);
 
   elliptic->o_r.copyFrom(elliptic->r);
 
@@ -106,7 +115,10 @@ static int shellSolveSEM(shell_t *shell, setupAide options)
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }
   
+  occa::streamTag ellipticStart = mesh->device.tagStream();
   Niters = ellipticSolve(elliptic, shell->lambda, shell->TOL, elliptic->o_r, elliptic->o_x);
+  occa::streamTag ellipticEnd = mesh->device.tagStream();
+  shell->times.solvePCG = mesh->device.timeBetween(ellipticStart, ellipticEnd);
   elliptic->o_x.copyTo(mesh->q);
 
   return Niters;

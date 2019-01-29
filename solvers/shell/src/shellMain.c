@@ -130,6 +130,8 @@ int main(int argc, char **argv)
     printf("Nmodes\t\t%d\n",        shell->Nmodes);
     printf("Setup Time\t%g\n",      shell->times.setup.total);
     printf("Solve Time\t%g\n",      shell->times.solve);
+    printf("Apply MM Time\t%g\n",   shell->times.solveApplyMM);
+    printf("PCG Time\t%g\n",        shell->times.solvePCG);
     printf("Total Time\t%g\n",      shell->times.total);
     printf("Nodes/s\t\t%g\n", (1.0*Ndofs)/shell->times.solve);
     printf("Precon. memory\t%lld\n", shell->preconBytes);
@@ -141,6 +143,8 @@ int main(int argc, char **argv)
     printf("Ntotal\t\t%d\n",        shell->elliptic->mesh->Np*shell->elliptic->mesh->Nelements);
     printf("Setup Time\t%g\n",      shell->times.setup.total);
     printf("Solve Time\t%g\n",      shell->times.solve);
+    printf("Apply MM Time\t%g\n",   shell->times.solveApplyMM);
+    printf("PCG Time\t%g\n",        shell->times.solvePCG);
     printf("Total Time\t%g\n",      shell->times.total);
     printf("Nodes/s\t\t%g\n", (1.0*Ndofs)/shell->times.solve);
     printf("Precon. memory\t%lld\n", shell->preconBytes);
