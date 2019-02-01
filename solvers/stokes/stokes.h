@@ -36,11 +36,34 @@ SOFTWARE.
 #include "mesh3D.h"
 #include "parAlmond.hpp"
 
+/* This data structure represents a vector used with the Stokes solver.  The
+ * vector is partitioned into blocks corresponding to the components of the
+ * velocity and the pressure.
+ */
 typedef struct {
-  mesh_t *meshV;  /* Velocity mesh. */
-  mesh_t *meshP;  /* Pressure mesh. */
+  dfloat *x;  /* Block matching velocity x-component */
+  dfloat *y;  /* Block matching velocity y-component */
+  dfloat *z;  /* Block matching velocity z-component */
+  dfloat *p;  /* Block matching pressure */
+} stokesVec_t;
+
+typedef struct {
+  setupAide options;  /* Configuration information. */
+
+  mesh_t *meshV;      /* Velocity mesh */
+  mesh_t *meshP;      /* Pressure mesh */
+
+  int NtotalV;        /* Total number of points in the velocity mesh */
+  int NtotalP;        /* Total number of points in the pressure mesh */
+
+  stokesVec_t u;      /* Solution */
+  stokesVec_t f;      /* Right-hand side */
 } stokes_t;
 
-stokes_t *stokesSetup(mesh_t *meshV, mesh_t *meshP, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
+stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
+void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
+void stokesSolve(stokes_t *stokes);
+void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
+void stokesPreconditioner(stokes_t *stokes);
 
 #endif /* STOKES_H */

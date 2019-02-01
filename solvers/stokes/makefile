@@ -43,7 +43,11 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS = \
-src/stokesSetup.o
+src/stokesOperator.o \
+src/stokesPreconditioner.o \
+src/stokesSetup.o \
+src/stokesSolve.o \
+src/stokesSolveSetup.o \
 
 # library objects
 LOBJS = \

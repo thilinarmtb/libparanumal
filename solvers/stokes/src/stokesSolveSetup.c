@@ -26,33 +26,33 @@ SOFTWARE.
 
 #include "stokes.h"
 
-int main(int argc, char **argv) {
-  stokes_t         *stokes;
-  occa::properties kernelInfoV, kernelInfoP;
+static void stokesAllocateVec(stokes_t *stokes, stokesVec_t *v);
 
-  // Start up MPI.
-  MPI_Init(&argc, &argv);
+void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
+{
+  int verbose = stokes->options.compareArgs("VERBOSE", "TRUE") ? 1 : 0;
 
-  if (argc != 2) {
-    printf("usage: ./stokesMain setupfile\n");
-    MPI_Finalize();
-    exit(-1);
-  }
+  stokes->NtotalV = stokes->meshV->Nelements*stokes->meshV->Np;
+  stokes->NtotalP = stokes->meshP->Nelements*stokes->meshP->Np;
 
-  setupAide options(argv[1]);
+  stokesAllocateVec(stokes, &stokes->u);
+  stokesAllocateVec(stokes, &stokes->f);
 
-  stokes = stokesSetup(kernelInfoP, kernelInfoV, options);
+  meshParallelGatherScatterSetup(stokes->meshV, stokes->NtotalV, stokes->meshV->globalIds, stokes->meshV->comm, verbose);
+  meshParallelGatherScatterSetup(stokes->meshP, stokes->NtotalP, stokes->meshP->globalIds, stokes->meshP->comm, verbose);
 
-  /* Solve. */
+  return;
+}
 
-  /* Compute error (if applicable.) */
+static void stokesAllocateVec(stokes_t *stokes, stokesVec_t *v)
+{
+  v->x = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
+  v->y = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
+  if (stokes->meshV->dim == 3)
+    v->z = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
+  else
+    v->z = NULL;
+  v->p = (dfloat*)calloc(stokes->NtotalP, sizeof(dfloat));
 
-  /* Export solution. */
-  
-  /* Report runtime statistics. */
-
-  // Shut down MPI.
-  MPI_Finalize();
-
-  return 0;
+  return;
 }

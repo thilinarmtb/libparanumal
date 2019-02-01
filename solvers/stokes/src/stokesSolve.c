@@ -26,33 +26,7 @@ SOFTWARE.
 
 #include "stokes.h"
 
-int main(int argc, char **argv) {
-  stokes_t         *stokes;
-  occa::properties kernelInfoV, kernelInfoP;
-
-  // Start up MPI.
-  MPI_Init(&argc, &argv);
-
-  if (argc != 2) {
-    printf("usage: ./stokesMain setupfile\n");
-    MPI_Finalize();
-    exit(-1);
-  }
-
-  setupAide options(argv[1]);
-
-  stokes = stokesSetup(kernelInfoP, kernelInfoV, options);
-
-  /* Solve. */
-
-  /* Compute error (if applicable.) */
-
-  /* Export solution. */
-  
-  /* Report runtime statistics. */
-
-  // Shut down MPI.
-  MPI_Finalize();
-
-  return 0;
+void stokesSolve(stokes_t *stokes)
+{
+  return;
 }
