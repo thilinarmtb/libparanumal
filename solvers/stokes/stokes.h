@@ -64,6 +64,6 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
 void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
 void stokesSolve(stokes_t *stokes);
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
-void stokesPreconditioner(stokes_t *stokes);
+void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
 
 #endif /* STOKES_H */

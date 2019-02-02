@@ -43,6 +43,20 @@ static void stokesApplyDivergenceYTranspose(stokes_t *stokes, dfloat *v, dfloat 
  */
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 {
+  /* TODO:  The operator code is broken.  This replaces it with a diagonal
+   * matrix for testing purposes.
+   */
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    Av.x[i] = ((dfloat)(i + 1)/100.0)*v.x[i];
+    Av.y[i] = ((dfloat)(i + 1)/100.0)*v.y[i];
+  }
+
+  for (int i = 0; i < stokes->NtotalP; i++) {
+    Av.p[i] = ((dfloat)(i + 1)/100.0)*v.p[i];
+  }
+
+  return;
+
   dfloat *Kvx, *Kvy, *Bxvp, *Byvp, *BxTvx, *ByTvy;
 
   Kvx = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));

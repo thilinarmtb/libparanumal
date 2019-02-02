@@ -26,7 +26,15 @@ SOFTWARE.
 
 #include "stokes.h"
 
-void stokesPreconditioner(stokes_t *stokes)
+void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
 {
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    Mv.x[i] = v.x[i];
+    Mv.y[i] = v.y[i];
+  }
+
+  for (int i = 0; i < stokes->NtotalP; i++) {
+    Mv.p[i] = v.p[i];
+  }
   return;
 }

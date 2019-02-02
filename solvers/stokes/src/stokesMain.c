@@ -42,8 +42,7 @@ int main(int argc, char **argv) {
   setupAide options(argv[1]);
 
   stokes = stokesSetup(kernelInfoP, kernelInfoV, options);
-
-  /* Solve. */
+  stokesSolve(stokes);
 
   /* Compute error (if applicable.) */
 
