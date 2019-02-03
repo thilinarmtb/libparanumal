@@ -43,20 +43,6 @@ static void stokesApplyDivergenceYTranspose(stokes_t *stokes, dfloat *v, dfloat 
  */
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 {
-  /* TODO:  The operator code is broken.  This replaces it with a diagonal
-   * matrix for testing purposes.
-   */
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    Av.x[i] = ((dfloat)(i + 1)/100.0)*v.x[i];
-    Av.y[i] = ((dfloat)(i + 1)/100.0)*v.y[i];
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    Av.p[i] = ((dfloat)(i + 1)/100.0)*v.p[i];
-  }
-
-  return;
-
   dfloat *Kvx, *Kvy, *Bxvp, *Byvp, *BxTvx, *ByTvy;
 
   Kvx = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
@@ -124,14 +110,14 @@ static void stokesApplyDivergenceXTranspose(stokes_t *stokes, dfloat *v, dfloat 
     memset(tmpITy0, 0, meshV->Nq*meshP->Nq*sizeof(dfloat));
     memset(tmpITy1, 0, meshV->Nq*meshP->Nq*sizeof(dfloat));
     memset(Av0, 0, meshP->Np*sizeof(dfloat));
-    memset(Av0, 0, meshP->Np*sizeof(dfloat));
+    memset(Av1, 0, meshP->Np*sizeof(dfloat));
 
     /* Multiply by I (X) D or D (X) I. */
     for (int i = 0; i < meshV->Nq; i++) {
       for (int j = 0; j < meshV->Nq; j++) {
         for (int k = 0; k < meshV->Nq; k++) {
-          tmp0[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[i*meshV->Nq + k];
-          tmp1[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[i + k*meshV->Nq];
+          tmp0[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i*meshV->Nq + k];
+          tmp1[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i + k*meshV->Nq];
         }
       }
     }
@@ -201,14 +187,14 @@ static void stokesApplyDivergenceYTranspose(stokes_t *stokes, dfloat *v, dfloat 
     memset(tmpITy0, 0, meshV->Nq*meshP->Nq*sizeof(dfloat));
     memset(tmpITy1, 0, meshV->Nq*meshP->Nq*sizeof(dfloat));
     memset(Av0, 0, meshP->Np*sizeof(dfloat));
-    memset(Av0, 0, meshP->Np*sizeof(dfloat));
+    memset(Av1, 0, meshP->Np*sizeof(dfloat));
 
     /* Multiply by I (X) D or D (X) I. */
     for (int i = 0; i < meshV->Nq; i++) {
       for (int j = 0; j < meshV->Nq; j++) {
         for (int k = 0; k < meshV->Nq; k++) {
-          tmp0[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[i*meshV->Nq + k];
-          tmp1[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[i + k*meshV->Nq];
+          tmp0[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i*meshV->Nq + k];
+          tmp1[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i + k*meshV->Nq];
         }
       }
     }
@@ -290,7 +276,7 @@ static void stokesApplyDivergenceX(stokes_t *stokes, dfloat *v, dfloat *Av)
     for (int i = 0; i < meshP->Nq; i++) {
       for (int j = 0; j < meshV->Nq; j++) {
         for (int k = 0; k < meshP->Nq; k++) {
-          tmpIx[i*meshV->Nq + j] += meshP->interpRaise[j*meshP->Nq + k]*v[i*meshP->Nq + k];
+          tmpIx[i*meshV->Nq + j] += meshP->interpRaise[j*meshP->Nq + k]*v[e*meshP->Np + i*meshP->Nq + k];
         }
       }
     }
@@ -371,7 +357,7 @@ static void stokesApplyDivergenceY(stokes_t *stokes, dfloat *v, dfloat *Av)
     for (int i = 0; i < meshP->Nq; i++) {
       for (int j = 0; j < meshV->Nq; j++) {
         for (int k = 0; k < meshP->Nq; k++) {
-          tmpIx[i*meshV->Nq + j] += meshP->interpRaise[j*meshP->Nq + k]*v[i*meshP->Nq + k];
+          tmpIx[i*meshV->Nq + j] += meshP->interpRaise[j*meshP->Nq + k]*v[e*meshP->Np + i*meshP->Nq + k];
         }
       }
     }
@@ -453,10 +439,10 @@ static void stokesApplyStiffness(stokes_t *stokes, dfloat *v, dfloat *Av)
     for (int i = 0; i < meshV->Nq; i++) {
       for (int j = 0; j < meshV->Nq; j++) {
         for (int k = 0; k < meshV->Nq; k++) {
-          tmp00[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[i*meshV->Nq + k];
-          tmp01[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[i + k*meshV->Nq];
-          tmp10[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[i*meshV->Nq + k];
-          tmp11[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[i + k*meshV->Nq];
+          tmp00[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i*meshV->Nq + k];
+          tmp01[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i + k*meshV->Nq];
+          tmp10[i*meshV->Nq + j] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i*meshV->Nq + k];
+          tmp11[i + j*meshV->Nq] += meshV->D[j*meshV->Nq + k]*v[e*meshV->Np + i + k*meshV->Nq];
         }
       }
     }
