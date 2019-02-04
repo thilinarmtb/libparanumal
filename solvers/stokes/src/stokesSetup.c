@@ -87,8 +87,8 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   // Initialize right-hand side with the forcing term.
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
-      int    ind, x, y;
-      dfloat J;
+      int    ind;
+      dfloat x, y, J;
 
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
