@@ -86,6 +86,18 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   free(BxTvx);
   free(ByTvy);
 
+  // Gather-scatter for C0 FEM.
+  //
+  // TODO:  Make a function for this.
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
+    ogsGatherScatter(Av.x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+    ogsGatherScatter(Av.y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+  }
+
+  if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
+    ogsGatherScatter(Av.p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
+  }
+
   return;
 }
 
