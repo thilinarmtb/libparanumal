@@ -37,11 +37,43 @@ static void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
 static void stokesVecPrint(stokes_t *stokes, stokesVec_t v)
 {
   for (int i = 0; i < stokes->NtotalV; i++)
-    printf("% .15e\n", v.x[i]);
+    printf("% .20e\n", v.x[i]);
   for (int i = 0; i < stokes->NtotalV; i++)
-    printf("% .15e\n", v.y[i]);
+    printf("% .20e\n", v.y[i]);
   for (int i = 0; i < stokes->NtotalP; i++)
-    printf("% .15e\n", v.p[i]);
+    printf("% .20e\n", v.p[i]);
+}
+
+static void stokesPrintOperator(stokes_t *stokes)
+{
+  stokesVec_t v, Av;
+
+  stokesAllocateVec(stokes, &v);
+  stokesAllocateVec(stokes, &Av);
+
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    v.x[i] = 1.0;
+    stokesOperator(stokes, v, Av);
+    stokesVecPrint(stokes, Av);
+    v.x[i] = 0.0;
+  }
+
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    v.y[i] = 1.0;
+    stokesOperator(stokes, v, Av);
+    stokesVecPrint(stokes, Av);
+    v.y[i] = 0.0;
+  }
+
+  for (int i = 0; i < stokes->NtotalP; i++) {
+    v.p[i] = 1.0;
+    stokesOperator(stokes, v, Av);
+    stokesVecPrint(stokes, Av);
+    v.p[i] = 0.0;
+  }
+
+  stokesFreeVec(stokes, &v);
+  stokesFreeVec(stokes, &Av);
 }
 
 void stokesSolve(stokes_t *stokes)
@@ -59,6 +91,52 @@ void stokesSolve(stokes_t *stokes)
     verbose = 1;
 
   u = stokes->u;
+
+  /*
+  printf("N = %d;\n", 2*stokes->NtotalV + stokes->NtotalP);
+  printf("NV = %d;\n", stokes->NtotalV);
+  printf("NP = %d;\n", stokes->NtotalP);
+  printf("A = [");
+  stokesPrintOperator(stokes);
+  printf("];\n\n");
+  printf("f = [");
+  stokesVecPrint(stokes, stokes->f);
+  printf("];\n");
+
+  printf("xx = [");
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->Np; i++) {
+      printf("% .20e\n", stokes->meshV->x[e*stokes->meshV->Np + i]);
+    }
+  }
+  printf("];\n\n");
+
+  printf("yy = [");
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->Np; i++) {
+      printf("% .20e\n", stokes->meshV->y[e*stokes->meshV->Np + i]);
+    }
+  }
+  printf("];\n\n");
+
+  printf("w = [");
+
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    printf("% .20e\n", stokes->meshV->ogs->invDegree[i]);
+  }
+
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    printf("% .20e\n", stokes->meshV->ogs->invDegree[i]);
+  }
+
+  for (int i = 0; i < stokes->NtotalP; i++) {
+    printf("% .20e\n", stokes->meshP->ogs->invDegree[i]);
+  }
+
+  printf("];\n\n");
+
+  exit(0);
+  */
 
   /* Allocate work vectors. */
   stokesAllocateVec(stokes, &p);
