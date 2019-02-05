@@ -45,9 +45,46 @@ int main(int argc, char **argv) {
   stokesSolve(stokes);
 
   /* Compute error (if applicable.) */
+  dfloat errxInf = 0.0, erryInf = 0.0, errxDL2 = 0.0, erryDL2 = 0.0;
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->Np; i++) {
+      int    ind;
+      dfloat x, y, errx, erry;
+
+      ind = e*stokes->meshV->Np + i;
+      x = stokes->meshV->x[ind];
+      y = stokes->meshV->y[ind];
+
+      dfloat ux_exact = 6.0*pow(1.0 - x*x, 3.0)*pow(1.0 - y*y, 2.0)*y;
+      dfloat uy_exact = -6.0*pow(1.0 - y*y, 3.0)*pow(1.0 - x*x, 2.0)*x;
+
+      errx = stokes->u.x[ind] - ux_exact;
+      erry = stokes->u.y[ind] - uy_exact;
+
+      //printf("ux[%d] = % .15e, uy[%d] = % .15e, errx[%d] = % .15e, erry[%d] = % .15e\n",
+      //       ind, stokes->u.x[ind], ind, stokes->u.y[ind], ind, errx, ind, erry);
+
+      if (fabs(errx) > errxInf)
+        errxInf = fabs(errx);
+      if (fabs(erry) > erryInf)
+        erryInf = fabs(erry);
+      errxDL2 += errx*errx;
+      erryDL2 += erry*erry;
+    }
+  }
+
+  errxDL2 = sqrt(errxDL2);
+  erryDL2 = sqrt(erryDL2);
+
+  printf("-----\n");
+
+  printf("errxInf = % .15e\n", errxInf);
+  printf("erryInf = % .15e\n", erryInf);
+  printf("errxDL2 = % .15e\n", errxDL2);
+  printf("erryDL2 = % .15e\n", erryDL2);
 
   /* Export solution. */
-  
+
   /* Report runtime statistics. */
 
   // Shut down MPI.
