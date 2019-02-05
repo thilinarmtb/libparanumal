@@ -178,11 +178,11 @@ static void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v
 {
   *c = 0.0;
   for (int i = 0; i < stokes->NtotalV; i++) {
-    *c += u.x[i]*v.x[i] + u.y[i]*v.y[i];
+    *c += (u.x[i]*v.x[i] + u.y[i]*v.y[i])*stokes->meshV->ogs->invDegree[i];
   }
 
   for (int i = 0; i < stokes->NtotalP; i++) {
-    *c += u.p[i]*v.p[i];
+    *c += u.p[i]*v.p[i]*stokes->meshP->ogs->invDegree[i];
   }
 }
 
