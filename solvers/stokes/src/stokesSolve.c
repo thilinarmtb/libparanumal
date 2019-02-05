@@ -48,6 +48,15 @@ void stokesSolve(stokes_t *stokes)
 {
   stokesVec_t u, p, z, r, r_old, w, w_old;
   dfloat      a0, a1, a2, a3, del, gam, gamp, c, cp, s, sp, eta;
+  dfloat      maxiter, tol;
+  int         verbose;
+
+  stokes->options.getArgs("KRYLOV SOLVER ITERATION LIMIT", maxiter);
+  stokes->options.getArgs("KRYLOV SOLVER TOLERANCE",       tol);
+
+  verbose = 0;
+  if (stokes->options.compareArgs("VERBOSE", "TRUE"))
+    verbose = 1;
 
   u = stokes->u;
 
@@ -64,15 +73,26 @@ void stokesSolve(stokes_t *stokes)
   stokesPreconditioner(stokes, r, z);                          /* z = M\r                  */
   stokesVecInnerProduct(stokes, z, r, &gam);                   /* gam = sqrt(r'*z)         */
   gamp = 0.0;
-  gam  = sqrt(gam);                           
+  gam  = sqrt(gam);
   eta  = gam;
   sp   = 0.0;
   s    = 0.0;
   cp   = 1.0;
   c    = 1.0;
 
-  /* TODO:  Get a proper convergence criterion. */
-  for (int i = 0; i < 100; i++) {
+  /* Adjust the tolerance to account for small initial residual norms. */
+  tol = mymax(tol*fabs(eta), tol);
+  printf("MINRES:  initial eta = % .15e, target %.15e\n", eta, tol);
+
+  /* MINRES iteration loop. */
+  for (int i = 0; i < maxiter; i++) {
+    printf("MINRES:  it % 3d  eta = % .15e\n", i, eta);
+    if (fabs(eta) < tol) {
+      if (verbose)
+        printf("MINRES converged in %d iterations (eta = % .15e).\n", i, eta);
+      break;
+    }
+
     stokesVecScale(stokes, z, 1.0/gam);                        /* z = z/gam                */
     stokesOperator(stokes, z, p);                              /* p = Az                   */
     stokesVecInnerProduct(stokes, p, z, &del);                 /* del = z'*p               */
@@ -100,10 +120,6 @@ void stokesSolve(stokes_t *stokes)
     stokesVecScale(stokes, w, 1.0/a1);                         /* w = w/a1                 */
     stokesVecScaledAdd(stokes, c*eta, w, 1.0, u);              /* u = u + c*eta*w          */
     eta = -s*eta;
-
-    printf("gam = % .15e\n", gam);
-    if (fabs(gam) < 1.0e-10)
-      break;
   }
 
   /* Free work vectors. */

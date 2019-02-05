@@ -19,7 +19,7 @@
 ################################################
 
 [THREAD MODEL]
-CUDA
+Serial
 
 [PLATFORM NUMBER]
 0
@@ -31,26 +31,30 @@ CUDA
 ################ PROBLEM SETUP #################
 ################################################
 
-
-################################################
-########### VELOCITY DISCRETIZATION ############
-################################################
-
 [VELOCITY POLYNOMIAL DEGREE]
 2
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
-################################################
-########### PRESSURE DISCRETIZATION ############
-################################################
-
 [PRESSURE POLYNOMIAL DEGREE]
 1
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
+
+################################################
+############ KRYLOV SOLVER OPTIONS #############
+################################################
+
+[KRYLOV SOLVER]
+MINRES
+
+[KRYLOV SOLVER ITERATION LIMIT]
+100
+
+[KRYLOV SOLVER TOLERANCE]
+1.0e-8
 
 ################################################
 ################ OTHER OPTIONS #################
