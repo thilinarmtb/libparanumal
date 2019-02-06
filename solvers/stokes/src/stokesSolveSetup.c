@@ -34,9 +34,10 @@ void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::pro
 
   stokes->NtotalV = stokes->meshV->Nelements*stokes->meshV->Np;
   stokes->NtotalP = stokes->meshP->Nelements*stokes->meshP->Np;
+  stokes->Ndof    = stokes->meshV->dim*stokes->NtotalV + stokes->NtotalP;
 
-  stokesAllocateVec(stokes, &stokes->u);
-  stokesAllocateVec(stokes, &stokes->f);
+  stokesVecAllocate(stokes, &stokes->u);
+  stokesVecAllocate(stokes, &stokes->f);
 
   meshParallelGatherScatterSetup(stokes->meshV, stokes->NtotalV, stokes->meshV->globalIds, stokes->meshV->comm, verbose);
   meshParallelGatherScatterSetup(stokes->meshP, stokes->NtotalP, stokes->meshP->globalIds, stokes->meshP->comm, verbose);
@@ -44,15 +45,3 @@ void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::pro
   return;
 }
 
-static void stokesAllocateVec(stokes_t *stokes, stokesVec_t *v)
-{
-  v->x = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
-  v->y = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
-  if (stokes->meshV->dim == 3)
-    v->z = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
-  else
-    v->z = NULL;
-  v->p = (dfloat*)calloc(stokes->NtotalP, sizeof(dfloat));
-
-  return;
-}

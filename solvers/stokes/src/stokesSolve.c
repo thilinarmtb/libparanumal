@@ -26,57 +26,20 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesAllocateVec(stokes_t *stokes, stokesVec_t *v);
-static void stokesFreeVec(stokes_t *stokes, stokesVec_t *v);
-
-static void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c);
-static void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t y, dfloat b, stokesVec_t v);
-static void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
-static void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
-
-static void stokesVecPrint(stokes_t *stokes, stokesVec_t v)
-{
-  for (int i = 0; i < stokes->NtotalV; i++)
-    printf("% .20e\n", v.x[i]);
-  for (int i = 0; i < stokes->NtotalV; i++)
-    printf("% .20e\n", v.y[i]);
-  for (int i = 0; i < stokes->NtotalP; i++)
-    printf("% .20e\n", v.p[i]);
-}
-
-static void stokesPrintOperator(stokes_t *stokes)
-{
-  stokesVec_t v, Av;
-
-  stokesAllocateVec(stokes, &v);
-  stokesAllocateVec(stokes, &Av);
-
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    v.x[i] = 1.0;
-    stokesOperator(stokes, v, Av);
-    stokesVecPrint(stokes, Av);
-    v.x[i] = 0.0;
-  }
-
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    v.y[i] = 1.0;
-    stokesOperator(stokes, v, Av);
-    stokesVecPrint(stokes, Av);
-    v.y[i] = 0.0;
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    v.p[i] = 1.0;
-    stokesOperator(stokes, v, Av);
-    stokesVecPrint(stokes, Av);
-    v.p[i] = 0.0;
-  }
-
-  stokesFreeVec(stokes, &v);
-  stokesFreeVec(stokes, &Av);
-}
+static void stokesSolveMINRES(stokes_t *stokes);
 
 void stokesSolve(stokes_t *stokes)
+{
+  if (stokes->options.compareArgs("KRYLOV SOLVER", "MINRES")) {
+    stokesSolveMINRES(stokes);
+  } else {
+    printf("ERROR:  Invalid value %s for [KRYLOV SOLVER] option.",
+           stokes->options.getArgs("KRYLOV SOLVER").c_str());
+    exit(-1);
+  }
+}
+
+static void stokesSolveMINRES(stokes_t *stokes)
 {
   stokesVec_t u, p, z, r, r_old, w, w_old;
   dfloat      a0, a1, a2, a3, del, gam, gamp, c, cp, s, sp, eta;
@@ -92,59 +55,13 @@ void stokesSolve(stokes_t *stokes)
 
   u = stokes->u;
 
-  /*
-  printf("N = %d;\n", 2*stokes->NtotalV + stokes->NtotalP);
-  printf("NV = %d;\n", stokes->NtotalV);
-  printf("NP = %d;\n", stokes->NtotalP);
-  printf("A = [");
-  stokesPrintOperator(stokes);
-  printf("];\n\n");
-  printf("f = [");
-  stokesVecPrint(stokes, stokes->f);
-  printf("];\n");
-
-  printf("xx = [");
-  for (int e = 0; e < stokes->meshV->Nelements; e++) {
-    for (int i = 0; i < stokes->meshV->Np; i++) {
-      printf("% .20e\n", stokes->meshV->x[e*stokes->meshV->Np + i]);
-    }
-  }
-  printf("];\n\n");
-
-  printf("yy = [");
-  for (int e = 0; e < stokes->meshV->Nelements; e++) {
-    for (int i = 0; i < stokes->meshV->Np; i++) {
-      printf("% .20e\n", stokes->meshV->y[e*stokes->meshV->Np + i]);
-    }
-  }
-  printf("];\n\n");
-
-  printf("w = [");
-
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    printf("% .20e\n", stokes->meshV->ogs->invDegree[i]);
-  }
-
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    printf("% .20e\n", stokes->meshV->ogs->invDegree[i]);
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    printf("% .20e\n", stokes->meshP->ogs->invDegree[i]);
-  }
-
-  printf("];\n\n");
-
-  exit(0);
-  */
-
   /* Allocate work vectors. */
-  stokesAllocateVec(stokes, &p);
-  stokesAllocateVec(stokes, &z);
-  stokesAllocateVec(stokes, &r);
-  stokesAllocateVec(stokes, &r_old);
-  stokesAllocateVec(stokes, &w);
-  stokesAllocateVec(stokes, &w_old);
+  stokesVecAllocate(stokes, &p);
+  stokesVecAllocate(stokes, &z);
+  stokesVecAllocate(stokes, &r);
+  stokesVecAllocate(stokes, &r_old);
+  stokesVecAllocate(stokes, &w);
+  stokesVecAllocate(stokes, &w_old);
 
   stokesOperator(stokes, u, r);                                /* r = f - Au               */
   stokesVecScaledAdd(stokes, 1.0, stokes->f, -1.0, r);
@@ -160,11 +77,13 @@ void stokesSolve(stokes_t *stokes)
 
   /* Adjust the tolerance to account for small initial residual norms. */
   tol = mymax(tol*fabs(eta), tol);
-  printf("MINRES:  initial eta = % .15e, target %.15e\n", eta, tol);
+  if (verbose)
+    printf("MINRES:  initial eta = % .15e, target %.15e\n", eta, tol);
 
   /* MINRES iteration loop. */
   for (int i = 0; i < maxiter; i++) {
-    printf("MINRES:  it % 3d  eta = % .15e\n", i, eta);
+    if (verbose)
+      printf("MINRES:  it % 3d  eta = % .15e\n", i, eta);
     if (fabs(eta) < tol) {
       if (verbose)
         printf("MINRES converged in %d iterations (eta = % .15e).\n", i, eta);
@@ -201,96 +120,12 @@ void stokesSolve(stokes_t *stokes)
   }
 
   /* Free work vectors. */
-  stokesFreeVec(stokes, &p);
-  stokesFreeVec(stokes, &z);
-  stokesFreeVec(stokes, &r);
-  stokesFreeVec(stokes, &r_old);
-  stokesFreeVec(stokes, &w);
-  stokesFreeVec(stokes, &w_old);
+  stokesVecFree(stokes, &p);
+  stokesVecFree(stokes, &z);
+  stokesVecFree(stokes, &r);
+  stokesVecFree(stokes, &r_old);
+  stokesVecFree(stokes, &w);
+  stokesVecFree(stokes, &w_old);
 
   return;
-}
-
-static void stokesAllocateVec(stokes_t *stokes, stokesVec_t *v)
-{
-  v->x = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
-  v->y = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
-  if (stokes->meshV->dim == 3)
-    v->z = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
-  else
-    v->z = NULL;
-  v->p = (dfloat*)calloc(stokes->NtotalP, sizeof(dfloat));
-
-  return;
-}
-
-static void stokesFreeVec(stokes_t *stokes, stokesVec_t *v)
-{
-  free(v->x);
-  free(v->y);
-  if (stokes->meshV->dim == 0)
-    free(v->z);
-  free(v->p);
-
-  return;
-}
-
-// TODO:  Only works for 2D.
-static void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c)
-{
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    v.x[i] *= c;
-    v.y[i] *= c;
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    v.p[i] *= c;
-  }
-
-  return;
-}
-
-// Computes v <-- au + bv.
-//
-// TODO:  Only works for 2D.
-static void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
-{
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    v.x[i] = a*u.x[i] + b*v.x[i];
-    v.y[i] = a*u.y[i] + b*v.y[i];
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    v.p[i] = a*u.p[i] + b*v.p[i];
-  }
-}
-
-// Computes c = v'*u
-//
-// TODO:  Only works for 2D.
-static void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
-{
-  *c = 0.0;
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    *c += (u.x[i]*v.x[i] + u.y[i]*v.y[i])*stokes->meshV->ogs->invDegree[i];
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    *c += u.p[i]*v.p[i]*stokes->meshP->ogs->invDegree[i];
-  }
-}
-
-// Copies v <-- u.
-//
-// TODO:  Only works for 2D.
-static void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
-{
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    v.x[i] = u.x[i];
-    v.y[i] = u.y[i];
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    v.p[i] = u.p[i];
-  }
 }

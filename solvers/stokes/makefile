@@ -48,6 +48,7 @@ src/stokesPreconditioner.o \
 src/stokesSetup.o \
 src/stokesSolve.o \
 src/stokesSolveSetup.o \
+src/stokesVec.o \
 
 # library objects
 LOBJS = \

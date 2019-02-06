@@ -61,14 +61,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   stokesApplyDivergenceYTranspose(stokes, v.y, ByTvy);
 
   /* Add up the contributions from the blocks. */
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    Av.x[i] = 0;
-    Av.y[i] = 0;
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++) {
-    Av.p[i] = 0;
-  }
+  stokesVecZero(stokes, Av);
 
   for (int i = 0; i < stokes->NtotalV; i++) {
     Av.x[i] += Kvx[i] - Bxvp[i];
@@ -86,17 +79,9 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   free(BxTvx);
   free(ByTvy);
 
-  // Gather-scatter for C0 FEM.
-  //
-  // TODO:  Make a function for this.
-  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(Av.x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-    ogsGatherScatter(Av.y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-  }
-
-  if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(Av.p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
-  }
+  /* Gather-scatter for C0 FEM. */
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS"))
+    stokesVecGatherScatter(stokes, Av);
 
   return;
 }
@@ -496,4 +481,24 @@ static void stokesApplyStiffness(stokes_t *stokes, dfloat *v, dfloat *Av)
   free(tmp11);
 
   return;
+}
+
+/*****************************************************************************/
+
+static void stokesOperatorPrint(stokes_t *stokes)
+{
+  stokesVec_t v, Av;
+
+  stokesVecAllocate(stokes, &v);
+  stokesVecAllocate(stokes, &Av);
+
+  for (int i = 0; i < stokes->Ndof; i++) {
+    v.v[i] = 1.0;
+    stokesOperator(stokes, v, Av);
+    stokesVecPrint(stokes, Av);
+    v.v[i] = 0.0;
+  }
+
+  stokesVecFree(stokes, &v);
+  stokesVecFree(stokes, &Av);
 }
