@@ -26,6 +26,8 @@ SOFTWARE.
 
 #include "stokes.h"
 
+static void stokesSetupRHS(stokes_t *stokes);
+
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
   int      velocityN, pressureN, dim, elementType;
@@ -83,6 +85,16 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   }
 
   stokesSolveSetup(stokes, kernelInfoV, kernelInfoP);
+  stokesSetupRHS(stokes);
+
+  return stokes;
+}
+
+static void stokesSetupRHS(stokes_t *stokes)
+{
+  int dim;
+
+  stokes->options.getArgs("MESH DIMENSION", dim);
 
   // Initialize right-hand side with the forcing term.
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
@@ -115,16 +127,16 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   // Gather-scatter for C0 FEM.
   //
   // TODO:  Make a function for this.
-  if (options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
     ogsGatherScatter(stokes->f.x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
     ogsGatherScatter(stokes->f.y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
     if (dim == 3)
       ogsGatherScatter(stokes->f.z, ogsDfloat, ogsAdd, stokes->meshV->ogs);
   }
 
-  if (options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
+  if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
     ogsGatherScatter(stokes->f.p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
   }
 
-  return stokes;
+  return;
 }
