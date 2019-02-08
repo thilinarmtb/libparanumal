@@ -55,7 +55,15 @@ static void stokesSolveMINRES(stokes_t *stokes)
 
   u = stokes->u;
 
-  /* Allocate work vectors. */
+  /* Allocate work vectors.
+   *
+   * TODO:  These vectors reside entirely on the device---no need to waste
+   * memory for their host counterparts.
+   *
+   * TODO:  Also:  should these be owned by the stokes_t so we don't have to
+   * re-allocate every time we want to solve?
+   */
+
   stokesVecAllocate(stokes, &p);
   stokesVecAllocate(stokes, &z);
   stokesVecAllocate(stokes, &r);

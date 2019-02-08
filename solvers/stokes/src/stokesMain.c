@@ -44,6 +44,8 @@ int main(int argc, char **argv) {
   stokes = stokesSetup(kernelInfoP, kernelInfoV, options);
   stokesSolve(stokes);
 
+  stokesVecCopyDeviceToHost(stokes->u);
+
   /* Compute error (if applicable.) */
   dfloat errxInf = 0.0, erryInf = 0.0, errxDL2 = 0.0, erryDL2 = 0.0;
   for (int e = 0; e < stokes->meshV->Nelements; e++) {

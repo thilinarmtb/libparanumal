@@ -124,19 +124,11 @@ static void stokesSetupRHS(stokes_t *stokes)
   if (dim == 3)
     meshApplyElementMatrix(stokes->meshV, stokes->meshV->MM, stokes->f.z, stokes->f.z);
 
-  // Gather-scatter for C0 FEM.
-  //
-  // TODO:  Make a function for this.
-  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(stokes->f.x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-    ogsGatherScatter(stokes->f.y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-    if (dim == 3)
-      ogsGatherScatter(stokes->f.z, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-  }
+  // Move RHS to the device.
+  stokesVecCopyHostToDevice(stokes->f);
 
-  if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(stokes->f.p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
-  }
+  // Gather-scatter for C0 FEM.
+  stokesVecGatherScatter(stokes, stokes->f);
 
   return;
 }

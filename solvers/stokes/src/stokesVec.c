@@ -26,6 +26,24 @@ SOFTWARE.
 
 #include "stokes.h"
 
+/* Host versions of stokesVec operations (for debugging only). */
+static void stokesVecCopyHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
+static void stokesVecGatherScatterHost(stokes_t *stokes, stokesVec_t v);
+static void stokesVecInnerProductHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
+static void stokesVecScaleHost(stokes_t *stokes, stokesVec_t v, dfloat c);
+static void stokesVecScaledAddHost(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);
+static void stokesVecZeroHost(stokes_t *stokes, stokesVec_t v);
+
+/* Device versions of stokesVec operations. */
+static void stokesVecCopyDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
+static void stokesVecGatherScatterDevice(stokes_t *stokes, stokesVec_t v);
+static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
+static void stokesVecScaleDevice(stokes_t *stokes, stokesVec_t v, dfloat c);
+static void stokesVecScaledAddDevice(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);
+static void stokesVecZeroDevice(stokes_t *stokes, stokesVec_t v);
+
+/*****************************************************************************/
+
 void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v)
 {
   v->v = (dfloat*)calloc(stokes->Ndof, sizeof(dfloat));
@@ -40,14 +58,95 @@ void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v)
     v->p = v->v + 3*stokes->NtotalV;
   }
 
+  v->o_v = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat), v->v);
+
+  v->o_x = v->o_v;
+  v->o_y = v->o_v + stokes->NtotalV*sizeof(dfloat);
+  if (stokes->meshV->dim == 2) {
+    v->o_p = v->o_v + 2*stokes->NtotalV*sizeof(dfloat);
+  } else if (stokes->meshV->dim == 3) {
+    v->o_z = v->o_v + 2*stokes->NtotalV*sizeof(dfloat);
+    v->o_p = v->o_p + 3*stokes->NtotalV*sizeof(dfloat);
+  }
+
   return;
 }
 
-/* Copies v <-- u.
- *
- * TODO:  Replace with OCCA kernel.
- */
+void stokesVecFree(stokes_t *stokes, stokesVec_t *v)
+{
+  free(v->v);
+  v->v = NULL;
+  v->x = NULL;
+  v->y = NULL;
+  v->z = NULL;
+  v->p = NULL;
+
+  v->o_v.free();
+
+  /* TODO:  What to do with the rest of the device pointers? */
+
+  return;
+}
+
+void stokesVecCopyHostToDevice(stokesVec_t v)
+{
+  v.o_v.copyFrom(v.v);
+  return;
+}
+
+void stokesVecCopyDeviceToHost(stokesVec_t v)
+{
+  v.o_v.copyTo(v.v);
+  return;
+}
+
+/*****************************************************************************/
+
+/* Copies v <-- u. */
 void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
+{
+  stokesVecCopyDevice(stokes, u, v);
+  return;
+}
+
+/* Computes v <-- c*v for vector v, scalar c. */
+void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
+{
+  stokesVecGatherScatterDevice(stokes, v);
+  return;
+}
+
+/* Computes c = v'*u. */
+void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
+{
+  stokesVecInnerProductDevice(stokes, u, v, c);
+  return;
+}
+
+/* Computes v <-- c*v for vector v, scalar c. */
+void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c)
+{
+  stokesVecScaleDevice(stokes, v, c);
+  return;
+}
+
+/* Computes v <-- au + bv for vectors u, v and scalars a, b. */
+void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
+{
+  stokesVecScaledAddDevice(stokes, a, u, b, v);
+  return;
+}
+
+/* Sets v <-- 0. */
+void stokesVecZero(stokes_t *stokes, stokesVec_t v)
+{
+  stokesVecZeroDevice(stokes, v);
+  return;
+}
+
+/*****************************************************************************/
+
+static void stokesVecCopyHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
 {
   for (int i = 0; i < stokes->Ndof; i++)
     v.v[i] = u.v[i];
@@ -55,7 +154,7 @@ void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
   return;
 }
 
-void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
+static void stokesVecGatherScatterHost(stokes_t *stokes, stokesVec_t v)
 {
   ogsGatherScatter(v.x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
   ogsGatherScatter(v.y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
@@ -66,54 +165,11 @@ void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
   return;
 }
 
-void stokesVecFree(stokes_t *stokes, stokesVec_t *v)
-{
-  free(v->v);
-
-  v->v = NULL;
-  v->x = NULL;
-  v->y = NULL;
-  v->z = NULL;
-  v->p = NULL;
-
-  return;
-}
-
-/* Computes v <-- c*v for vector v, scalar c.
- *
- * TODO:  Replace with OCCA kernel.
- */
-void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c)
-{
-  for (int i = 0; i < stokes->Ndof; i++)
-    v.v[i] *= c;
-
-  return;
-}
-
-/* Computes v <-- au + bv for vectors u, v and scalars a, b.
- *
- * TODO:  Replace with OCCA kernel.
- */
-void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
-{
-  for (int i = 0; i < stokes->Ndof; i++)
-    v.v[i] = a*u.v[i] + b*v.v[i];
-
-  return;
-}
-
-/* Computes c = v'*u
- *
- * TODO:  The inverse degree weighting is only applicable for C0 FEM.
- *
- * TODO:  Replace with OCCA kernel.
- */
-void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
+/* TODO:  The inverse degree weighting is only applicable for C0 FEM. */
+static void stokesVecInnerProductHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
 {
   *c = 0.0;
 
-  /* Easier to go component-by-component because of the weights. */
   if (stokes->meshV->dim == 2) {
     for (int i = 0; i < stokes->NtotalV; i++)
       *c += (u.x[i]*v.x[i] + u.y[i]*v.y[i])*stokes->meshV->ogs->invDegree[i];
@@ -128,10 +184,108 @@ void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloa
   return;
 }
 
-/* Sets v <-- 0. */
-void stokesVecZero(stokes_t *stokes, stokesVec_t v)
+static void stokesVecScaleHost(stokes_t *stokes, stokesVec_t v, dfloat c)
+{
+  for (int i = 0; i < stokes->Ndof; i++)
+    v.v[i] *= c;
+
+  return;
+}
+
+static void stokesVecScaledAddHost(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
+{
+  for (int i = 0; i < stokes->Ndof; i++)
+    v.v[i] = a*u.v[i] + b*v.v[i];
+
+  return;
+}
+
+static void stokesVecZeroHost(stokes_t *stokes, stokesVec_t v)
 {
   memset(v.v, 0, stokes->Ndof*sizeof(dfloat));
+  return;
+}
+
+/*****************************************************************************/
+
+static void stokesVecCopyDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
+{
+  v.o_v.copyFrom(u.o_v);
+  return;
+}
+
+/* TODO:  The inverse degree weighting is only applicable for C0 FEM.
+ *
+ * TODO:  Might it be better to store the inverse degree weights in one big
+ * long vector of length stokes->Ndof and call the inner product kernel just
+ * once?  This would use more memory, but it might be more efficient, and it
+ * would simplify the code.)
+ */
+static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
+{
+  *c = 0.0;
+
+  /* TODO:  Replace host loops with further kernel calls if we had too many
+   * blocks.  (See, e.g., ellipticWeightedInnerProduct().)
+   */
+  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_x, v.o_x, stokes->o_workV);
+  stokes->o_workV.copyTo(stokes->workV);
+  for (int i = 0; i < stokes->NblockV; i++)
+    *c += stokes->workV[i];
+
+  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_y, v.o_y, stokes->o_workV);
+  stokes->o_workV.copyTo(stokes->workV);
+  for (int i = 0; i < stokes->NblockV; i++)
+    *c += stokes->workV[i];
+
+  if (stokes->meshV->dim == 3) {
+    stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_z, v.o_z, stokes->o_workV);
+    stokes->o_workV.copyTo(stokes->workV);
+    for (int i = 0; i < stokes->NblockV; i++)
+      *c += stokes->workV[i];
+  }
+
+  stokes->weightedInnerProductKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, u.o_p, v.o_p, stokes->o_workP);
+  stokes->o_workP.copyTo(stokes->workP);
+  for (int i = 0; i < stokes->NblockP; i++)
+    *c += stokes->workP[i];
+
+  /* TODO:  MPI. */
+
+  return;
+}
+
+static void stokesVecGatherScatterDevice(stokes_t *stokes, stokesVec_t v)
+{
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
+    ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+    ogsGatherScatter(v.o_y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+    if (stokes->meshV->dim == 3)
+      ogsGatherScatter(v.o_z, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+  }
+
+  if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
+    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
+  }
+
+  return;
+}
+
+static void stokesVecScaleDevice(stokes_t *stokes, stokesVec_t v, dfloat c)
+{
+  stokes->vecScaleKernel(stokes->Ndof, c, v.o_v);
+  return;
+}
+
+static void stokesVecScaledAddDevice(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
+{
+  stokes->vecScaledAddKernel(stokes->Ndof, a, u.o_v, b, v.o_v);
+  return;
+}
+
+static void stokesVecZeroDevice(stokes_t *stokes, stokesVec_t v)
+{
+  stokes->vecZeroKernel(stokes->Ndof, v.o_v);
   return;
 }
 

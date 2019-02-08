@@ -24,10 +24,27 @@ SOFTWARE.
 
 */
 
-#include "stokes.h"
-
-void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+/* Raises the pressure variable into the velocity space. */
+@kernel void stokesRaisePressureQuad2D(const dlong Nelements,
+                                       @restrict const dfloat *interpRaise,
+                                       @restrict const dfloat *p,
+                                       @restrict dfloat *pRaised)
 {
-  stokesVecCopy(stokes, v, Mv);
-  return;
+  /* TODO:  This is inefficient (c depends only on j, k and is recomputed for
+   * each j, k pair whenever i changes; we don't use shared memory; etc.), but
+   * it's going to go away eventually, so we don't care.
+   */
+  for (int e = 0; e < Nelements; e++; @outer(0)) {
+    for (int i = 0; i < p_NqV; i++; @inner(1)) {
+      for (int j = 0; j < p_NqV; j++; @inner(0)) {
+        pRaised[e*p_NpV + i*p_NqV + j] = 0.0;
+        for (int k = 0; k < p_NqP; k++) {
+          dfloat c = 0.0;
+          for (int n = 0; n < p_NqP; n++)
+            c += interpRaise[j*p_NqP + n]*p[e*p_NpP + k*p_NqP + n];
+          pRaised[e*p_NpV + i*p_NqV + j] += c*interpRaise[i*p_NqP + k];
+        }
+      }
+    }
+  }
 }

@@ -26,22 +26,91 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesApplyStiffness(stokes_t *stokes, dfloat *v, dfloat *Av);
-static void stokesApplyDivergenceX(stokes_t *stokes, dfloat *v, dfloat *Av);
-static void stokesApplyDivergenceY(stokes_t *stokes, dfloat *v, dfloat *Av);
-static void stokesApplyDivergenceXTranspose(stokes_t *stokes, dfloat *v, dfloat *Av);
-static void stokesApplyDivergenceYTranspose(stokes_t *stokes, dfloat *v, dfloat *Av);
+/* Host implemenation of Stokes operator for C0 FEM on Quad2D (for debugging only). */
+static void stokesOperatorQuad2DHost(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
+static void stokesApplyStiffnessQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av);
+static void stokesApplyDivergenceXQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av);
+static void stokesApplyDivergenceYQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av);
+static void stokesApplyDivergenceXTransposeQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av);
+static void stokesApplyDivergenceYTransposeQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av);
 
 /* Applies the Stokes operator to the vector v, storing the result in Av.  Note
  * that v and Av cannot be the same.
  *
- * TODO:  This is woefully inefficient---giant wastes of both flops and
- * memory---but we're going to blow it all away once we get the thing working
- * anyway.
- *
- * TODO:  This only works for 2D quadrilaterals at the moment.
+ * TODO:  This only works for Quad2D at the moment.
  */
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
+{
+  /* TODO:  We re-allocate these scratch variables every time we call the
+   * operator, but they're going to go away eventually, so we don't care.  keep
+   * re-allocating them.
+   */
+  occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
+  occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
+
+  stokesVecZero(stokes, Av);
+
+  /* NB:  These kernels MUST be called in this order, as they modify Av incrementally.
+   *
+   * TODO:  Fuse these into one big Stokes Ax kernel?
+   */
+
+  stokes->stiffnessKernel(stokes->meshV->Nelements,
+                          stokes->meshV->o_ggeo,
+                          stokes->meshV->o_Dmatrices,
+                          stokes->meshV->o_Smatrices,
+                          stokes->meshV->o_MM,
+                          0.0,
+                          v.o_x,
+                          Av.o_x);
+
+  stokes->stiffnessKernel(stokes->meshV->Nelements,
+                          stokes->meshV->o_ggeo,
+                          stokes->meshV->o_Dmatrices,
+                          stokes->meshV->o_Smatrices,
+                          stokes->meshV->o_MM,
+                          0.0,
+                          v.o_y,
+                          Av.o_y);
+
+  stokes->raisePressureKernel(stokes->meshV->Nelements,
+                              o_interpRaise,
+                              v.o_p,
+                              o_pRaised);
+
+  stokes->gradientKernel(stokes->meshV->Nelements,
+                         stokes->NtotalV,
+                         stokes->meshV->o_Dmatrices,
+                         stokes->meshV->o_vgeo,
+                         o_pRaised,
+                         Av.o_v);
+
+  stokes->divergenceKernel(stokes->meshV->Nelements,
+                           stokes->NtotalV,
+                           stokes->meshV->o_Dmatrices,
+                           stokes->meshV->o_vgeo,
+                           v.o_v,
+                           o_pRaised);
+
+  stokes->lowerPressureKernel(stokes->meshV->Nelements,
+                              o_interpRaise,
+                              o_pRaised,
+                              Av.o_p);
+
+  stokesVecCopyDeviceToHost(Av);
+
+  /* Gather-scatter for C0 FEM. */
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS"))
+    stokesVecGatherScatter(stokes, Av);
+
+  o_pRaised.free();
+  o_interpRaise.free();
+  return;
+}
+
+/******************************************************************************/
+
+void stokesOperatorQuad2DHost(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 {
   dfloat *Kvx, *Kvy, *Bxvp, *Byvp, *BxTvx, *ByTvy;
 
@@ -53,12 +122,12 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   ByTvy = (dfloat*)calloc(stokes->NtotalP, sizeof(dfloat));
 
   /* TODO:  Replace with calls to appropriate kernels (e.g., elliptic Ax kernel). */
-  stokesApplyStiffness(stokes, v.x, Kvx);
-  stokesApplyStiffness(stokes, v.y, Kvy);
-  stokesApplyDivergenceX(stokes, v.p, Bxvp);
-  stokesApplyDivergenceY(stokes, v.p, Byvp);
-  stokesApplyDivergenceXTranspose(stokes, v.x, BxTvx);
-  stokesApplyDivergenceYTranspose(stokes, v.y, ByTvy);
+  stokesApplyStiffnessQuad2DHost(stokes, v.x, Kvx);
+  stokesApplyStiffnessQuad2DHost(stokes, v.y, Kvy);
+  stokesApplyDivergenceXQuad2DHost(stokes, v.p, Bxvp);
+  stokesApplyDivergenceYQuad2DHost(stokes, v.p, Byvp);
+  stokesApplyDivergenceXTransposeQuad2DHost(stokes, v.x, BxTvx);
+  stokesApplyDivergenceYTransposeQuad2DHost(stokes, v.y, ByTvy);
 
   /* Add up the contributions from the blocks. */
   stokesVecZero(stokes, Av);
@@ -86,7 +155,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   return;
 }
 
-static void stokesApplyDivergenceXTranspose(stokes_t *stokes, dfloat *v, dfloat *Av)
+static void stokesApplyDivergenceXTransposeQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av)
 {
   mesh_t *meshV, *meshP;
   dfloat *tmp0, *tmp1, *tmpITy0, *tmpITy1, *Av0, *Av1;
@@ -163,7 +232,7 @@ static void stokesApplyDivergenceXTranspose(stokes_t *stokes, dfloat *v, dfloat 
   return;
 }
 
-static void stokesApplyDivergenceYTranspose(stokes_t *stokes, dfloat *v, dfloat *Av)
+static void stokesApplyDivergenceYTransposeQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av)
 {
   mesh_t *meshV, *meshP;
   dfloat *tmp0, *tmp1, *tmpITy0, *tmpITy1, *Av0, *Av1;
@@ -240,7 +309,7 @@ static void stokesApplyDivergenceYTranspose(stokes_t *stokes, dfloat *v, dfloat 
   return;
 }
 
-static void stokesApplyDivergenceX(stokes_t *stokes, dfloat *v, dfloat *Av)
+static void stokesApplyDivergenceXQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av)
 {
   mesh_t *meshV, *meshP;
   dfloat *tmpIx, *tmpIxy, *tmp0, *tmp1, *Av0, *Av1;
@@ -307,7 +376,6 @@ static void stokesApplyDivergenceX(stokes_t *stokes, dfloat *v, dfloat *Av)
     for (int i = 0; i < meshV->Np; i++) {
       Av[e*meshV->Np + i] = Av0[i] + Av1[i];
     }
-
   }
 
   free(Av0);
@@ -321,7 +389,7 @@ static void stokesApplyDivergenceX(stokes_t *stokes, dfloat *v, dfloat *Av)
   return;
 }
 
-static void stokesApplyDivergenceY(stokes_t *stokes, dfloat *v, dfloat *Av)
+static void stokesApplyDivergenceYQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av)
 {
   mesh_t *meshV, *meshP;
   dfloat *tmpIx, *tmpIxy, *tmp0, *tmp1, *Av0, *Av1;
@@ -402,7 +470,7 @@ static void stokesApplyDivergenceY(stokes_t *stokes, dfloat *v, dfloat *Av)
   return;
 }
 
-static void stokesApplyStiffness(stokes_t *stokes, dfloat *v, dfloat *Av)
+static void stokesApplyStiffnessQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *Av)
 {
   mesh_t *meshV, *meshP;
   dfloat *Av00, *Av01, *Av10, *Av11;

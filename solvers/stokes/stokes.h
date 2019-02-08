@@ -36,6 +36,9 @@ SOFTWARE.
 #include "mesh3D.h"
 #include "parAlmond.hpp"
 
+/* Block size for reductions. */
+#define STOKES_REDUCTION_BLOCK_SIZE 256
+
 /* This data structure represents a vector used with the Stokes solver.  The
  * data is allocated in one big long block partitioned as
  *
@@ -47,11 +50,19 @@ SOFTWARE.
  * the component blocks for easy access.
  */
 typedef struct {
-  dfloat *v;  /* Vector data as one long block */
-  dfloat *x;  /* Pointer to start of velocity x-component */
-  dfloat *y;  /* Pointer to start of velocity y-component */
-  dfloat *z;  /* Pointer to start of velocity z-component */
-  dfloat *p;  /* Pointer to start of pressure */
+  /* Host variables .*/
+  dfloat *v;          /* Vector data as one long block */
+  dfloat *x;          /* Pointer to start of velocity x-component */
+  dfloat *y;          /* Pointer to start of velocity y-component */
+  dfloat *z;          /* Pointer to start of velocity z-component */
+  dfloat *p;          /* Pointer to start of pressure */
+
+  /* Device variables. */
+  occa::memory o_v;
+  occa::memory o_x;
+  occa::memory o_y;
+  occa::memory o_z;
+  occa::memory o_p;
 } stokesVec_t;
 
 typedef struct {
@@ -66,6 +77,26 @@ typedef struct {
 
   stokesVec_t u;      /* Solution */
   stokesVec_t f;      /* Right-hand side */
+
+  /* OCCA kernels */
+  occa::kernel raisePressureKernel;
+  occa::kernel lowerPressureKernel;
+  occa::kernel stiffnessKernel;
+  occa::kernel gradientKernel;
+  occa::kernel divergenceKernel;
+  occa::kernel vecScaleKernel;
+  occa::kernel vecScaledAddKernel;
+  occa::kernel vecZeroKernel;
+  occa::kernel weightedInnerProductKernel;
+
+  /* Scratch variables */
+  dlong NblockV;          /* Used for reductions over the velocity DOFs. */
+  dfloat *workV;
+  occa::memory o_workV;
+
+  dlong NblockP;          /* Used for reductions over the pressure DOFs. */
+  dfloat *workP;
+  occa::memory o_workP;
 } stokes_t;
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
@@ -75,9 +106,12 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
 
 void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v);
+void stokesVecFree(stokes_t *stokes, stokesVec_t *v);
+void stokesVecCopyHostToDevice(stokesVec_t v);
+void stokesVecCopyDeviceToHost(stokesVec_t v);
+
 void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
 void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v);
-void stokesVecFree(stokes_t *stokes, stokesVec_t *v);
 void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
 void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c);
 void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);

@@ -24,10 +24,11 @@ SOFTWARE.
 
 */
 
-#include "stokes.h"
-
-void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+@kernel void stokesStiffnessQuad2D(const dlong Nelements,
+                                   const dlong NtotalV,
+                                   @restrict const dfloat *D,
+                                   @restrict const dfloat *ggeo,
+                                   @restrict const dfloat *v,
+                                   @restrict const dfloat *Av)
 {
-  stokesVecCopy(stokes, v, Mv);
-  return;
 }

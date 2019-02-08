@@ -24,10 +24,16 @@ SOFTWARE.
 
 */
 
-#include "stokes.h"
+#define blockSize 256
 
-void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+/* Sets v = 0. */
+@kernel void stokesVecZero(const dlong N,        /* Length of vector */
+                           @restrict dfloat *v)  /* Array of vector data */
 {
-  stokesVecCopy(stokes, v, Mv);
-  return;
+  for (dlong n = 0; n < N; n += blockSize; @outer(0)) {
+    for (dlong i = n; i < (n + blockSize); i++; @inner(0)) {
+      if (i < N)
+        v[i] = 0.0;
+    }
+  }
 }

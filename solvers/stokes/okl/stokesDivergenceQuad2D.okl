@@ -1,0 +1,63 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void stokesDivergenceQuad2D(const dlong Nelements,
+                                    const dlong NtotalV,
+                                    @restrict const dfloat *D,
+                                    @restrict const dfloat *vgeo,
+                                    @restrict const dfloat *v,
+                                    @restrict dfloat *pRaised)
+{
+  for (dlong e = 0; e < Nelements; e++; @outer(0)) {
+    for (int i = 0; i < p_NqV; i++; @inner(1)) {
+      for (int j = 0; j < p_NqV; j++; @inner(0)) {
+        const dlong id = e*p_NpV + i*p_NqV + j;
+        const dlong gid = e*p_NpV*p_Nvgeo + i*p_NqV + j;
+
+        dfloat Gx0 = 0.0;
+        dfloat Gx1 = 0.0;
+        dfloat Gy0 = 0.0;
+        dfloat Gy1 = 0.0;
+
+        for (int k = 0; k < p_NqV; k++) {
+          Gx0 += D[j*p_NqV + k]*v[e*p_NpV + i*p_NqV + k + 0*NtotalV];
+          Gx1 += D[i*p_NqV + k]*v[e*p_NpV + k*p_NqV + j + 0*NtotalV];
+          Gy0 += D[j*p_NqV + k]*v[e*p_NpV + i*p_NqV + k + 1*NtotalV];
+          Gy1 += D[i*p_NqV + k]*v[e*p_NpV + k*p_NqV + j + 1*NtotalV];
+        }
+
+        const dfloat JW = vgeo[gid + p_NpV*p_JWID];
+        Gx0 *= vgeo[gid + p_NpV*p_RXID]*JW;
+        Gx1 *= vgeo[gid + p_NpV*p_SXID]*JW;
+        Gy0 *= vgeo[gid + p_NpV*p_RYID]*JW;
+        Gy1 *= vgeo[gid + p_NpV*p_SYID]*JW;
+
+        pRaised[id] = -Gx0 - Gx1 - Gy0 - Gy1;
+      }
+    }
+  }
+}
+

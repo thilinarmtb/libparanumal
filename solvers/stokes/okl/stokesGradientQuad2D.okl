@@ -1,0 +1,75 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void stokesGradientQuad2D(const dlong Nelements,
+                                  const dlong NtotalV,
+                                  @restrict const dfloat *D,
+                                  @restrict const dfloat *vgeo,
+                                  @restrict const dfloat *pRaised,
+                                  @restrict dfloat *v)
+{
+  /* TODO:  Group the elements into blocks.
+   *
+   * TODO:  Prefetch to shared memory.
+   *
+   * TODO:  Unroll the loop over k?
+   */
+  for (dlong e = 0; e < Nelements; e++; @outer(0)) {
+    for (int i = 0; i < p_NqV; i++; @inner(1)) {
+      for (int j = 0; j < p_NqV; j++; @inner(0)) {
+        const dlong id = e*p_NpV + i*p_NqV + j;
+
+        dfloat Gx0 = 0.0;
+        dfloat Gx1 = 0.0;
+        dfloat Gy0 = 0.0;
+        dfloat Gy1 = 0.0;
+
+        for (int k = 0; k < p_NqV; k++) {
+          const dlong id_ik = e*p_NpV + i*p_NqV + k;
+          const dlong id_kj = e*p_NpV + k*p_NqV + j;
+
+          const dlong gid_ik = e*p_NpV*p_Nvgeo + i*p_NqV + k;
+          const dlong gid_kj = e*p_NpV*p_Nvgeo + k*p_NqV + j;
+
+          const dfloat JW_ik = vgeo[gid_ik + p_NpV*p_JWID];
+          const dfloat JW_kj = vgeo[gid_kj + p_NpV*p_JWID];
+          const dfloat drdxJW_ik = vgeo[gid_ik + p_NpV*p_RXID]*JW_ik;
+          const dfloat drdyJW_ik = vgeo[gid_ik + p_NpV*p_RYID]*JW_ik;
+          const dfloat dsdxJW_kj = vgeo[gid_kj + p_NpV*p_SXID]*JW_kj;
+          const dfloat dsdyJW_kj = vgeo[gid_kj + p_NpV*p_SYID]*JW_kj;
+
+          Gx0 += D[k*p_NqV + j]*pRaised[id_ik]*drdxJW_ik;
+          Gx1 += D[k*p_NqV + i]*pRaised[id_kj]*dsdxJW_kj;
+          Gy0 += D[k*p_NqV + j]*pRaised[id_ik]*drdyJW_ik;
+          Gy1 += D[k*p_NqV + i]*pRaised[id_kj]*dsdyJW_kj;
+        }
+
+        v[id + 0*NtotalV] += -Gx0 - Gx1;
+        v[id + 1*NtotalV] += -Gy0 - Gy1;
+      }
+    }
+  }
+}
