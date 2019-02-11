@@ -26,8 +26,27 @@ SOFTWARE.
 
 #include "stokes.h"
 
+static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
+
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
 {
-  stokesVecCopy(stokes, v, Mv);
+  if (stokes->options.compareArgs("PRECONDITIONER", "NONE")) {
+    stokesVecCopy(stokes, v, Mv);
+  } else if (stokes->options.compareArgs("PRECONDITIONER", "JACOBI")) {
+    stokesJacobiPreconditioner(stokes, v, Mv);
+  } else {
+    printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.",
+           stokes->options.getArgs("PRECONDITIONER").c_str());
+  }
+
+  return;
+}
+
+static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+{
+  stokes->dotMultiplyKernel(stokes->Ndof,
+                            v.o_v,
+                            stokes->precon->invDiagA.o_v,
+                            Mv.o_v);
   return;
 }

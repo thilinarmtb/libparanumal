@@ -45,6 +45,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 AOBJS = \
 src/stokesOperator.o \
 src/stokesPreconditioner.o \
+src/stokesPreconditionerSetup.o \
 src/stokesSetup.o \
 src/stokesSolve.o \
 src/stokesSolveSetup.o \

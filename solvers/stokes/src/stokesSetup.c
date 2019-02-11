@@ -45,6 +45,7 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   options.getArgs("MESH DIMENSION", dim);
 
   stokes->options = options;
+  stokes->elementType = elementType;
 
   // Setup meshes.
   //

@@ -45,6 +45,7 @@ void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::pro
 
   stokesAllocateScratchVars(stokes);
   stokesSetupKernels(stokes, kernelInfoV, kernelInfoP);
+  stokesPreconditionerSetup(stokes);
 
   return;
 }
@@ -65,18 +66,17 @@ static void stokesAllocateScratchVars(stokes_t *stokes)
 static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties& kernelInfoP)
 {
   kernelInfoV["defines/p_blockSize"] = STOKES_REDUCTION_BLOCK_SIZE;
-  //kernelInfoV["defines/p_NblockV"]   = mymax(1, 256/stokes->meshV->Np); /* ??? (See INS) */
-
   kernelInfoV["defines/p_NpV"] = stokes->meshV->Np;
   kernelInfoV["defines/p_NqV"] = stokes->meshV->Nq;
   kernelInfoV["defines/p_NpP"] = stokes->meshP->Np;
   kernelInfoV["defines/p_NqP"] = stokes->meshP->Nq;
 
-  stokes->raisePressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureQuad2D.okl", "stokesRaisePressureQuad2D", kernelInfoV);
-  stokes->lowerPressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureQuad2D.okl", "stokesLowerPressureQuad2D", kernelInfoV);
-  stokes->stiffnessKernel            = stokes->meshV->device.buildKernel(DELLIPTIC "/okl/ellipticAxQuad2D.okl", "ellipticAxQuad2D", kernelInfoV);
-  stokes->gradientKernel             = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
   stokes->divergenceKernel           = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
+  stokes->dotMultiplyKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/dotMultiply.okl", "dotMultiply", kernelInfoV);
+  stokes->gradientKernel             = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
+  stokes->lowerPressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureQuad2D.okl", "stokesLowerPressureQuad2D", kernelInfoV);
+  stokes->raisePressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureQuad2D.okl", "stokesRaisePressureQuad2D", kernelInfoV);
+  stokes->stiffnessKernel            = stokes->meshV->device.buildKernel(DELLIPTIC "/okl/ellipticAxQuad2D.okl", "ellipticAxQuad2D", kernelInfoV);
   stokes->vecScaleKernel             = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecScale.okl", "stokesVecScale", kernelInfoV);
   stokes->vecScaledAddKernel         = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecScaledAdd.okl", "stokesVecScaledAdd", kernelInfoV);
   stokes->vecZeroKernel              = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecZero.okl", "stokesVecZero", kernelInfoV);

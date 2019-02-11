@@ -51,10 +51,21 @@ CONTINUOUS
 MINRES
 
 [KRYLOV SOLVER ITERATION LIMIT]
-100
+1000
 
 [KRYLOV SOLVER TOLERANCE]
 1.0e-8
+
+################################################
+############ PRECONDITIONER OPTIONS ############
+################################################
+
+[PRECONDITIONER]
+#NONE
+JACOBI
+
+[JACOBI BOOST PARAMETER]
+1.0e-2
 
 ################################################
 ################ OTHER OPTIONS #################

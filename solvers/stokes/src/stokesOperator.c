@@ -553,7 +553,7 @@ static void stokesApplyStiffnessQuad2DHost(stokes_t *stokes, dfloat *v, dfloat *
 
 /*****************************************************************************/
 
-static void stokesOperatorPrint(stokes_t *stokes)
+void stokesOperatorPrint(stokes_t *stokes)
 {
   stokesVec_t v, Av;
 
@@ -562,7 +562,9 @@ static void stokesOperatorPrint(stokes_t *stokes)
 
   for (int i = 0; i < stokes->Ndof; i++) {
     v.v[i] = 1.0;
+    stokesVecCopyHostToDevice(v);
     stokesOperator(stokes, v, Av);
+    stokesVecCopyDeviceToHost(Av);
     stokesVecPrint(stokes, Av);
     v.v[i] = 0.0;
   }

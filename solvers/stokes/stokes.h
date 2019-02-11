@@ -50,7 +50,7 @@ SOFTWARE.
  * the component blocks for easy access.
  */
 typedef struct {
-  /* Host variables .*/
+  /* Host variables. */
   dfloat *v;          /* Vector data as one long block */
   dfloat *x;          /* Pointer to start of velocity x-component */
   dfloat *y;          /* Pointer to start of velocity y-component */
@@ -66,24 +66,33 @@ typedef struct {
 } stokesVec_t;
 
 typedef struct {
-  setupAide options;  /* Configuration information. */
+  dfloat boost;          /* Jacobi boosting parameter. */
+  stokesVec_t invDiagA;  /* Boosted inverse of the Stokes operator diagonal */
+} stokesPrecon_t;
 
-  mesh_t *meshV;      /* Velocity mesh */
-  mesh_t *meshP;      /* Pressure mesh */
+typedef struct {
+  setupAide options;       /* Configuration information. */
 
-  int NtotalV;        /* Total number of points in the velocity mesh */
-  int NtotalP;        /* Total number of points in the pressure mesh */
-  int Ndof;           /* Total number of degrees of freedom */
+  int elementType;         /* Element type code */
+  mesh_t *meshV;           /* Velocity mesh */
+  mesh_t *meshP;           /* Pressure mesh */
 
-  stokesVec_t u;      /* Solution */
-  stokesVec_t f;      /* Right-hand side */
+  int NtotalV;             /* Total number of points in the velocity mesh */
+  int NtotalP;             /* Total number of points in the pressure mesh */
+  int Ndof;                /* Total number of degrees of freedom */
+
+  stokesVec_t u;           /* Solution */
+  stokesVec_t f;           /* Right-hand side */
+
+  stokesPrecon_t *precon;  /* Preconditioner */
 
   /* OCCA kernels */
-  occa::kernel raisePressureKernel;
-  occa::kernel lowerPressureKernel;
-  occa::kernel stiffnessKernel;
-  occa::kernel gradientKernel;
   occa::kernel divergenceKernel;
+  occa::kernel dotMultiplyKernel;
+  occa::kernel gradientKernel;
+  occa::kernel lowerPressureKernel;
+  occa::kernel raisePressureKernel;
+  occa::kernel stiffnessKernel;
   occa::kernel vecScaleKernel;
   occa::kernel vecScaledAddKernel;
   occa::kernel vecZeroKernel;
@@ -104,6 +113,7 @@ void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::pro
 void stokesSolve(stokes_t *stokes);
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
+void stokesPreconditionerSetup(stokes_t *stokes);
 
 void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v);
 void stokesVecFree(stokes_t *stokes, stokesVec_t *v);
@@ -117,6 +127,7 @@ void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c);
 void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);
 void stokesVecZero(stokes_t *stokes, stokesVec_t v);
 
+void stokesOperatorPrint(stokes_t *stokes);
 void stokesVecPrint(stokes_t *stokes, stokesVec_t v);
 
 #endif /* STOKES_H */

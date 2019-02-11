@@ -63,9 +63,6 @@ int main(int argc, char **argv) {
       errx = stokes->u.x[ind] - ux_exact;
       erry = stokes->u.y[ind] - uy_exact;
 
-      //printf("ux[%d] = % .15e, uy[%d] = % .15e, errx[%d] = % .15e, erry[%d] = % .15e\n",
-      //       ind, stokes->u.x[ind], ind, stokes->u.y[ind], ind, errx, ind, erry);
-
       if (fabs(errx) > errxInf)
         errxInf = fabs(errx);
       if (fabs(erry) > erryInf)
