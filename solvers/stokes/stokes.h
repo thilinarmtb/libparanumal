@@ -112,7 +112,7 @@ typedef struct {
 } stokes_t;
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
-void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
+void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
 void stokesSolve(stokes_t *stokes);
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);

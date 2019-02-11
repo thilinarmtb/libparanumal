@@ -108,19 +108,22 @@ static void stokesBuildLocalContinuousDiagQuad2D(stokes_t* stokes, dlong e, dflo
 
       for (int k=0;k<mesh->Nq;k++) {
         int id = k+ny*mesh->Nq;
+        dfloat eta = stokes->eta[e*mesh->Np + id];
         dfloat Grr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
-        diagA[iid] += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[nx+k*mesh->Nq];
+        diagA[iid] += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[nx+k*mesh->Nq]*eta;
       }
 
       for (int k=0;k<mesh->Nq;k++) {
         int id = nx+k*mesh->Nq;
+        dfloat eta = stokes->eta[e*mesh->Np + id];
         dfloat Gss = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
-        diagA[iid] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[ny+k*mesh->Nq];
+        diagA[iid] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[ny+k*mesh->Nq]*eta;
       }
 
       int id = nx+ny*mesh->Nq;
+      dfloat eta = stokes->eta[e*mesh->Np + id];
       dfloat Grs = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
-      diagA[iid] += 2*Grs*mesh->D[nx+nx*mesh->Nq]*mesh->D[ny+ny*mesh->Nq];
+      diagA[iid] += 2*Grs*mesh->D[nx+nx*mesh->Nq]*mesh->D[ny+ny*mesh->Nq]*eta;
     }
   }
 

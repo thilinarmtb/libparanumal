@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesSetupProblem(stokes_t *stokes);
+static void stokesSetupRHS(stokes_t *stokes);
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
@@ -34,6 +34,7 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   int      velocityNtotal, pressureNtotal;
   string   fileName;
   stokes_t *stokes;
+  dfloat   *eta;
 
   stokes = new stokes_t();
 
@@ -85,13 +86,29 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
     exit(-1);
   }
 
-  stokesSolveSetup(stokes, kernelInfoV, kernelInfoP);
-  stokesSetupProblem(stokes);
+  /* TODO:  Think about where this should be set. */
+  eta = (dfloat*)calloc(stokes->meshV->Nelements*stokes->meshV->Np, sizeof(dfloat));
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->Np; i++) {
+      int    ind;
+      dfloat x, y;
 
+      ind = e*stokes->meshV->Np + i;
+      x = stokes->meshV->x[ind];
+      y = stokes->meshV->y[ind];
+
+      eta[ind] = 2.0 + sinh(x*y);
+    }
+  }
+
+  stokesSolveSetup(stokes, eta, kernelInfoV, kernelInfoP);
+  stokesSetupRHS(stokes);
+
+  free(eta);
   return stokes;
 }
 
-static void stokesSetupProblem(stokes_t *stokes)
+static void stokesSetupRHS(stokes_t *stokes)
 {
   int dim;
 
@@ -107,7 +124,6 @@ static void stokesSetupProblem(stokes_t *stokes)
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
 
-      //stokes->eta[ind] = 1.0;
       //stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - 24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) - 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0);
       //stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + 24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0);
 
@@ -132,9 +148,6 @@ static void stokesSetupProblem(stokes_t *stokes)
 
   // Move RHS to the device.
   stokesVecCopyHostToDevice(stokes->f);
-
-  // Move the viscosity over to the device.
-  stokes->o_eta.copyFrom(stokes->eta);
 
   // Gather-scatter for C0 FEM.
   stokesVecGatherScatter(stokes, stokes->f);

@@ -29,7 +29,7 @@ SOFTWARE.
 static void stokesAllocateScratchVars(stokes_t *stokes);
 static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties& kernelInfoP);
 
-void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
+void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
 {
   int verbose = stokes->options.compareArgs("VERBOSE", "TRUE") ? 1 : 0;
 
@@ -44,6 +44,14 @@ void stokesSolveSetup(stokes_t *stokes, occa::properties &kernelInfoV, occa::pro
   stokesVecAllocate(stokes, &stokes->f);
 
   stokes->eta = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
+  if (eta == NULL) {
+    for (int i = 0; i < stokes->NtotalV; i++)
+      stokes->eta[i] = 1.0;
+  } else {
+    for (int i = 0; i < stokes->NtotalV; i++)
+      stokes->eta[i] = eta[i];
+  }
+
   stokes->o_eta = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat), stokes->eta);
 
   stokesAllocateScratchVars(stokes);
