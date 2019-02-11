@@ -84,6 +84,9 @@ typedef struct {
   stokesVec_t u;           /* Solution */
   stokesVec_t f;           /* Right-hand side */
 
+  dfloat      *eta;        /* Viscosity */
+  occa::memory o_eta;
+
   stokesPrecon_t *precon;  /* Preconditioner */
 
   /* OCCA kernels */

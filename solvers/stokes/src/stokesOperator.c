@@ -58,18 +58,14 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   stokes->stiffnessKernel(stokes->meshV->Nelements,
                           stokes->meshV->o_ggeo,
                           stokes->meshV->o_Dmatrices,
-                          stokes->meshV->o_Smatrices,
-                          stokes->meshV->o_MM,
-                          0.0,
+                          stokes->o_eta,
                           v.o_x,
                           Av.o_x);
 
   stokes->stiffnessKernel(stokes->meshV->Nelements,
                           stokes->meshV->o_ggeo,
                           stokes->meshV->o_Dmatrices,
-                          stokes->meshV->o_Smatrices,
-                          stokes->meshV->o_MM,
-                          0.0,
+                          stokes->o_eta,
                           v.o_y,
                           Av.o_y);
 

@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesSetupRHS(stokes_t *stokes);
+static void stokesSetupProblem(stokes_t *stokes);
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
@@ -86,12 +86,12 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   }
 
   stokesSolveSetup(stokes, kernelInfoV, kernelInfoP);
-  stokesSetupRHS(stokes);
+  stokesSetupProblem(stokes);
 
   return stokes;
 }
 
-static void stokesSetupRHS(stokes_t *stokes)
+static void stokesSetupProblem(stokes_t *stokes)
 {
   int dim;
 
@@ -107,8 +107,13 @@ static void stokesSetupRHS(stokes_t *stokes)
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
 
-      stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y) - 24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) - 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0);
-      stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y) + 24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0);
+      //stokes->eta[ind] = 1.0;
+      //stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - 24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) - 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0);
+      //stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + 24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0);
+
+      stokes->eta[ind] = 2.0 + sinh(x*y);
+      stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - (2.0 + sinh(x*y))*(24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) + 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0)) + 36.0*x*pow(1.0 - x*x, 2.0)*pow(1.0 - y*y, 2.0)*y*y*cosh(x*y) - 6.0*pow(1.0 - x*x, 3.0)*(1.0 - 5.0*y*y)*(1.0 - y*y)*x*cosh(x*y);
+      stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + (2.0 + sinh(x*y))*(24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0)) + 6.0*pow(1.0 - y*y, 3.0)*(1.0 - 5.0*x*x)*(1.0 - x*x)*y*cosh(x*y) - 36.0*y*pow(1.0 - y*y, 2.0)*pow(1.0 - x*x, 2.0)*x*x*cosh(x*y);
 
       // NB:  We have to incorporate the Jacobian factor because meshApplyElementMatrix() assumes it.
       //
@@ -127,6 +132,9 @@ static void stokesSetupRHS(stokes_t *stokes)
 
   // Move RHS to the device.
   stokesVecCopyHostToDevice(stokes->f);
+
+  // Move the viscosity over to the device.
+  stokes->o_eta.copyFrom(stokes->eta);
 
   // Gather-scatter for C0 FEM.
   stokesVecGatherScatter(stokes, stokes->f);
