@@ -72,14 +72,19 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
       meshOccaSetup2D(stokes->meshV, options, kernelInfoV);
       meshOccaSetup2D(stokes->meshP, options, kernelInfoP);
     } else {
-      printf("ERROR:  Support for elements other than QUADRILATERALS not yet implemented.\n");
+      printf("ERROR:  Support for 2D elements other than QUADRILATERALS not yet implemented.\n");
       MPI_Finalize();
       exit(-1);
     }
   } else if (dim == 3) {
-    printf("ERROR:  Support for 3D elements not yet implemented.\n");
-    MPI_Finalize();
-    exit(-1);
+    if (elementType == HEXAHEDRA) {
+      meshOccaSetup3D(stokes->meshV, options, kernelInfoV);
+      meshOccaSetup3D(stokes->meshP, options, kernelInfoP);
+    } else {
+      printf("ERROR:  Support for 3D elements other than HEXAHEDRA not yet implemented.\n");
+      MPI_Finalize();
+      exit(-1);
+    }
   } else {
     printf("ERROR:  MESH DIMENSION must be 2 or 3.\n");
     MPI_Finalize();
@@ -91,13 +96,15 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
       int    ind;
-      dfloat x, y;
+      dfloat x, y, z;
 
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
+      z = stokes->meshV->y[ind];
 
-      eta[ind] = 2.0 + sinh(x*y);
+      //eta[ind] = 2.0 + sinh(x*y);
+      eta[ind] = 1.0;
     }
   }
 
@@ -118,25 +125,36 @@ static void stokesSetupRHS(stokes_t *stokes)
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
       int    ind;
-      dfloat x, y, J;
+      dfloat x, y, z, J;
 
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
+      z = stokes->meshV->y[ind];
 
+      // 2D square constant viscosity test case.
+      //stokes->eta[ind] = 1.0;
       //stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - 24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) - 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0);
       //stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + 24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0);
 
-      stokes->eta[ind] = 2.0 + sinh(x*y);
-      stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - (2.0 + sinh(x*y))*(24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) + 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0)) + 36.0*x*pow(1.0 - x*x, 2.0)*pow(1.0 - y*y, 2.0)*y*y*cosh(x*y) - 6.0*pow(1.0 - x*x, 3.0)*(1.0 - 5.0*y*y)*(1.0 - y*y)*x*cosh(x*y);
-      stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + (2.0 + sinh(x*y))*(24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0)) + 6.0*pow(1.0 - y*y, 3.0)*(1.0 - 5.0*x*x)*(1.0 - x*x)*y*cosh(x*y) - 36.0*y*pow(1.0 - y*y, 2.0)*pow(1.0 - x*x, 2.0)*x*x*cosh(x*y);
+      // 2D square variable viscosity test case.
+      //stokes->eta[ind] = 2.0 + sinh(x*y);
+      //stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - (2.0 + sinh(x*y))*(24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) + 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0)) + 36.0*x*pow(1.0 - x*x, 2.0)*pow(1.0 - y*y, 2.0)*y*y*cosh(x*y) - 6.0*pow(1.0 - x*x, 3.0)*(1.0 - 5.0*y*y)*(1.0 - y*y)*x*cosh(x*y);
+      //stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + (2.0 + sinh(x*y))*(24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0)) + 6.0*pow(1.0 - y*y, 3.0)*(1.0 - 5.0*x*x)*(1.0 - x*x)*y*cosh(x*y) - 36.0*y*pow(1.0 - y*y, 2.0)*pow(1.0 - x*x, 2.0)*x*x*cosh(x*y);
+
+      // 3D cube constant viscosity test case.
+      //stokes->eta[ind] = 1.0;
+      stokes->f.x[ind] = M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*z) + 48.0*z*z*z - 72.0*z*(1.0 - z*z);
+      stokes->f.y[ind] = M_PI*sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*z) + 48.0*x*x*x - 72.0*x*(1.0 - x*x);
+      stokes->f.z[ind] = M_PI*sin(M_PI*x)*sin(M_PI*y)*cos(M_PI*z) + 48.0*y*y*y - 72.0*y*(1.0 - y*y);
 
       // NB:  We have to incorporate the Jacobian factor because meshApplyElementMatrix() assumes it.
       //
-      // TODO:  This may assume the use of quadrilateral elements.
+      // TODO:  This may assume the use of quadrilateral/hexahedral elements.
       J = stokes->meshV->vgeo[stokes->meshV->Np*(e*stokes->meshV->Nvgeo + JID) + i];
       stokes->f.x[ind] *= J;
       stokes->f.y[ind] *= J;
+      stokes->f.z[ind] *= J;
     }
   }
 

@@ -69,6 +69,15 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                           v.o_y,
                           Av.o_y);
 
+  if (stokes->meshV->dim == 3) {
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_ggeo,
+                            stokes->meshV->o_Dmatrices,
+                            stokes->o_eta,
+                            v.o_z,
+                            Av.o_z);
+  }
+
   stokes->raisePressureKernel(stokes->meshV->Nelements,
                               o_interpRaise,
                               v.o_p,

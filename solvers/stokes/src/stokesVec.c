@@ -66,7 +66,7 @@ void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v)
     v->o_p = v->o_v + 2*stokes->NtotalV*sizeof(dfloat);
   } else if (stokes->meshV->dim == 3) {
     v->o_z = v->o_v + 2*stokes->NtotalV*sizeof(dfloat);
-    v->o_p = v->o_p + 3*stokes->NtotalV*sizeof(dfloat);
+    v->o_p = v->o_v + 3*stokes->NtotalV*sizeof(dfloat);
   }
 
   return;

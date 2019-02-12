@@ -47,40 +47,72 @@ int main(int argc, char **argv) {
   stokesVecCopyDeviceToHost(stokes->u);
 
   /* Compute error (if applicable.) */
-  dfloat errxInf = 0.0, erryInf = 0.0, errxDL2 = 0.0, erryDL2 = 0.0;
+  dfloat errxInf = 0.0, erryInf = 0.0, errzInf = 0.0;
+  dfloat errxDL2 = 0.0, erryDL2 = 0.0, errzDL2 = 0.0;
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
       int    ind;
-      dfloat x, y, errx, erry;
+      dfloat x, y, z;
+      dfloat errx, erry, errz;
 
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
+      z = stokes->meshV->z[ind];
 
-      dfloat ux_exact = 6.0*pow(1.0 - x*x, 3.0)*pow(1.0 - y*y, 2.0)*y;
-      dfloat uy_exact = -6.0*pow(1.0 - y*y, 3.0)*pow(1.0 - x*x, 2.0)*x;
+      //dfloat ux_exact = 6.0*pow(1.0 - x*x, 3.0)*pow(1.0 - y*y, 2.0)*y;
+      //dfloat uy_exact = -6.0*pow(1.0 - y*y, 3.0)*pow(1.0 - x*x, 2.0)*x;
+
+      dfloat ux_exact = -6.0*z*pow(1.0 - z*z, 2.0);
+      dfloat uy_exact = -6.0*x*pow(1.0 - x*x, 2.0);
+      dfloat uz_exact = -6.0*y*pow(1.0 - y*y, 2.0);
 
       errx = stokes->u.x[ind] - ux_exact;
       erry = stokes->u.y[ind] - uy_exact;
+      errz = stokes->u.z[ind] - uz_exact;
 
       if (fabs(errx) > errxInf)
         errxInf = fabs(errx);
       if (fabs(erry) > erryInf)
         erryInf = fabs(erry);
+      if (fabs(errz) > errzInf)
+        errzInf = fabs(errz);
       errxDL2 += errx*errx;
       erryDL2 += erry*erry;
+      errzDL2 += errz*errz;
     }
   }
 
   errxDL2 = sqrt(errxDL2);
   erryDL2 = sqrt(erryDL2);
+  errzDL2 = sqrt(errzDL2);
 
   printf("-----\n");
 
   printf("errxInf = % .15e\n", errxInf);
   printf("erryInf = % .15e\n", erryInf);
+  printf("errzInf = % .15e\n", errzInf);
   printf("errxDL2 = % .15e\n", errxDL2);
   printf("erryDL2 = % .15e\n", erryDL2);
+  printf("errzDL2 = % .15e\n", errzDL2);
+
+  printf("-----\n");
+
+  /*
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->Np; i++) {
+      int    ind;
+      dfloat x, y, z;
+
+      ind = e*stokes->meshV->Np + i;
+      x = stokes->meshV->x[ind];
+      y = stokes->meshV->y[ind];
+      z = stokes->meshV->z[ind];
+
+      printf("%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n", x, y, z, stokes->u.x[ind], stokes->u.y[ind], stokes->u.z[ind], stokes->u.p[ind]);
+    }
+  }
+  */
 
   /* Export solution. */
 

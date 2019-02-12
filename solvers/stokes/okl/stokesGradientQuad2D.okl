@@ -44,6 +44,7 @@ SOFTWARE.
 
         dfloat Gx0 = 0.0;
         dfloat Gx1 = 0.0;
+
         dfloat Gy0 = 0.0;
         dfloat Gy1 = 0.0;
 
@@ -56,13 +57,16 @@ SOFTWARE.
 
           const dfloat JW_ik = vgeo[gid_ik + p_NpV*p_JWID];
           const dfloat JW_kj = vgeo[gid_kj + p_NpV*p_JWID];
+
           const dfloat drdxJW_ik = vgeo[gid_ik + p_NpV*p_RXID]*JW_ik;
           const dfloat drdyJW_ik = vgeo[gid_ik + p_NpV*p_RYID]*JW_ik;
+
           const dfloat dsdxJW_kj = vgeo[gid_kj + p_NpV*p_SXID]*JW_kj;
           const dfloat dsdyJW_kj = vgeo[gid_kj + p_NpV*p_SYID]*JW_kj;
 
           Gx0 += D[k*p_NqV + j]*pRaised[id_ik]*drdxJW_ik;
           Gx1 += D[k*p_NqV + i]*pRaised[id_kj]*dsdxJW_kj;
+
           Gy0 += D[k*p_NqV + j]*pRaised[id_ik]*drdyJW_ik;
           Gy1 += D[k*p_NqV + i]*pRaised[id_kj]*dsdyJW_kj;
         }

@@ -39,19 +39,23 @@ SOFTWARE.
 
         dfloat Gx0 = 0.0;
         dfloat Gx1 = 0.0;
+
         dfloat Gy0 = 0.0;
         dfloat Gy1 = 0.0;
 
         for (int k = 0; k < p_NqV; k++) {
           Gx0 += D[j*p_NqV + k]*v[e*p_NpV + i*p_NqV + k + 0*NtotalV];
           Gx1 += D[i*p_NqV + k]*v[e*p_NpV + k*p_NqV + j + 0*NtotalV];
+
           Gy0 += D[j*p_NqV + k]*v[e*p_NpV + i*p_NqV + k + 1*NtotalV];
           Gy1 += D[i*p_NqV + k]*v[e*p_NpV + k*p_NqV + j + 1*NtotalV];
         }
 
         const dfloat JW = vgeo[gid + p_NpV*p_JWID];
+
         Gx0 *= vgeo[gid + p_NpV*p_RXID]*JW;
         Gx1 *= vgeo[gid + p_NpV*p_SXID]*JW;
+
         Gy0 *= vgeo[gid + p_NpV*p_RYID]*JW;
         Gy1 *= vgeo[gid + p_NpV*p_SYID]*JW;
 
@@ -60,4 +64,3 @@ SOFTWARE.
     }
   }
 }
-

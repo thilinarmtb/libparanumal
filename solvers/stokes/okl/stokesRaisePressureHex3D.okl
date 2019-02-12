@@ -25,27 +25,33 @@ SOFTWARE.
 */
 
 /* Raises the pressure variable into the velocity space. */
-@kernel void stokesRaisePressureQuad2D(const dlong Nelements,
-                                       @restrict const dfloat *interpRaise,
-                                       @restrict const dfloat *p,
-                                       @restrict dfloat *pRaised)
+@kernel void stokesRaisePressureHex3D(const dlong Nelements,
+                                      @restrict const dfloat *interpRaise,
+                                      @restrict const dfloat *p,
+                                      @restrict dfloat *pRaised)
 {
-  /* TODO:  This is inefficient (c depends only on j, k and is recomputed for
-   * each j, k pair whenever i changes; we don't use shared memory; etc.), but
-   * it's going to go away eventually, so we don't care.
+  /* TODO:  This is really inefficient, but it's going to go away eventually,
+   * so we don't care.
    */
   for (int e = 0; e < Nelements; e++; @outer(0)) {
-    for (int i = 0; i < p_NqV; i++; @inner(1)) {
-      for (int j = 0; j < p_NqV; j++; @inner(0)) {
-        const dlong ind = e*p_NpV + i*p_NqV + j;
-        pRaised[ind] = 0.0;
-        for (int k = 0; k < p_NqP; k++) {
-          dfloat c = 0.0;
-          for (int n = 0; n < p_NqP; n++)
-            c += interpRaise[j*p_NqP + n]*p[e*p_NpP + k*p_NqP + n];
-          pRaised[ind] += c*interpRaise[i*p_NqP + k];
+    for (int i = 0; i < p_NqV; i++; @inner(2)) {
+      for (int j = 0; j < p_NqV; j++; @inner(1)) {
+        for (int k = 0; k < p_NqV; k++; @inner(0)) {
+          const dlong ind = e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + k;
+          pRaised[ind] = 0.0;
+          for (int ell = 0; ell < p_NqP; ell++) {
+            dfloat c = 0.0;
+            for (int m = 0; m < p_NqP; m++) {
+              dfloat b = 0.0;
+              for (int n = 0; n < p_NqP; n++)
+                b += interpRaise[k*p_NqP + n]*p[e*p_NpP + ell*p_NqP*p_NqP + m*p_NqP + n];
+              c += interpRaise[j*p_NqP + m]*b;
+            }
+            pRaised[ind] += interpRaise[i*p_NqP + ell]*c;
+          }
         }
       }
     }
   }
 }
+

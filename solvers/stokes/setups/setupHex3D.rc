@@ -6,13 +6,16 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-1.msh
+../../meshes/cubeHexM4.msh
 
 [MESH DIMENSION]
-2
+3
 
 [ELEMENT TYPE]
-4
+12
+
+[ELEMENT MAP]
+ISOPARAMETRIC
 
 ################################################
 #################### DEVICE ####################
@@ -51,7 +54,7 @@ CONTINUOUS
 MINRES
 
 [KRYLOV SOLVER ITERATION LIMIT]
-100
+1000
 
 [KRYLOV SOLVER TOLERANCE]
 1.0e-8
@@ -61,8 +64,8 @@ MINRES
 ################################################
 
 [PRECONDITIONER]
-#NONE
-JACOBI
+NONE
+#JACOBI
 
 [JACOBI BOOST PARAMETER]
 1.0e-1
