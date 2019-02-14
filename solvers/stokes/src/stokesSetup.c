@@ -130,7 +130,7 @@ static void stokesSetupRHS(stokes_t *stokes)
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
-      z = stokes->meshV->y[ind];
+      z = stokes->meshV->z[ind];
 
       // 2D square constant viscosity test case.
       //stokes->eta[ind] = 1.0;
