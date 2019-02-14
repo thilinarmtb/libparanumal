@@ -28,6 +28,10 @@ SOFTWARE.
 
 static void stokesSetupRHS(stokes_t *stokes);
 
+static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
+static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
+static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *fx, dfloat *fy, dfloat *fz);
+
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
   int      velocityN, pressureN, dim, elementType;
@@ -103,8 +107,12 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
       y = stokes->meshV->y[ind];
       z = stokes->meshV->y[ind];
 
-      //eta[ind] = 2.0 + sinh(x*y);
-      eta[ind] = 1.0;
+      if (dim == 2) {
+        //eta[ind] = 1.0;
+        eta[ind] = 2.0 + sinh(x*y);
+      } else if (dim == 3) {
+        eta[ind] = 1.0;
+      }
     }
   }
 
@@ -132,21 +140,12 @@ static void stokesSetupRHS(stokes_t *stokes)
       y = stokes->meshV->y[ind];
       z = stokes->meshV->z[ind];
 
-      // 2D square constant viscosity test case.
-      //stokes->eta[ind] = 1.0;
-      //stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - 24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) - 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0);
-      //stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + 24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0);
-
-      // 2D square variable viscosity test case.
-      //stokes->eta[ind] = 2.0 + sinh(x*y);
-      //stokes->f.x[ind] = cos(M_PI*x)*sin(M_PI*y)/M_PI - (2.0 + sinh(x*y))*(24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) + 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0)) + 36.0*x*pow(1.0 - x*x, 2.0)*pow(1.0 - y*y, 2.0)*y*y*cosh(x*y) - 6.0*pow(1.0 - x*x, 3.0)*(1.0 - 5.0*y*y)*(1.0 - y*y)*x*cosh(x*y);
-      //stokes->f.y[ind] = sin(M_PI*x)*cos(M_PI*y)/M_PI + (2.0 + sinh(x*y))*(24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0)) + 6.0*pow(1.0 - y*y, 3.0)*(1.0 - 5.0*x*x)*(1.0 - x*x)*y*cosh(x*y) - 36.0*y*pow(1.0 - y*y, 2.0)*pow(1.0 - x*x, 2.0)*x*x*cosh(x*y);
-
-      // 3D cube constant viscosity test case.
-      //stokes->eta[ind] = 1.0;
-      stokes->f.x[ind] = M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*z) + 48.0*z*z*z - 72.0*z*(1.0 - z*z);
-      stokes->f.y[ind] = M_PI*sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*z) + 48.0*x*x*x - 72.0*x*(1.0 - x*x);
-      stokes->f.z[ind] = M_PI*sin(M_PI*x)*sin(M_PI*y)*cos(M_PI*z) + 48.0*y*y*y - 72.0*y*(1.0 - y*y);
+      if (dim == 2) {
+        //stokesTestForcingFunctionConstantViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
+        stokesTestForcingFunctionVariableViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
+      } else if (dim == 3) {
+        stokesTestForcingFunctionConstantViscosityHex3D(x, y, z, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
+      }
 
       // NB:  We have to incorporate the Jacobian factor because meshApplyElementMatrix() assumes it.
       //
@@ -154,7 +153,8 @@ static void stokesSetupRHS(stokes_t *stokes)
       J = stokes->meshV->vgeo[stokes->meshV->Np*(e*stokes->meshV->Nvgeo + JID) + i];
       stokes->f.x[ind] *= J;
       stokes->f.y[ind] *= J;
-      stokes->f.z[ind] *= J;
+      if (dim == 3)
+        stokes->f.z[ind] *= J;
     }
   }
 
@@ -170,5 +170,29 @@ static void stokesSetupRHS(stokes_t *stokes)
   // Gather-scatter for C0 FEM.
   stokesVecGatherScatter(stokes, stokes->f);
 
+  return;
+}
+
+/*****************************************************************************/
+
+static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
+{
+  *fx = cos(M_PI*x)*sin(M_PI*y)/M_PI - 24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) - 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0);
+  *fy = sin(M_PI*x)*cos(M_PI*y)/M_PI + 24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0);
+  return;
+}
+
+static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
+{
+  *fx = cos(M_PI*x)*sin(M_PI*y)/M_PI - (2.0 + sinh(x*y))*(24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) + 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0)) + 36.0*x*pow(1.0 - x*x, 2.0)*pow(1.0 - y*y, 2.0)*y*y*cosh(x*y) - 6.0*pow(1.0 - x*x, 3.0)*(1.0 - 5.0*y*y)*(1.0 - y*y)*x*cosh(x*y);
+  *fy = sin(M_PI*x)*cos(M_PI*y)/M_PI + (2.0 + sinh(x*y))*(24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0)) + 6.0*pow(1.0 - y*y, 3.0)*(1.0 - 5.0*x*x)*(1.0 - x*x)*y*cosh(x*y) - 36.0*y*pow(1.0 - y*y, 2.0)*pow(1.0 - x*x, 2.0)*x*x*cosh(x*y);
+  return;
+}
+
+static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *fx, dfloat *fy, dfloat *fz)
+{
+  *fx = M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*z) + 48.0*z*z*z - 72.0*z*(1.0 - z*z);
+  *fy = M_PI*sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*z) + 48.0*x*x*x - 72.0*x*(1.0 - x*x);
+  *fz = M_PI*sin(M_PI*x)*sin(M_PI*y)*cos(M_PI*z) + 48.0*y*y*y - 72.0*y*(1.0 - y*y);
   return;
 }

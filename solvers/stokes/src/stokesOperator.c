@@ -102,12 +102,17 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                               o_pRaised,
                               Av.o_p);
 
+#if 0
   /* Rank-boost for all-Neumann problem.
    *
    * TODO:  Need to make this conditional on an "allNeumann" flag like in the
    * elliptic solver.
    *
    * TODO:  Do this on-device.
+   *
+   * TODO:  There may be a better way to do this using projections---see the
+   * experimental branch.
+   *
    */
 
   stokesVecCopyDeviceToHost(v);
@@ -117,20 +122,24 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   for (int i = 0; i < stokes->NtotalV; i++) {
     sx += v.x[i];
     sy += v.y[i];
-    sz += v.z[i];
+    if (stokes->meshV->dim == 3)
+      sz += v.z[i];
   }
 
   sx /= stokes->NtotalV;
   sy /= stokes->NtotalV;
-  sz /= stokes->NtotalV;
+  if (stokes->meshV->dim == 3)
+    sz /= stokes->NtotalV;
 
   for (int i = 0; i < stokes->NtotalV; i++) {
     Av.x[i] += sx;
     Av.y[i] += sy;
-    Av.z[i] += sz;
+    if (stokes->meshV->dim == 3)
+      Av.z[i] += sz;
   }
 
   stokesVecCopyHostToDevice(Av);
+#endif
 
   /* Gather-scatter for C0 FEM. */
   if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS"))

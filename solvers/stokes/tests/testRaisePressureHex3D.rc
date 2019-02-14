@@ -6,13 +6,16 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-1.msh
+../../../meshes/cubeHexM1.msh
 
 [MESH DIMENSION]
-2
+3
 
 [ELEMENT TYPE]
-4
+12
+
+[ELEMENT MAP]
+ISOPARAMETRIC
 
 ################################################
 #################### DEVICE ####################

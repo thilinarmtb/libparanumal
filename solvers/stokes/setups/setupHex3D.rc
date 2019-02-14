@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/cubeHexM4.msh
+../../meshes/cubeHexM1.msh
 
 [MESH DIMENSION]
 3
@@ -22,7 +22,7 @@ ISOPARAMETRIC
 ################################################
 
 [THREAD MODEL]
-Serial
+CUDA
 
 [PLATFORM NUMBER]
 0
@@ -35,13 +35,13 @@ Serial
 ################################################
 
 [VELOCITY POLYNOMIAL DEGREE]
-2
+3
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-1
+2
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
