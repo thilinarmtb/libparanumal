@@ -51,17 +51,21 @@ SOFTWARE.
           dfloat Gz2 = 0.0;
 
           for (int n = 0; n < p_NqV; n++) {
-            Gx0 += D[k*p_NqV + n]*v[e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + n + 0*NtotalV];
-            Gx1 += D[j*p_NqV + n]*v[e*p_NpV + i*p_NqV*p_NqV + n*p_NqV + k + 0*NtotalV];
-            Gx2 += D[i*p_NqV + n]*v[e*p_NpV + n*p_NqV*p_NqV + j*p_NqV + k + 0*NtotalV];
+            const dlong id_ijn = e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + n;
+            const dlong id_ink = e*p_NpV + i*p_NqV*p_NqV + n*p_NqV + k;
+            const dlong id_njk = e*p_NpV + n*p_NqV*p_NqV + j*p_NqV + k;
 
-            Gy0 += D[k*p_NqV + n]*v[e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + n + 1*NtotalV];
-            Gy1 += D[j*p_NqV + n]*v[e*p_NpV + i*p_NqV*p_NqV + n*p_NqV + k + 1*NtotalV];
-            Gy2 += D[i*p_NqV + n]*v[e*p_NpV + n*p_NqV*p_NqV + j*p_NqV + k + 1*NtotalV];
+            Gx0 += D[k*p_NqV + n]*v[id_ijn + 0*NtotalV];
+            Gx1 += D[j*p_NqV + n]*v[id_ink + 0*NtotalV];
+            Gx2 += D[i*p_NqV + n]*v[id_njk + 0*NtotalV];
 
-            Gz0 += D[k*p_NqV + n]*v[e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + n + 2*NtotalV];
-            Gz1 += D[j*p_NqV + n]*v[e*p_NpV + i*p_NqV*p_NqV + n*p_NqV + k + 2*NtotalV];
-            Gz2 += D[i*p_NqV + n]*v[e*p_NpV + n*p_NqV*p_NqV + j*p_NqV + k + 2*NtotalV];
+            Gy0 += D[k*p_NqV + n]*v[id_ijn + 1*NtotalV];
+            Gy1 += D[j*p_NqV + n]*v[id_ink + 1*NtotalV];
+            Gy2 += D[i*p_NqV + n]*v[id_njk + 1*NtotalV];
+
+            Gz0 += D[k*p_NqV + n]*v[id_ijn + 2*NtotalV];
+            Gz1 += D[j*p_NqV + n]*v[id_ink + 2*NtotalV];
+            Gz2 += D[i*p_NqV + n]*v[id_njk + 2*NtotalV];
           }
 
           const dfloat JW = vgeo[gid + p_NpV*p_JWID];
