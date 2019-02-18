@@ -27,16 +27,18 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesSetupRHS(stokes_t *stokes);
+static void stokesRHSAddBC(stokes_t *stokes);
 
 static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
+static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *fx, dfloat *fy, dfloat *fz);
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
   int      velocityN, pressureN, dim, elementType;
   int      velocityNtotal, pressureNtotal;
-  string   fileName;
+  string   fileName, bcHeaderFileName;
   stokes_t *stokes;
   dfloat   *eta;
 
@@ -44,6 +46,7 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
 
   // Load information from the setup file.
   options.getArgs("MESH FILE", fileName);
+  options.getArgs("DATA FILE", bcHeaderFileName);
   options.getArgs("VELOCITY POLYNOMIAL DEGREE", velocityN);
   options.getArgs("PRESSURE POLYNOMIAL DEGREE", pressureN);
   options.getArgs("ELEMENT TYPE", elementType);
@@ -70,6 +73,8 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   kernelInfoP["includes"].asArray();
   kernelInfoP["header"].asArray();
   kernelInfoP["flags"].asObject();
+
+  kernelInfoV["includes"] += bcHeaderFileName.c_str();
 
   if (dim == 2) {
     if (elementType == QUADRILATERALS) {
@@ -108,13 +113,18 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
       z = stokes->meshV->y[ind];
 
       if (dim == 2) {
-        //eta[ind] = 1.0;
-        eta[ind] = 2.0 + sinh(x*y);
+        eta[ind] = 1.0;
+        //eta[ind] = 2.0 + sinh(x*y);
       } else if (dim == 3) {
         eta[ind] = 1.0;
       }
     }
   }
+
+  // Set up the physical-to-mathematial BC map.
+  int BCType[3] = {0, 1, 2};
+  stokes->BCType = (int*)calloc(3, sizeof(int));
+  memcpy(stokes->BCType, BCType, 3*sizeof(int));
 
   stokesSolveSetup(stokes, eta, kernelInfoV, kernelInfoP);
   stokesSetupRHS(stokes);
@@ -142,7 +152,8 @@ static void stokesSetupRHS(stokes_t *stokes)
 
       if (dim == 2) {
         //stokesTestForcingFunctionConstantViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
-        stokesTestForcingFunctionVariableViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
+        //stokesTestForcingFunctionVariableViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
+        stokesTestForcingFunctionDirichletQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
       } else if (dim == 3) {
         stokesTestForcingFunctionConstantViscosityHex3D(x, y, z, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
       }
@@ -167,11 +178,139 @@ static void stokesSetupRHS(stokes_t *stokes)
   // Move RHS to the device.
   stokesVecCopyHostToDevice(stokes->f);
 
+  // Apply the boundary conditions.
+  stokesRHSAddBC(stokes);
+
   // Gather-scatter for C0 FEM.
-  stokesVecGatherScatter(stokes, stokes->f);
+  stokesVecUnmaskedGatherScatter(stokes, stokes->f);
+
+  printf("f vector before mask:\n");
+  stokesVecCopyDeviceToHost(stokes->f);
+  stokesVecPrint(stokes, stokes->f);
+
+  // TODO:  Make a function for this.
+  //
+  // TODO:  We only need to do this for C0 FEM.
+  if (stokes->Nmasked) {
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_x);
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_y);
+    if (stokes->meshV->dim == 3)
+      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_z);
+  }
+
+  printf("f vector after mask:\n");
+  stokesVecCopyDeviceToHost(stokes->f);
+  stokesVecPrint(stokes, stokes->f);
 
   return;
 }
+
+// TODO:  Write a kernel for this.
+static void stokesRHSAddBC(stokes_t *stokes)
+{
+  stokesVec_t tmp;
+
+  occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
+  occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
+
+  stokesVecAllocate(stokes, &tmp);
+
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->Np; i++) {
+      int    ind;
+      dfloat x, y, z;
+
+      ind = e*stokes->meshV->Np + i;
+      x = stokes->meshV->x[ind];
+      y = stokes->meshV->y[ind];
+
+      if (stokes->mapB[ind] == 1) {
+        tmp.x[ind] = cos(y);
+        tmp.y[ind] = sin(x);
+      }
+    }
+  }
+
+  stokesVecCopyHostToDevice(tmp);
+  printf("tmp:\n");
+  stokesVecPrint(stokes, tmp);
+
+  //stokesVecCopy(stokes, stokes->f, tmp);
+
+  stokesVecZero(stokes, stokes->u);
+
+  stokes->stiffnessKernel(stokes->meshV->Nelements,
+                          stokes->meshV->o_ggeo,
+                          stokes->meshV->o_Dmatrices,
+                          stokes->o_eta,
+                          tmp.o_x,
+                          stokes->u.o_x);
+
+  stokes->stiffnessKernel(stokes->meshV->Nelements,
+                          stokes->meshV->o_ggeo,
+                          stokes->meshV->o_Dmatrices,
+                          stokes->o_eta,
+                          tmp.o_y,
+                          stokes->u.o_y);
+
+  if (stokes->meshV->dim == 3) {
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_ggeo,
+                            stokes->meshV->o_Dmatrices,
+                            stokes->o_eta,
+                            tmp.o_z,
+                            stokes->u.o_z);
+  }
+
+  stokes->raisePressureKernel(stokes->meshV->Nelements,
+                              o_interpRaise,
+                              tmp.o_p,
+                              o_pRaised);
+
+  stokes->gradientKernel(stokes->meshV->Nelements,
+                         stokes->NtotalV,
+                         stokes->meshV->o_Dmatrices,
+                         stokes->meshV->o_vgeo,
+                         o_pRaised,
+                         stokes->u.o_v);
+
+  stokes->divergenceKernel(stokes->meshV->Nelements,
+                           stokes->NtotalV,
+                           stokes->meshV->o_Dmatrices,
+                           stokes->meshV->o_vgeo,
+                           tmp.o_v,
+                           o_pRaised);
+
+  stokes->lowerPressureKernel(stokes->meshV->Nelements,
+                              o_interpRaise,
+                              o_pRaised,
+                              stokes->u.o_p);
+
+
+  stokesVecCopyDeviceToHost(stokes->u);
+  stokesVecCopyDeviceToHost(stokes->f);
+
+  printf("u before scaled add:\n");
+  stokesVecPrint(stokes, stokes->u);
+  printf("f before scaled add:\n");
+  stokesVecPrint(stokes, stokes->f);
+
+
+  stokesVecScaledAdd(stokes, -1.0, stokes->u, 1.0, stokes->f);
+
+
+  stokesVecCopyDeviceToHost(stokes->f);
+  printf("f after scaled add:\n");
+  stokesVecPrint(stokes, stokes->f);
+
+  stokesVecZero(stokes, stokes->u);
+
+  stokesVecFree(stokes, &tmp);
+  o_pRaised.free();
+  o_interpRaise.free();
+  return;
+}
+
 
 /*****************************************************************************/
 
@@ -186,6 +325,13 @@ static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y,
 {
   *fx = cos(M_PI*x)*sin(M_PI*y)/M_PI - (2.0 + sinh(x*y))*(24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) + 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0)) + 36.0*x*pow(1.0 - x*x, 2.0)*pow(1.0 - y*y, 2.0)*y*y*cosh(x*y) - 6.0*pow(1.0 - x*x, 3.0)*(1.0 - 5.0*y*y)*(1.0 - y*y)*x*cosh(x*y);
   *fy = sin(M_PI*x)*cos(M_PI*y)/M_PI + (2.0 + sinh(x*y))*(24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0)) + 6.0*pow(1.0 - y*y, 3.0)*(1.0 - 5.0*x*x)*(1.0 - x*x)*y*cosh(x*y) - 36.0*y*pow(1.0 - y*y, 2.0)*pow(1.0 - x*x, 2.0)*x*x*cosh(x*y);
+  return;
+}
+
+static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
+{
+  *fx = 1.0 + cos(y);
+  *fy = 1.0 + sin(x);
   return;
 }
 

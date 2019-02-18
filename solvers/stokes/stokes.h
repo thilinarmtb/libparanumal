@@ -89,6 +89,18 @@ typedef struct {
 
   stokesPrecon_t *precon;  /* Preconditioner */
 
+  ogs_t *ogs;              /* Gather-scatter handle (masked for BCs) */
+
+  /* Infrastructure for boundary conditions */
+  int *BCType;             /* Phyiscal-to-mathematical BC type code map. */
+  dlong Nmasked;           /* Number of nodes masked out due to boundary conditions */
+
+  dlong* maskIds;          /* Indices of the nodes to be masked */
+  occa::memory o_maskIds;
+
+  int* mapB;               /* Node-wise BC type codes */
+  occa::memory o_mapB;
+
   /* OCCA kernels */
   occa::kernel divergenceKernel;
   occa::kernel dotMultiplyKernel;
@@ -125,6 +137,7 @@ void stokesVecCopyDeviceToHost(stokesVec_t v);
 
 void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
 void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v);
+void stokesVecUnmaskedGatherScatter(stokes_t *stokes, stokesVec_t v);
 void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
 void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c);
 void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);

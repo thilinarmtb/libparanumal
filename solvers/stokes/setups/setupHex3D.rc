@@ -22,7 +22,7 @@ ISOPARAMETRIC
 ################################################
 
 [THREAD MODEL]
-CUDA
+Serial
 
 [PLATFORM NUMBER]
 0

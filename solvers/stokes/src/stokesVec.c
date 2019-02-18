@@ -37,6 +37,7 @@ static void stokesVecZeroHost(stokes_t *stokes, stokesVec_t v);
 /* Device versions of stokesVec operations. */
 static void stokesVecCopyDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
 static void stokesVecGatherScatterDevice(stokes_t *stokes, stokesVec_t v);
+static void stokesVecUnmaskedGatherScatterDevice(stokes_t *stokes, stokesVec_t v);
 static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
 static void stokesVecScaleDevice(stokes_t *stokes, stokesVec_t v, dfloat c);
 static void stokesVecScaledAddDevice(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);
@@ -109,10 +110,15 @@ void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
   return;
 }
 
-/* Computes v <-- c*v for vector v, scalar c. */
 void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
 {
   stokesVecGatherScatterDevice(stokes, v);
+  return;
+}
+
+void stokesVecUnmaskedGatherScatter(stokes_t *stokes, stokesVec_t v)
+{
+  stokesVecUnmaskedGatherScatterDevice(stokes, v);
   return;
 }
 
@@ -156,10 +162,10 @@ static void stokesVecCopyHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
 
 static void stokesVecGatherScatterHost(stokes_t *stokes, stokesVec_t v)
 {
-  ogsGatherScatter(v.x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-  ogsGatherScatter(v.y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+  ogsGatherScatter(v.x, ogsDfloat, ogsAdd, stokes->ogs);
+  ogsGatherScatter(v.y, ogsDfloat, ogsAdd, stokes->ogs);
   if (stokes->meshV->dim == 3)
-    ogsGatherScatter(v.z, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+    ogsGatherScatter(v.z, ogsDfloat, ogsAdd, stokes->ogs);
   ogsGatherScatter(v.p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
 
   return;
@@ -228,18 +234,18 @@ static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesV
   /* TODO:  Replace host loops with further kernel calls if we had too many
    * blocks.  (See, e.g., ellipticWeightedInnerProduct().)
    */
-  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_x, v.o_x, stokes->o_workV);
+  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_x, v.o_x, stokes->o_workV);
   stokes->o_workV.copyTo(stokes->workV);
   for (int i = 0; i < stokes->NblockV; i++)
     *c += stokes->workV[i];
 
-  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_y, v.o_y, stokes->o_workV);
+  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_y, v.o_y, stokes->o_workV);
   stokes->o_workV.copyTo(stokes->workV);
   for (int i = 0; i < stokes->NblockV; i++)
     *c += stokes->workV[i];
 
   if (stokes->meshV->dim == 3) {
-    stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_z, v.o_z, stokes->o_workV);
+    stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_z, v.o_z, stokes->o_workV);
     stokes->o_workV.copyTo(stokes->workV);
     for (int i = 0; i < stokes->NblockV; i++)
       *c += stokes->workV[i];
@@ -256,6 +262,22 @@ static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesV
 }
 
 static void stokesVecGatherScatterDevice(stokes_t *stokes, stokesVec_t v)
+{
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
+    ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->ogs);
+    ogsGatherScatter(v.o_y, ogsDfloat, ogsAdd, stokes->ogs);
+    if (stokes->meshV->dim == 3)
+      ogsGatherScatter(v.o_z, ogsDfloat, ogsAdd, stokes->ogs);
+  }
+
+  if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
+    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
+  }
+
+  return;
+}
+
+static void stokesVecUnmaskedGatherScatterDevice(stokes_t *stokes, stokesVec_t v)
 {
   if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
     ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->meshV->ogs);

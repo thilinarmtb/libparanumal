@@ -28,6 +28,7 @@ SOFTWARE.
 
 static void stokesTestSolutionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy);
 static void stokesTestSolutionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy);
+static void stokesTestSolutionDirichletQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy);
 static void stokesTestSolutionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *ux, dfloat *uy, dfloat *uz);
 
 int main(int argc, char **argv)
@@ -68,7 +69,16 @@ int main(int argc, char **argv)
 
       if (stokes->meshV->dim == 2) {
         //stokesTestSolutionConstantViscosityQuad2D(x, y, &ux_exact, &uy_exact);
-        stokesTestSolutionVariableViscosityQuad2D(x, y, &ux_exact, &uy_exact);
+        //stokesTestSolutionVariableViscosityQuad2D(x, y, &ux_exact, &uy_exact);
+        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+          stokes->u.x[ind] = cos(y);  // Manually insert the boundary data.
+          stokes->u.y[ind] = sin(x);
+
+          ux_exact = cos(y);
+          uy_exact = sin(x);
+        } else {
+          stokesTestSolutionDirichletQuad2D(x, y, &ux_exact, &uy_exact);
+        }
       } else if (stokes->meshV->dim == 3) {
         stokesTestSolutionConstantViscosityHex3D(x, y, z, &ux_exact, &uy_exact, &uz_exact);
       }
@@ -77,6 +87,8 @@ int main(int argc, char **argv)
       erry = stokes->u.y[ind] - uy_exact;
       if (stokes->meshV->dim == 3)
         errz = stokes->u.z[ind] - uz_exact;
+
+      printf("x[%d] = % .15e, y[%d] = % .15e, ux[%d] = % .15e, ux_exact[%d] = % .15e, uy[%d] = % .15e, uy_exact[%d] = % .15e, errx[%d] = % .15e, erry[%d] = % .15e\n", ind, x, ind, y, ind, stokes->u.x[ind], ind, ux_exact, ind, stokes->u.y[ind], ind, uy_exact, ind, errx, ind, erry);
 
       if (fabs(errx) > errxInf)
         errxInf = fabs(errx);
@@ -134,6 +146,13 @@ static void stokesTestSolutionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat
 {
   *ux = 6.0*pow(1.0 - x*x, 3.0)*pow(1.0 - y*y, 2.0)*y;
   *uy = -6.0*pow(1.0 - y*y, 3.0)*pow(1.0 - x*x, 2.0)*x;
+  return;
+}
+
+static void stokesTestSolutionDirichletQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy)
+{
+  *ux = cos(y);
+  *uy = sin(x);
   return;
 }
 

@@ -24,9 +24,11 @@ SOFTWARE.
 
 */
 
+#include <limits.h>
 #include "stokes.h"
 
 static void stokesAllocateScratchVars(stokes_t *stokes);
+static void stokesSetupBCMask(stokes_t *stokes);
 static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties& kernelInfoP);
 
 void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
@@ -54,7 +56,15 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
 
   stokes->o_eta = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat), stokes->eta);
 
+  if (stokes->meshV->dim == 2) {
+    kernelInfoV["includes"] += DSTOKES "/data/stokesBoundary2D.h";
+  } else if (stokes->meshV->dim == 3) {
+    printf("ERROR:  Not implemented.\n");
+    exit(-1);
+  }
+
   stokesAllocateScratchVars(stokes);
+  stokesSetupBCMask(stokes);
   stokesSetupKernels(stokes, kernelInfoV, kernelInfoP);
   stokesPreconditionerSetup(stokes);
 
@@ -74,6 +84,110 @@ static void stokesAllocateScratchVars(stokes_t *stokes)
   return;
 }
 
+static void stokesSetupBCMask(stokes_t *stokes)
+{
+  int verbose = stokes->options.compareArgs("VERBOSE", "TRUE") ? 1 : 0;
+
+  // Get the BC type codes for each node, prioritizing Dirichlet over Neumann.
+  stokes->mapB = (int*)calloc(stokes->NtotalV, sizeof(int));
+  for (dlong e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int n = 0; n < stokes->meshV->Np; n++)
+      stokes->mapB[e*stokes->meshV->Np + n] = INT_MAX;
+    for (int f = 0; f < stokes->meshV->Nfaces; f++) {
+      int bc = stokes->meshV->EToB[e*stokes->meshV->Nfaces + f];
+      if (bc > 0) {
+        for (int n = 0; n < stokes->meshV->Nfp; n++) {
+          int fid, BCFlag;
+          BCFlag = stokes->BCType[bc];
+          fid = stokes->meshV->faceNodes[f*stokes->meshV->Nfp + n];
+          stokes->mapB[e*stokes->meshV->Np + fid] = mymin(BCFlag, stokes->mapB[e*stokes->meshV->Np + fid]);
+        }
+      }
+    }
+  }
+
+  printf("mapB Before GS:\n");
+  for (dlong e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int n = 0; n < stokes->meshV->Np; n++) {
+      dfloat x, y;
+      x = stokes->meshV->x[e*stokes->meshV->Np + n];
+      y = stokes->meshV->y[e*stokes->meshV->Np + n];
+      printf("(% .15e, % .15e):  %d\n", x, y, stokes->mapB[e*stokes->meshV->Np + n]);
+    }
+  }
+
+  ogsGatherScatter(stokes->mapB, ogsInt, ogsMin, stokes->meshV->ogs);
+
+  printf("mapB After GS:\n");
+  for (dlong e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int n = 0; n < stokes->meshV->Np; n++) {
+      dfloat x, y;
+      x = stokes->meshV->x[e*stokes->meshV->Np + n];
+      y = stokes->meshV->y[e*stokes->meshV->Np + n];
+      printf("(% .15e, % .15e):  %d\n", x, y, stokes->mapB[e*stokes->meshV->Np + n]);
+    }
+  }
+
+  // Count the number of nodes we need to mask out (Dirichlet boundary nodes).
+  stokes->Nmasked = 0;
+  for (dlong n = 0; n < stokes->NtotalV; n++) {
+    if (stokes->mapB[n] == INT_MAX)
+      stokes->mapB[n] = 0;
+    else if (stokes->mapB[n] == 1)
+      stokes->Nmasked++;
+  }
+
+  printf("Final mapB:\n");
+  for (dlong n = 0; n < stokes->NtotalV; n++) {
+    dfloat x, y;
+    x = stokes->meshV->x[n];
+    y = stokes->meshV->y[n];
+    printf("(% .15e, % .15e):  %d\n", x, y, stokes->mapB[n]);
+  }
+
+  printf("Nmasked = %d\n", stokes->Nmasked);
+
+  stokes->o_mapB = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(int), stokes->mapB);
+
+  // Record the indices of the nodes we need to mask out.
+  stokes->maskIds = (dlong*)calloc(stokes->Nmasked, sizeof(dlong));
+  stokes->Nmasked = 0;
+  for (dlong n = 0; n < stokes->NtotalV; n++)
+    if (stokes->mapB[n] == 1)
+      stokes->maskIds[stokes->Nmasked++] = n;
+
+  printf("maskIds:\n");
+  for (dlong n = 0; n < stokes->Nmasked; n++) {
+    printf("%d\n", stokes->maskIds[n]);
+  }
+
+  if (stokes->Nmasked)
+    stokes->o_maskIds = stokes->meshV->device.malloc(stokes->Nmasked*sizeof(dlong), stokes->maskIds);
+
+  // Make the index mask.
+  stokes->meshV->maskedGlobalIds = (hlong*)calloc(stokes->NtotalV, sizeof(hlong));
+  memcpy(stokes->meshV->maskedGlobalIds, stokes->meshV->globalIds, stokes->NtotalV*sizeof(hlong));
+  for (dlong n = 0; n < stokes->Nmasked; n++)
+    stokes->meshV->maskedGlobalIds[stokes->maskIds[n]] = 0;
+
+  for (dlong n = 0; n < stokes->NtotalV; n++) {
+    printf("maskedGlobalIds[%d] = %d\n", n, stokes->meshV->maskedGlobalIds[n]);
+  }
+
+  // Set up the masked GS handle.
+  stokes->ogs = ogsSetup(stokes->NtotalV, stokes->meshV->maskedGlobalIds, stokes->meshV->comm, verbose, stokes->meshV->device);
+
+  dfloat *tmp = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
+  stokes->ogs->o_invDegree.copyTo(tmp);
+  printf("masked invDegree:\n");
+  for (dlong n = 0; n < stokes->NtotalV; n++) {
+    printf("invDegree[%d] = % .15e\n", n, tmp[n]);
+  }
+  free(tmp);
+
+  return;
+}
+
 static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties& kernelInfoP)
 {
   kernelInfoV["defines/p_blockSize"] = STOKES_REDUCTION_BLOCK_SIZE;
@@ -81,6 +195,8 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   kernelInfoV["defines/p_NqV"] = stokes->meshV->Nq;
   kernelInfoV["defines/p_NpP"] = stokes->meshP->Np;
   kernelInfoV["defines/p_NqP"] = stokes->meshP->Nq;
+
+  stokes->meshV->maskKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/mask.okl", "mask", kernelInfoV);
 
   stokes->dotMultiplyKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/dotMultiply.okl", "dotMultiply", kernelInfoV);
   stokes->vecScaleKernel             = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecScale.okl", "stokesVecScale", kernelInfoV);

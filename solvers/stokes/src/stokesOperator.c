@@ -145,6 +145,16 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS"))
     stokesVecGatherScatter(stokes, Av);
 
+  // TODO:  Make a function for this.
+  //
+  // TODO:  We only need to do this for C0 FEM.
+  if (stokes->Nmasked) {
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av.o_x);
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av.o_y);
+    if (stokes->meshV->dim == 3)
+      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av.o_z);
+  }
+
   o_pRaised.free();
   o_interpRaise.free();
   return;
