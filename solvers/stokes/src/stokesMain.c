@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 
   stokesVecCopyDeviceToHost(stokes->u);
 
-#if 0
+#if 1
   /* Compute error (if applicable.) */
   dfloat errxInf = 0.0, erryInf = 0.0, errzInf = 0.0;
   dfloat errxDL2 = 0.0, erryDL2 = 0.0, errzDL2 = 0.0;
@@ -121,6 +121,7 @@ int main(int argc, char **argv)
     printf("errzDL2 = % .15e\n", errzDL2);
 #endif
 
+#if 0
   printf("-----\n");
 
   printf("u = [");
@@ -139,9 +140,11 @@ int main(int argc, char **argv)
   }
   printf("];\n");
 
-  /* Export solution. */
   printf("NtotalV = %d\n", stokes->NtotalV);
   printf("NtotalP = %d\n", stokes->NtotalP);
+#endif
+
+  /* Export solution. */
 
   /* Report runtime statistics. */
 

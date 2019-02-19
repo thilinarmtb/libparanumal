@@ -225,13 +225,12 @@ static void stokesRHSAddBC(stokes_t *stokes)
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
 
-      /*
       if (stokes->mapB[ind] == 1) {
         tmp.x[ind] = cos(y);
         tmp.y[ind] = sin(x);
       }
-      */
 
+      /*
       if (stokes->mapB[ind] == 1) {
         if (fabs(y - 1.0) < 1.0e-12) {
           tmp.x[ind] = 1.0;
@@ -241,6 +240,8 @@ static void stokesRHSAddBC(stokes_t *stokes)
           tmp.y[ind] = 0.0;
         }
       }
+      */
+
     }
   }
 

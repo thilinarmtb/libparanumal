@@ -26,23 +26,6 @@ SOFTWARE.
 
 #include "stokes.h"
 
-/* Host versions of stokesVec operations (for debugging only). */
-static void stokesVecCopyHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
-static void stokesVecGatherScatterHost(stokes_t *stokes, stokesVec_t v);
-static void stokesVecInnerProductHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
-static void stokesVecScaleHost(stokes_t *stokes, stokesVec_t v, dfloat c);
-static void stokesVecScaledAddHost(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);
-static void stokesVecZeroHost(stokes_t *stokes, stokesVec_t v);
-
-/* Device versions of stokesVec operations. */
-static void stokesVecCopyDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v);
-static void stokesVecGatherScatterDevice(stokes_t *stokes, stokesVec_t v);
-static void stokesVecUnmaskedGatherScatterDevice(stokes_t *stokes, stokesVec_t v);
-static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c);
-static void stokesVecScaleDevice(stokes_t *stokes, stokesVec_t v, dfloat c);
-static void stokesVecScaledAddDevice(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);
-static void stokesVecZeroDevice(stokes_t *stokes, stokesVec_t v);
-
 /*****************************************************************************/
 
 void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v)
@@ -106,116 +89,6 @@ void stokesVecCopyDeviceToHost(stokesVec_t v)
 /* Copies v <-- u. */
 void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
 {
-  stokesVecCopyDevice(stokes, u, v);
-  return;
-}
-
-void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
-{
-  stokesVecGatherScatterDevice(stokes, v);
-  return;
-}
-
-void stokesVecUnmaskedGatherScatter(stokes_t *stokes, stokesVec_t v)
-{
-  stokesVecUnmaskedGatherScatterDevice(stokes, v);
-  return;
-}
-
-/* Computes c = v'*u. */
-void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
-{
-  stokesVecInnerProductDevice(stokes, u, v, c);
-  return;
-}
-
-/* Computes v <-- c*v for vector v, scalar c. */
-void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c)
-{
-  stokesVecScaleDevice(stokes, v, c);
-  return;
-}
-
-/* Computes v <-- au + bv for vectors u, v and scalars a, b. */
-void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
-{
-  stokesVecScaledAddDevice(stokes, a, u, b, v);
-  return;
-}
-
-/* Sets v <-- 0. */
-void stokesVecZero(stokes_t *stokes, stokesVec_t v)
-{
-  stokesVecZeroDevice(stokes, v);
-  return;
-}
-
-/*****************************************************************************/
-
-static void stokesVecCopyHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
-{
-  for (int i = 0; i < stokes->Ndof; i++)
-    v.v[i] = u.v[i];
-
-  return;
-}
-
-static void stokesVecGatherScatterHost(stokes_t *stokes, stokesVec_t v)
-{
-  ogsGatherScatter(v.x, ogsDfloat, ogsAdd, stokes->ogs);
-  ogsGatherScatter(v.y, ogsDfloat, ogsAdd, stokes->ogs);
-  if (stokes->meshV->dim == 3)
-    ogsGatherScatter(v.z, ogsDfloat, ogsAdd, stokes->ogs);
-  ogsGatherScatter(v.p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
-
-  return;
-}
-
-/* TODO:  The inverse degree weighting is only applicable for C0 FEM. */
-static void stokesVecInnerProductHost(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
-{
-  *c = 0.0;
-
-  if (stokes->meshV->dim == 2) {
-    for (int i = 0; i < stokes->NtotalV; i++)
-      *c += (u.x[i]*v.x[i] + u.y[i]*v.y[i])*stokes->meshV->ogs->invDegree[i];
-  } else if (stokes->meshV->dim == 3) {
-    for (int i = 0; i < stokes->NtotalV; i++)
-      *c += (u.x[i]*v.x[i] + u.y[i]*v.y[i] + u.z[i]*v.z[i])*stokes->meshV->ogs->invDegree[i];
-  }
-
-  for (int i = 0; i < stokes->NtotalP; i++)
-    *c += u.p[i]*v.p[i]*stokes->meshP->ogs->invDegree[i];
-
-  return;
-}
-
-static void stokesVecScaleHost(stokes_t *stokes, stokesVec_t v, dfloat c)
-{
-  for (int i = 0; i < stokes->Ndof; i++)
-    v.v[i] *= c;
-
-  return;
-}
-
-static void stokesVecScaledAddHost(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
-{
-  for (int i = 0; i < stokes->Ndof; i++)
-    v.v[i] = a*u.v[i] + b*v.v[i];
-
-  return;
-}
-
-static void stokesVecZeroHost(stokes_t *stokes, stokesVec_t v)
-{
-  memset(v.v, 0, stokes->Ndof*sizeof(dfloat));
-  return;
-}
-
-/*****************************************************************************/
-
-static void stokesVecCopyDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
-{
   v.o_v.copyFrom(u.o_v);
   return;
 }
@@ -227,7 +100,9 @@ static void stokesVecCopyDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
  * once?  This would use more memory, but it might be more efficient, and it
  * would simplify the code.)
  */
-static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
+
+/* Computes c = v'*u. */
+void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
 {
   *c = 0.0;
 
@@ -261,7 +136,8 @@ static void stokesVecInnerProductDevice(stokes_t *stokes, stokesVec_t u, stokesV
   return;
 }
 
-static void stokesVecGatherScatterDevice(stokes_t *stokes, stokesVec_t v)
+/* Performs a gather-scatter operation. */
+void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
 {
   if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
     ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->ogs);
@@ -277,7 +153,8 @@ static void stokesVecGatherScatterDevice(stokes_t *stokes, stokesVec_t v)
   return;
 }
 
-static void stokesVecUnmaskedGatherScatterDevice(stokes_t *stokes, stokesVec_t v)
+/* Performs a gather-scatter operation, ignoring boundary node masking. */
+void stokesVecUnmaskedGatherScatter(stokes_t *stokes, stokesVec_t v)
 {
   if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
     ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
@@ -293,19 +170,22 @@ static void stokesVecUnmaskedGatherScatterDevice(stokes_t *stokes, stokesVec_t v
   return;
 }
 
-static void stokesVecScaleDevice(stokes_t *stokes, stokesVec_t v, dfloat c)
+/* Computes v <-- c*v for vector v, scalar c. */
+void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c)
 {
   stokes->vecScaleKernel(stokes->Ndof, c, v.o_v);
   return;
 }
 
-static void stokesVecScaledAddDevice(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
+/* Computes v <-- au + bv for vectors u, v and scalars a, b. */
+void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
 {
   stokes->vecScaledAddKernel(stokes->Ndof, a, u.o_v, b, v.o_v);
   return;
 }
 
-static void stokesVecZeroDevice(stokes_t *stokes, stokesVec_t v)
+/* Sets v <-- 0. */
+void stokesVecZero(stokes_t *stokes, stokesVec_t v)
 {
   stokes->vecZeroKernel(stokes->Ndof, v.o_v);
   return;
