@@ -32,6 +32,7 @@ static void stokesRHSAddBC(stokes_t *stokes);
 static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
+static void stokesTestForcingFunctionLeakyCavityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *fx, dfloat *fy, dfloat *fz);
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
@@ -224,9 +225,21 @@ static void stokesRHSAddBC(stokes_t *stokes)
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
 
+      /*
       if (stokes->mapB[ind] == 1) {
         tmp.x[ind] = cos(y);
         tmp.y[ind] = sin(x);
+      }
+      */
+
+      if (stokes->mapB[ind] == 1) {
+        if (fabs(y - 1.0) < 1.0e-12) {
+          tmp.x[ind] = 1.0;
+          tmp.y[ind] = 0.0;
+        } else {
+          tmp.x[ind] = 0.0;
+          tmp.y[ind] = 0.0;
+        }
       }
     }
   }
@@ -332,6 +345,13 @@ static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat 
 {
   *fx = 1.0 + cos(y);
   *fy = 1.0 + sin(x);
+  return;
+}
+
+static void stokesTestForcingFunctionLeakyCavityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
+{
+  *fx = 0.0;
+  *fy = 0.0;
   return;
 }
 

@@ -52,6 +52,7 @@ int main(int argc, char **argv)
 
   stokesVecCopyDeviceToHost(stokes->u);
 
+#if 0
   /* Compute error (if applicable.) */
   dfloat errxInf = 0.0, erryInf = 0.0, errzInf = 0.0;
   dfloat errxDL2 = 0.0, erryDL2 = 0.0, errzDL2 = 0.0;
@@ -88,8 +89,6 @@ int main(int argc, char **argv)
       if (stokes->meshV->dim == 3)
         errz = stokes->u.z[ind] - uz_exact;
 
-      printf("x[%d] = % .15e, y[%d] = % .15e, ux[%d] = % .15e, ux_exact[%d] = % .15e, uy[%d] = % .15e, uy_exact[%d] = % .15e, errx[%d] = % .15e, erry[%d] = % .15e\n", ind, x, ind, y, ind, stokes->u.x[ind], ind, ux_exact, ind, stokes->u.y[ind], ind, uy_exact, ind, errx, ind, erry);
-
       if (fabs(errx) > errxInf)
         errxInf = fabs(errx);
       if (fabs(erry) > erryInf)
@@ -120,10 +119,29 @@ int main(int argc, char **argv)
   printf("erryDL2 = % .15e\n", erryDL2);
   if (stokes->meshV->dim == 3)
     printf("errzDL2 = % .15e\n", errzDL2);
+#endif
 
   printf("-----\n");
 
+  printf("u = [");
+  stokesVecPrint(stokes, stokes->u);
+  printf("];\n");
+
+  printf("x = [");
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    printf("% .15e\n", stokes->meshV->x[i]);
+  }
+  printf("];\n");
+
+  printf("y = [");
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    printf("% .15e\n", stokes->meshV->y[i]);
+  }
+  printf("];\n");
+
   /* Export solution. */
+  printf("NtotalV = %d\n", stokes->NtotalV);
+  printf("NtotalP = %d\n", stokes->NtotalP);
 
   /* Report runtime statistics. */
 
