@@ -185,10 +185,6 @@ static void stokesSetupRHS(stokes_t *stokes)
   // Gather-scatter for C0 FEM.
   stokesVecUnmaskedGatherScatter(stokes, stokes->f);
 
-  printf("f vector before mask:\n");
-  stokesVecCopyDeviceToHost(stokes->f);
-  stokesVecPrint(stokes, stokes->f);
-
   // TODO:  Make a function for this.
   //
   // TODO:  We only need to do this for C0 FEM.
@@ -198,10 +194,6 @@ static void stokesSetupRHS(stokes_t *stokes)
     if (stokes->meshV->dim == 3)
       stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_z);
   }
-
-  printf("f vector after mask:\n");
-  stokesVecCopyDeviceToHost(stokes->f);
-  stokesVecPrint(stokes, stokes->f);
 
   return;
 }
@@ -246,10 +238,6 @@ static void stokesRHSAddBC(stokes_t *stokes)
   }
 
   stokesVecCopyHostToDevice(tmp);
-  printf("tmp:\n");
-  stokesVecPrint(stokes, tmp);
-
-  //stokesVecCopy(stokes, stokes->f, tmp);
 
   stokesVecZero(stokes, stokes->u);
 
@@ -300,22 +288,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                               o_pRaised,
                               stokes->u.o_p);
 
-
-  stokesVecCopyDeviceToHost(stokes->u);
-  stokesVecCopyDeviceToHost(stokes->f);
-
-  printf("u before scaled add:\n");
-  stokesVecPrint(stokes, stokes->u);
-  printf("f before scaled add:\n");
-  stokesVecPrint(stokes, stokes->f);
-
-
   stokesVecScaledAdd(stokes, -1.0, stokes->u, 1.0, stokes->f);
-
-
-  stokesVecCopyDeviceToHost(stokes->f);
-  printf("f after scaled add:\n");
-  stokesVecPrint(stokes, stokes->f);
 
   stokesVecZero(stokes, stokes->u);
 
