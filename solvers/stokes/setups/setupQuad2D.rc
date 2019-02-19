@@ -22,7 +22,7 @@ data/stokesDirichletTestQuad2D.h
 ################################################
 
 [THREAD MODEL]
-Serial
+CUDA
 
 [PLATFORM NUMBER]
 0
@@ -35,13 +35,13 @@ Serial
 ################################################
 
 [VELOCITY POLYNOMIAL DEGREE]
-2
+7
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-1
+6
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
@@ -54,7 +54,7 @@ CONTINUOUS
 MINRES
 
 [KRYLOV SOLVER ITERATION LIMIT]
-1000
+5000
 
 [KRYLOV SOLVER TOLERANCE]
 1.0e-8

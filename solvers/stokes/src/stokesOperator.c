@@ -37,8 +37,10 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
    * operator, but they're going to go away eventually, so we don't care.  keep
    * re-allocating them.
    */
-  occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
-  occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
+  //occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
+  //occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
+
+  occa::memory o_Pp = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
 
   stokesVecZero(stokes, Av);
 
@@ -70,16 +72,23 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                             Av.o_z);
   }
 
+  /*
   stokes->raisePressureKernel(stokes->meshV->Nelements,
                               o_interpRaise,
                               v.o_p,
                               o_pRaised);
+  */
+
+  stokes->pressureProjectKernel(stokes->meshV->Nelements,
+                                stokes->o_P,
+                                v.o_p,
+                                o_Pp);
 
   stokes->gradientKernel(stokes->meshV->Nelements,
                          stokes->NtotalV,
                          stokes->meshV->o_Dmatrices,
                          stokes->meshV->o_vgeo,
-                         o_pRaised,
+                         o_Pp,
                          Av.o_v);
 
   stokes->divergenceKernel(stokes->meshV->Nelements,
@@ -87,12 +96,19 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                            stokes->meshV->o_Dmatrices,
                            stokes->meshV->o_vgeo,
                            v.o_v,
-                           o_pRaised);
+                           o_Pp);
 
+  stokes->pressureProjectTransKernel(stokes->meshV->Nelements,
+                                     stokes->o_P,
+                                     o_Pp,
+                                     Av.o_p);
+
+  /*
   stokes->lowerPressureKernel(stokes->meshV->Nelements,
                               o_interpRaise,
                               o_pRaised,
                               Av.o_p);
+  */
 
 #if 0
   /* Rank-boost for all-Neumann problem.
@@ -147,8 +163,9 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
       stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av.o_z);
   }
 
-  o_pRaised.free();
-  o_interpRaise.free();
+  o_Pp.free();
+  //o_pRaised.free();
+  //o_interpRaise.free();
   return;
 }
 

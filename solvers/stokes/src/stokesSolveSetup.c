@@ -33,14 +33,19 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
 
 void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
 {
-  int verbose = stokes->options.compareArgs("VERBOSE", "TRUE") ? 1 : 0;
+  FILE *fp;
+  char fname[BUFSIZ];
+  int  Nrows, Ncols, verbose;
+
+  verbose = stokes->options.compareArgs("VERBOSE", "TRUE") ? 1 : 0;
 
   stokes->NtotalV = stokes->meshV->Nelements*stokes->meshV->Np;
-  stokes->NtotalP = stokes->meshP->Nelements*stokes->meshP->Np;
-  stokes->Ndof    = stokes->meshV->dim*stokes->NtotalV + stokes->NtotalP;
+  //stokes->NtotalP = stokes->meshP->Nelements*stokes->meshP->Np;
+  //stokes->Ndof    = stokes->meshV->dim*stokes->NtotalV + stokes->NtotalP;
+  stokes->Ndof    = (stokes->meshV->dim + 1)*stokes->NtotalV;
 
   meshParallelGatherScatterSetup(stokes->meshV, stokes->NtotalV, stokes->meshV->globalIds, stokes->meshV->comm, verbose);
-  meshParallelGatherScatterSetup(stokes->meshP, stokes->NtotalP, stokes->meshP->globalIds, stokes->meshP->comm, verbose);
+  //meshParallelGatherScatterSetup(stokes->meshP, stokes->NtotalP, stokes->meshP->globalIds, stokes->meshP->comm, verbose);
 
   stokesVecAllocate(stokes, &stokes->u);
   stokesVecAllocate(stokes, &stokes->f);
@@ -62,6 +67,18 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
     printf("ERROR:  Not implemented.\n");
     exit(-1);
   }
+
+  sprintf(fname, DSTOKES "/data/stokes%02d.dat", stokes->meshV->N);
+  fp = fopen(fname, "r");
+  if (!fp) {
+    printf("ERROR:  Cannot open file '%s' for reading.\n", fname);
+  }
+
+  readDfloatArray(fp, "Pressure projection matrix - Interpolatory", &stokes->P, &Nrows, &Ncols);
+
+  fclose(fp);
+
+  stokes->o_P = stokes->meshV->device.malloc(stokes->meshV->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->P);
 
   stokesAllocateScratchVars(stokes);
   stokesSetupBCMask(stokes);
@@ -146,8 +163,8 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   kernelInfoV["defines/p_blockSize"] = STOKES_REDUCTION_BLOCK_SIZE;
   kernelInfoV["defines/p_NpV"] = stokes->meshV->Np;
   kernelInfoV["defines/p_NqV"] = stokes->meshV->Nq;
-  kernelInfoV["defines/p_NpP"] = stokes->meshP->Np;
-  kernelInfoV["defines/p_NqP"] = stokes->meshP->Nq;
+  //kernelInfoV["defines/p_NpP"] = stokes->meshP->Np;
+  //kernelInfoV["defines/p_NqP"] = stokes->meshP->Nq;
 
   stokes->meshV->maskKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/mask.okl", "mask", kernelInfoV);
 
@@ -159,17 +176,19 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
 
   /* TODO:  Replace this with parametrized filenames. */
   if ((stokes->meshV->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
-    stokes->divergenceKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
-    stokes->gradientKernel       = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
-    stokes->lowerPressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureQuad2D.okl", "stokesLowerPressureQuad2D", kernelInfoV);
-    stokes->raisePressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureQuad2D.okl", "stokesRaisePressureQuad2D", kernelInfoV);
-    stokes->stiffnessKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfoV);
+    stokes->divergenceKernel           = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
+    stokes->gradientKernel             = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
+    //stokes->lowerPressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureQuad2D.okl", "stokesLowerPressureQuad2D", kernelInfoV);
+    //stokes->raisePressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureQuad2D.okl", "stokesRaisePressureQuad2D", kernelInfoV);
+    stokes->pressureProjectKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesPressureProjectQuad2D.okl", "stokesPressureProjectQuad2D", kernelInfoV);
+    stokes->pressureProjectTransKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesPressureProjectTransQuad2D.okl", "stokesPressureProjectTransQuad2D", kernelInfoV);
+    stokes->stiffnessKernel            = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfoV);
   } else if ((stokes->meshV->dim == 3) && (stokes->elementType == HEXAHEDRA)) {
-    stokes->divergenceKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceHex3D.okl", "stokesDivergenceHex3D", kernelInfoV);
-    stokes->gradientKernel       = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientHex3D.okl", "stokesGradientHex3D", kernelInfoV);
-    stokes->lowerPressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureHex3D.okl", "stokesLowerPressureHex3D", kernelInfoV);
-    stokes->raisePressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureHex3D.okl", "stokesRaisePressureHex3D", kernelInfoV);
-    stokes->stiffnessKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessHex3D.okl", "stokesStiffnessHex3D", kernelInfoV);
+    stokes->divergenceKernel           = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceHex3D.okl", "stokesDivergenceHex3D", kernelInfoV);
+    stokes->gradientKernel             = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientHex3D.okl", "stokesGradientHex3D", kernelInfoV);
+    //stokes->lowerPressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureHex3D.okl", "stokesLowerPressureHex3D", kernelInfoV);
+    //stokes->raisePressureKernel        = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureHex3D.okl", "stokesRaisePressureHex3D", kernelInfoV);
+    stokes->stiffnessKernel            = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessHex3D.okl", "stokesStiffnessHex3D", kernelInfoV);
   }
 
   return;

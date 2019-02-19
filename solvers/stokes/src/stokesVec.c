@@ -126,10 +126,10 @@ void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloa
       *c += stokes->workV[i];
   }
 
-  stokes->weightedInnerProductKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, u.o_p, v.o_p, stokes->o_workP);
-  stokes->o_workP.copyTo(stokes->workP);
-  for (int i = 0; i < stokes->NblockP; i++)
-    *c += stokes->workP[i];
+  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_p, v.o_p, stokes->o_workV);
+  stokes->o_workV.copyTo(stokes->workV);
+  for (int i = 0; i < stokes->NblockV; i++)
+    *c += stokes->workV[i];
 
   /* TODO:  MPI. */
 
@@ -147,7 +147,7 @@ void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
   }
 
   if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
+    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshV->ogs);
   }
 
   return;
@@ -164,7 +164,7 @@ void stokesVecUnmaskedGatherScatter(stokes_t *stokes, stokesVec_t v)
   }
 
   if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
+    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshV->ogs);
   }
 
   return;

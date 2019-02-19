@@ -62,7 +62,7 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   //
   // TODO:  This results in duplicate device objects and instruction streams.
   stokes->meshV = meshSetup((char*)fileName.c_str(), velocityN, options);
-  stokes->meshP = meshSetup((char*)fileName.c_str(), pressureN, options);
+  //stokes->meshP = meshSetup((char*)fileName.c_str(), pressureN, options);
 
   // OCCA setup.
   kernelInfoV["defines"].asObject();
@@ -80,7 +80,7 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   if (dim == 2) {
     if (elementType == QUADRILATERALS) {
       meshOccaSetup2D(stokes->meshV, options, kernelInfoV);
-      meshOccaSetup2D(stokes->meshP, options, kernelInfoP);
+      //meshOccaSetup2D(stokes->meshP, options, kernelInfoP);
     } else {
       printf("ERROR:  Support for 2D elements other than QUADRILATERALS not yet implemented.\n");
       MPI_Finalize();
@@ -89,7 +89,7 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   } else if (dim == 3) {
     if (elementType == HEXAHEDRA) {
       meshOccaSetup3D(stokes->meshV, options, kernelInfoV);
-      meshOccaSetup3D(stokes->meshP, options, kernelInfoP);
+      //meshOccaSetup3D(stokes->meshP, options, kernelInfoP);
     } else {
       printf("ERROR:  Support for 3D elements other than HEXAHEDRA not yet implemented.\n");
       MPI_Finalize();
@@ -203,8 +203,10 @@ static void stokesRHSAddBC(stokes_t *stokes)
 {
   stokesVec_t tmp;
 
-  occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
-  occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
+  //occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
+  //occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
+
+  occa::memory o_Pp = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
 
   stokesVecAllocate(stokes, &tmp);
 
@@ -264,16 +266,23 @@ static void stokesRHSAddBC(stokes_t *stokes)
                             stokes->u.o_z);
   }
 
+  /*
   stokes->raisePressureKernel(stokes->meshV->Nelements,
                               o_interpRaise,
                               tmp.o_p,
                               o_pRaised);
+  */
+
+  stokes->pressureProjectKernel(stokes->meshV->Nelements,
+                                stokes->o_P,
+                                tmp.o_p,
+                                o_Pp);
 
   stokes->gradientKernel(stokes->meshV->Nelements,
                          stokes->NtotalV,
                          stokes->meshV->o_Dmatrices,
                          stokes->meshV->o_vgeo,
-                         o_pRaised,
+                         o_Pp,
                          stokes->u.o_v);
 
   stokes->divergenceKernel(stokes->meshV->Nelements,
@@ -281,20 +290,28 @@ static void stokesRHSAddBC(stokes_t *stokes)
                            stokes->meshV->o_Dmatrices,
                            stokes->meshV->o_vgeo,
                            tmp.o_v,
-                           o_pRaised);
+                           o_Pp);
 
+  stokes->pressureProjectTransKernel(stokes->meshV->Nelements,
+                                     stokes->o_P,
+                                     o_Pp,
+                                     stokes->u.o_p);
+
+  /*
   stokes->lowerPressureKernel(stokes->meshV->Nelements,
                               o_interpRaise,
                               o_pRaised,
                               stokes->u.o_p);
+  */
 
   stokesVecScaledAdd(stokes, -1.0, stokes->u, 1.0, stokes->f);
 
   stokesVecZero(stokes, stokes->u);
 
   stokesVecFree(stokes, &tmp);
-  o_pRaised.free();
-  o_interpRaise.free();
+  o_Pp.free();
+  //o_pRaised.free();
+  //o_interpRaise.free();
   return;
 }
 

@@ -75,7 +75,7 @@ typedef struct {
 
   int elementType;         /* Element type code */
   mesh_t *meshV;           /* Velocity mesh */
-  mesh_t *meshP;           /* Pressure mesh */
+  //mesh_t *meshP;           /* Pressure mesh */
 
   int NtotalV;             /* Total number of points in the velocity mesh */
   int NtotalP;             /* Total number of points in the pressure mesh */
@@ -86,6 +86,9 @@ typedef struct {
 
   dfloat      *eta;        /* Viscosity */
   occa::memory o_eta;
+
+  dfloat      *P;          /* Pressure projection matrix */
+  occa::memory o_P;
 
   stokesPrecon_t *precon;  /* Preconditioner */
 
@@ -107,6 +110,8 @@ typedef struct {
   occa::kernel gradientKernel;
   occa::kernel lowerPressureKernel;
   occa::kernel raisePressureKernel;
+  occa::kernel pressureProjectKernel;
+  occa::kernel pressureProjectTransKernel;
   occa::kernel stiffnessKernel;
   occa::kernel vecScaleKernel;
   occa::kernel vecScaledAddKernel;
