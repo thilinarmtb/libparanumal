@@ -90,6 +90,11 @@ typedef struct {
   dfloat      *P;          /* Pressure projection matrix */
   occa::memory o_P;
 
+  dfloat       *uP;
+  occa::memory o_uP;
+  dfloat       *vP;
+  occa::memory o_vP;
+
   stokesPrecon_t *precon;  /* Preconditioner */
 
   ogs_t *ogs;              /* Gather-scatter handle (masked for BCs) */
@@ -112,6 +117,7 @@ typedef struct {
   occa::kernel raisePressureKernel;
   occa::kernel pressureProjectKernel;
   occa::kernel pressureProjectTransKernel;
+  occa::kernel rankOneProjectionKernel;
   occa::kernel stiffnessKernel;
   occa::kernel vecScaleKernel;
   occa::kernel vecScaledAddKernel;

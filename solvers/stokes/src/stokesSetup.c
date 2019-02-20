@@ -273,10 +273,18 @@ static void stokesRHSAddBC(stokes_t *stokes)
                               o_pRaised);
   */
 
+  /*
   stokes->pressureProjectKernel(stokes->meshV->Nelements,
                                 stokes->o_P,
                                 tmp.o_p,
                                 o_Pp);
+  */
+
+  stokes->rankOneProjectionKernel(stokes->meshV->Nelements,
+                                  stokes->o_uP,
+                                  stokes->o_vP,
+                                  tmp.o_p,
+                                  o_Pp);
 
   stokes->gradientKernel(stokes->meshV->Nelements,
                          stokes->NtotalV,
@@ -292,10 +300,19 @@ static void stokesRHSAddBC(stokes_t *stokes)
                            tmp.o_v,
                            o_Pp);
 
+  /*
   stokes->pressureProjectTransKernel(stokes->meshV->Nelements,
                                      stokes->o_P,
                                      o_Pp,
                                      stokes->u.o_p);
+
+  */
+
+  stokes->rankOneProjectionKernel(stokes->meshV->Nelements,
+                                  stokes->o_vP,
+                                  stokes->o_uP,
+                                  o_Pp,
+                                  stokes->u.o_p);
 
   /*
   stokes->lowerPressureKernel(stokes->meshV->Nelements,

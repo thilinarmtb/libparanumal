@@ -79,10 +79,18 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                               o_pRaised);
   */
 
+  /*
   stokes->pressureProjectKernel(stokes->meshV->Nelements,
                                 stokes->o_P,
                                 v.o_p,
                                 o_Pp);
+  */
+
+  stokes->rankOneProjectionKernel(stokes->meshV->Nelements,
+                                  stokes->o_uP,
+                                  stokes->o_vP,
+                                  v.o_p,
+                                  o_Pp);
 
   stokes->gradientKernel(stokes->meshV->Nelements,
                          stokes->NtotalV,
@@ -98,11 +106,18 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                            v.o_v,
                            o_Pp);
 
+  /*
   stokes->pressureProjectTransKernel(stokes->meshV->Nelements,
                                      stokes->o_P,
                                      o_Pp,
                                      Av.o_p);
+  */
 
+  stokes->rankOneProjectionKernel(stokes->meshV->Nelements,
+                                  stokes->o_vP,
+                                  stokes->o_uP,
+                                  o_Pp,
+                                  Av.o_p);
   /*
   stokes->lowerPressureKernel(stokes->meshV->Nelements,
                               o_interpRaise,
