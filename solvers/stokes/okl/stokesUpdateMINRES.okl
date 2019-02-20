@@ -1,0 +1,58 @@
+
+@kernel void stokesUpdateMINRES(const dlong Ntotal,
+				const dfloat ma2, // -a2
+				const dfloat ma3, // -a3
+				const dfloat alpha, // -del/gam
+				const dfloat beta, // -gam/gamp
+				@restrict dfloat *z,
+				@restrict dfloat *wOld,
+				@restrict dfloat *w,
+				@restrict dfloat *rOld,
+				@restrict dfloat *r,
+				@restrict dfloat *p){
+
+
+#define p_NT 256
+  
+  for(int no=0;no<Ntotal;no+=p_NT;@outer(0)){
+    for(int n=no;n<no+p_NT;++n;@inner(0)){
+
+      if(n<Ntotal){
+	dfloat zn = z[n];
+	dfloat wn = w[n];
+	dfloat wOldn = wOld[n];
+	dfloat rn = r[n];
+	dfloat rOldn = rOld[n];
+	dfloat pn = p[n];
+	
+	/* z = z - a2*w - a3*w_old  */
+	zn += ma2*wn;
+	zn += ma3*wOldn;
+	
+	/* w_old = w                */
+	wOld[n] = wn;
+	
+	/* w = z                    */
+	wn = zn;
+
+	/* z = r                    */
+	zn = rn;
+	
+	/* r = p - (del/gam)*r      */
+	rn = pn + alpha*rn;	
+
+	/* r = r - (gam/gamp)*r_old */
+	rn = rn + beta*rOldn;
+
+	/* r_old = z                */
+	rOldn = zn;
+
+	rOld[n] = rOldn;
+	r[n] = rn;
+	z[n] = zn;
+	w[n] = wn;
+ 	
+      }
+    }
+  }
+}

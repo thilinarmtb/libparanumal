@@ -50,6 +50,7 @@ src/stokesSetup.o \
 src/stokesSolve.o \
 src/stokesSolveSetup.o \
 src/stokesVec.o \
+src/stokesUpdateMINRES.o \
 
 # library objects
 LOBJS = \

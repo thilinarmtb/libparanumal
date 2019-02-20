@@ -56,7 +56,7 @@ typedef struct {
   dfloat *y;          /* Pointer to start of velocity y-component */
   dfloat *z;          /* Pointer to start of velocity z-component */
   dfloat *p;          /* Pointer to start of pressure */
-
+  
   /* Device variables. */
   occa::memory o_v;
   occa::memory o_x;
@@ -115,6 +115,8 @@ typedef struct {
   occa::kernel vecZeroKernel;
   occa::kernel weightedInnerProductKernel;
 
+  occa::kernel updateMINRESKernel;
+  
   /* Scratch variables */
   dlong Nblock;          /* Used for reductions */
   dfloat *block;
@@ -143,5 +145,17 @@ void stokesVecZero(stokes_t *stokes, stokesVec_t v);
 
 void stokesOperatorPrint(stokes_t *stokes);
 void stokesVecPrint(stokes_t *stokes, stokesVec_t v);
+
+void stokesUpdateMINRES(stokes_t *stokes,
+			const dfloat ma2, // -a2
+			const dfloat ma3, // -a3
+			const dfloat alpha, // -del/gam
+			const dfloat beta, // -gam/gamp
+			stokesVec_t &z,
+			stokesVec_t &wOld,
+			stokesVec_t &w,
+			stokesVec_t &rOld,
+			stokesVec_t &r,
+			stokesVec_t &p);
 
 #endif /* STOKES_H */
