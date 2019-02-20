@@ -56,7 +56,7 @@ typedef struct {
   dfloat *y;          /* Pointer to start of velocity y-component */
   dfloat *z;          /* Pointer to start of velocity z-component */
   dfloat *p;          /* Pointer to start of pressure */
-
+  
   /* Device variables. */
   occa::memory o_v;
   occa::memory o_x;

@@ -38,10 +38,7 @@ void stokesUpdateMINRES(stokes_t *stokes,
 			stokesVec_t &r,
 			stokesVec_t &p){
 
-
-  dlong Ntotal = stokes->meshV->Np*stokes->meshV->Nelements*(stokes->meshV->dim+1);
-
-  stokes->updateMINRESKernel(Ntotal, ma2, ma3, alpha, beta,
+  stokes->updateMINRESKernel(stokes->Ndof, ma2, ma3, alpha, beta,
 			     z.o_v, wOld.o_v, w.o_v, rOld.o_v, r.o_v, p.o_v);
 }
 			

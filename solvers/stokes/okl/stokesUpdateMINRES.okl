@@ -33,22 +33,25 @@
 	wOld[n] = wn;
 	
 	/* w = z                    */
-	w[n] = zn;
+	wn = zn;
 
 	/* z = r                    */
-	z[n] = rn;
+	zn = rn;
 	
 	/* r = p - (del/gam)*r      */
-	rn *= alpha;	
-	rn += pn;
+	rn = pn + alpha*rn;	
 
 	/* r = r - (gam/gamp)*r_old */
-	rn += beta*rOldn;
+	rn = rn + beta*rOldn;
 
-	r[n] = rn;
-	
 	/* r_old = z                */
-	rOld[n] = zn;
+	rOldn = zn;
+
+	rOld[n] = rOldn;
+	r[n] = rn;
+	z[n] = zn;
+	w[n] = wn;
+ 	
       }
     }
   }
