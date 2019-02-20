@@ -32,11 +32,11 @@ SOFTWARE.
                                    @restrict dfloat *pRaised)
 {
   for (dlong e = 0; e < Nelements; e++; @outer(0)) {
-    for (int i = 0; i < p_NqV; i++; @inner(2)) {
-      for (int j = 0; j < p_NqV; j++; @inner(1)) {
-        for (int k = 0; k < p_NqV; k++; @inner(0)) {
-          const dlong id = e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + k;
-          const dlong gid = e*p_NpV*p_Nvgeo + i*p_NqV*p_NqV + j*p_NqV + k;
+    for (int i = 0; i < p_Nq; i++; @inner(2)) {
+      for (int j = 0; j < p_Nq; j++; @inner(1)) {
+        for (int k = 0; k < p_Nq; k++; @inner(0)) {
+          const dlong id = e*p_Np + i*p_Nq*p_Nq + j*p_Nq + k;
+          const dlong gid = e*p_Np*p_Nvgeo + i*p_Nq*p_Nq + j*p_Nq + k;
 
           dfloat Gx0 = 0.0;
           dfloat Gx1 = 0.0;
@@ -50,37 +50,37 @@ SOFTWARE.
           dfloat Gz1 = 0.0;
           dfloat Gz2 = 0.0;
 
-          for (int n = 0; n < p_NqV; n++) {
-            const dlong id_ijn = e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + n;
-            const dlong id_ink = e*p_NpV + i*p_NqV*p_NqV + n*p_NqV + k;
-            const dlong id_njk = e*p_NpV + n*p_NqV*p_NqV + j*p_NqV + k;
+          for (int n = 0; n < p_Nq; n++) {
+            const dlong id_ijn = e*p_Np + i*p_Nq*p_Nq + j*p_Nq + n;
+            const dlong id_ink = e*p_Np + i*p_Nq*p_Nq + n*p_Nq + k;
+            const dlong id_njk = e*p_Np + n*p_Nq*p_Nq + j*p_Nq + k;
 
-            Gx0 += D[k*p_NqV + n]*v[id_ijn + 0*NtotalV];
-            Gx1 += D[j*p_NqV + n]*v[id_ink + 0*NtotalV];
-            Gx2 += D[i*p_NqV + n]*v[id_njk + 0*NtotalV];
+            Gx0 += D[k*p_Nq + n]*v[id_ijn + 0*NtotalV];
+            Gx1 += D[j*p_Nq + n]*v[id_ink + 0*NtotalV];
+            Gx2 += D[i*p_Nq + n]*v[id_njk + 0*NtotalV];
 
-            Gy0 += D[k*p_NqV + n]*v[id_ijn + 1*NtotalV];
-            Gy1 += D[j*p_NqV + n]*v[id_ink + 1*NtotalV];
-            Gy2 += D[i*p_NqV + n]*v[id_njk + 1*NtotalV];
+            Gy0 += D[k*p_Nq + n]*v[id_ijn + 1*NtotalV];
+            Gy1 += D[j*p_Nq + n]*v[id_ink + 1*NtotalV];
+            Gy2 += D[i*p_Nq + n]*v[id_njk + 1*NtotalV];
 
-            Gz0 += D[k*p_NqV + n]*v[id_ijn + 2*NtotalV];
-            Gz1 += D[j*p_NqV + n]*v[id_ink + 2*NtotalV];
-            Gz2 += D[i*p_NqV + n]*v[id_njk + 2*NtotalV];
+            Gz0 += D[k*p_Nq + n]*v[id_ijn + 2*NtotalV];
+            Gz1 += D[j*p_Nq + n]*v[id_ink + 2*NtotalV];
+            Gz2 += D[i*p_Nq + n]*v[id_njk + 2*NtotalV];
           }
 
-          const dfloat JW = vgeo[gid + p_NpV*p_JWID];
+          const dfloat JW = vgeo[gid + p_Np*p_JWID];
 
-          Gx0 *= vgeo[gid + p_NpV*p_RXID]*JW;
-          Gx1 *= vgeo[gid + p_NpV*p_SXID]*JW;
-          Gx2 *= vgeo[gid + p_NpV*p_TXID]*JW;
+          Gx0 *= vgeo[gid + p_Np*p_RXID]*JW;
+          Gx1 *= vgeo[gid + p_Np*p_SXID]*JW;
+          Gx2 *= vgeo[gid + p_Np*p_TXID]*JW;
 
-          Gy0 *= vgeo[gid + p_NpV*p_RYID]*JW;
-          Gy1 *= vgeo[gid + p_NpV*p_SYID]*JW;
-          Gy2 *= vgeo[gid + p_NpV*p_TYID]*JW;
+          Gy0 *= vgeo[gid + p_Np*p_RYID]*JW;
+          Gy1 *= vgeo[gid + p_Np*p_SYID]*JW;
+          Gy2 *= vgeo[gid + p_Np*p_TYID]*JW;
 
-          Gz0 *= vgeo[gid + p_NpV*p_RZID]*JW;
-          Gz1 *= vgeo[gid + p_NpV*p_SZID]*JW;
-          Gz2 *= vgeo[gid + p_NpV*p_TZID]*JW;
+          Gz0 *= vgeo[gid + p_Np*p_RZID]*JW;
+          Gz1 *= vgeo[gid + p_Np*p_SZID]*JW;
+          Gz2 *= vgeo[gid + p_Np*p_TZID]*JW;
 
           pRaised[id] = -Gx0 - Gx1 - Gx2 - Gy0 - Gy1 - Gy2 - Gz0 - Gz1 - Gz2;
         }

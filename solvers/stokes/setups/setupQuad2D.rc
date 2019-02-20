@@ -34,14 +34,12 @@ CUDA
 ################ PROBLEM SETUP #################
 ################################################
 
+# Pressure degree is velocity degree - 1.
 [VELOCITY POLYNOMIAL DEGREE]
 7
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
-
-[PRESSURE POLYNOMIAL DEGREE]
-6
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS

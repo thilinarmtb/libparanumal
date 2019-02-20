@@ -33,24 +33,24 @@ void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v)
   v->v = (dfloat*)calloc(stokes->Ndof, sizeof(dfloat));
 
   v->x = v->v;
-  v->y = v->v + stokes->NtotalV;
-  if (stokes->meshV->dim == 2) {
+  v->y = v->v + stokes->Ntotal;
+  if (stokes->mesh->dim == 2) {
     v->z = NULL;
-    v->p = v->v + 2*stokes->NtotalV;
-  } else if (stokes->meshV->dim == 3) {
-    v->z = v->v + 2*stokes->NtotalV;
-    v->p = v->v + 3*stokes->NtotalV;
+    v->p = v->v + 2*stokes->Ntotal;
+  } else if (stokes->mesh->dim == 3) {
+    v->z = v->v + 2*stokes->Ntotal;
+    v->p = v->v + 3*stokes->Ntotal;
   }
 
-  v->o_v = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat), v->v);
+  v->o_v = stokes->mesh->device.malloc(stokes->Ndof*sizeof(dfloat), v->v);
 
   v->o_x = v->o_v;
-  v->o_y = v->o_v + stokes->NtotalV*sizeof(dfloat);
-  if (stokes->meshV->dim == 2) {
-    v->o_p = v->o_v + 2*stokes->NtotalV*sizeof(dfloat);
-  } else if (stokes->meshV->dim == 3) {
-    v->o_z = v->o_v + 2*stokes->NtotalV*sizeof(dfloat);
-    v->o_p = v->o_v + 3*stokes->NtotalV*sizeof(dfloat);
+  v->o_y = v->o_v + stokes->Ntotal*sizeof(dfloat);
+  if (stokes->mesh->dim == 2) {
+    v->o_p = v->o_v + 2*stokes->Ntotal*sizeof(dfloat);
+  } else if (stokes->mesh->dim == 3) {
+    v->o_z = v->o_v + 2*stokes->Ntotal*sizeof(dfloat);
+    v->o_p = v->o_v + 3*stokes->Ntotal*sizeof(dfloat);
   }
 
   return;
@@ -109,27 +109,27 @@ void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloa
   /* TODO:  Replace host loops with further kernel calls if we had too many
    * blocks.  (See, e.g., ellipticWeightedInnerProduct().)
    */
-  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_x, v.o_x, stokes->o_workV);
-  stokes->o_workV.copyTo(stokes->workV);
-  for (int i = 0; i < stokes->NblockV; i++)
-    *c += stokes->workV[i];
+  stokes->weightedInnerProductKernel(stokes->Ntotal, stokes->ogs->o_invDegree, u.o_x, v.o_x, stokes->o_block);
+  stokes->o_block.copyTo(stokes->block);
+  for (int i = 0; i < stokes->Nblock; i++)
+    *c += stokes->block[i];
 
-  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_y, v.o_y, stokes->o_workV);
-  stokes->o_workV.copyTo(stokes->workV);
-  for (int i = 0; i < stokes->NblockV; i++)
-    *c += stokes->workV[i];
+  stokes->weightedInnerProductKernel(stokes->Ntotal, stokes->ogs->o_invDegree, u.o_y, v.o_y, stokes->o_block);
+  stokes->o_block.copyTo(stokes->block);
+  for (int i = 0; i < stokes->Nblock; i++)
+    *c += stokes->block[i];
 
-  if (stokes->meshV->dim == 3) {
-    stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_z, v.o_z, stokes->o_workV);
-    stokes->o_workV.copyTo(stokes->workV);
-    for (int i = 0; i < stokes->NblockV; i++)
-      *c += stokes->workV[i];
+  if (stokes->mesh->dim == 3) {
+    stokes->weightedInnerProductKernel(stokes->Ntotal, stokes->ogs->o_invDegree, u.o_z, v.o_z, stokes->o_block);
+    stokes->o_block.copyTo(stokes->block);
+    for (int i = 0; i < stokes->Nblock; i++)
+      *c += stokes->block[i];
   }
 
-  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, u.o_p, v.o_p, stokes->o_workV);
-  stokes->o_workV.copyTo(stokes->workV);
-  for (int i = 0; i < stokes->NblockV; i++)
-    *c += stokes->workV[i];
+  stokes->weightedInnerProductKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, u.o_p, v.o_p, stokes->o_block);
+  stokes->o_block.copyTo(stokes->block);
+  for (int i = 0; i < stokes->Nblock; i++)
+    *c += stokes->block[i];
 
   /* TODO:  MPI. */
 
@@ -142,12 +142,12 @@ void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
   if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
     ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->ogs);
     ogsGatherScatter(v.o_y, ogsDfloat, ogsAdd, stokes->ogs);
-    if (stokes->meshV->dim == 3)
+    if (stokes->mesh->dim == 3)
       ogsGatherScatter(v.o_z, ogsDfloat, ogsAdd, stokes->ogs);
   }
 
   if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->mesh->ogs);
   }
 
   return;
@@ -157,14 +157,14 @@ void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
 void stokesVecUnmaskedGatherScatter(stokes_t *stokes, stokesVec_t v)
 {
   if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-    ogsGatherScatter(v.o_y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-    if (stokes->meshV->dim == 3)
-      ogsGatherScatter(v.o_z, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+    ogsGatherScatter(v.o_x, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+    ogsGatherScatter(v.o_y, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+    if (stokes->mesh->dim == 3)
+      ogsGatherScatter(v.o_z, ogsDfloat, ogsAdd, stokes->mesh->ogs);
   }
 
   if (stokes->options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS")) {
-    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->meshV->ogs);
+    ogsGatherScatter(v.o_p, ogsDfloat, ogsAdd, stokes->mesh->ogs);
   }
 
   return;

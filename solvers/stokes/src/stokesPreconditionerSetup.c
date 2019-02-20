@@ -62,14 +62,14 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
 
   switch (stokes->elementType) {
   case QUADRILATERALS:
-    if (stokes->meshV->dim == 2) {
-      for (dlong e = 0; e < stokes->meshV->Nelements; e++) {
+    if (stokes->mesh->dim == 2) {
+      for (dlong e = 0; e < stokes->mesh->Nelements; e++) {
         /* TODO:  This is wasteful---should just build once and then copy. */
-        stokesBuildLocalContinuousDiagQuad2D(stokes, e, stokes->precon->invDiagA.x + e*stokes->meshV->Np);
-        stokesBuildLocalContinuousDiagQuad2D(stokes, e, stokes->precon->invDiagA.y + e*stokes->meshV->Np);
+        stokesBuildLocalContinuousDiagQuad2D(stokes, e, stokes->precon->invDiagA.x + e*stokes->mesh->Np);
+        stokesBuildLocalContinuousDiagQuad2D(stokes, e, stokes->precon->invDiagA.y + e*stokes->mesh->Np);
       }
 
-      for (int i = 0; i < stokes->NtotalP; i++)
+      for (int i = 0; i < stokes->Ntotal; i++)
         stokes->precon->invDiagA.p[i] = stokes->precon->boost;
     } else {
       printf("ERROR:  Not implemented.\n");
@@ -99,7 +99,7 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
  */
 static void stokesBuildLocalContinuousDiagQuad2D(stokes_t* stokes, dlong e, dfloat *diagA)
 {
-  mesh_t *mesh = stokes->meshV;
+  mesh_t *mesh = stokes->mesh;
 
   for (int ny=0;ny<mesh->Nq;ny++) {
     for (int nx=0;nx<mesh->Nq;nx++) {

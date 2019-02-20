@@ -34,7 +34,7 @@ static void stokesTestSolutionConstantViscosityHex3D(dfloat x, dfloat y, dfloat 
 int main(int argc, char **argv)
 {
   stokes_t         *stokes;
-  occa::properties kernelInfoV, kernelInfoP;
+  occa::properties kernelInfo;
 
   // Start up MPI.
   MPI_Init(&argc, &argv);
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 
   setupAide options(argv[1]);
 
-  stokes = stokesSetup(kernelInfoP, kernelInfoV, options);
+  stokes = stokesSetup(kernelInfo, options);
   stokesSolve(stokes);
 
   stokesVecCopyDeviceToHost(stokes->u);
@@ -56,22 +56,22 @@ int main(int argc, char **argv)
   /* Compute error (if applicable.) */
   dfloat errxInf = 0.0, erryInf = 0.0, errzInf = 0.0;
   dfloat errxDL2 = 0.0, erryDL2 = 0.0, errzDL2 = 0.0;
-  for (int e = 0; e < stokes->meshV->Nelements; e++) {
-    for (int i = 0; i < stokes->meshV->Np; i++) {
+  for (int e = 0; e < stokes->mesh->Nelements; e++) {
+    for (int i = 0; i < stokes->mesh->Np; i++) {
       int    ind;
       dfloat x, y, z;
       dfloat errx, erry, errz;
       dfloat ux_exact, uy_exact, uz_exact;
 
-      ind = e*stokes->meshV->Np + i;
-      x = stokes->meshV->x[ind];
-      y = stokes->meshV->y[ind];
-      z = stokes->meshV->z[ind];
+      ind = e*stokes->mesh->Np + i;
+      x = stokes->mesh->x[ind];
+      y = stokes->mesh->y[ind];
+      z = stokes->mesh->z[ind];
 
-      if (stokes->meshV->dim == 2) {
+      if (stokes->mesh->dim == 2) {
         //stokesTestSolutionConstantViscosityQuad2D(x, y, &ux_exact, &uy_exact);
         //stokesTestSolutionVariableViscosityQuad2D(x, y, &ux_exact, &uy_exact);
-        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+        if (stokes->mapB[e*stokes->mesh->Np + i] == 1) {
           stokes->u.x[ind] = cos(y);  // Manually insert the boundary data.
           stokes->u.y[ind] = sin(x);
 
@@ -80,13 +80,13 @@ int main(int argc, char **argv)
         } else {
           stokesTestSolutionDirichletQuad2D(x, y, &ux_exact, &uy_exact);
         }
-      } else if (stokes->meshV->dim == 3) {
+      } else if (stokes->mesh->dim == 3) {
         stokesTestSolutionConstantViscosityHex3D(x, y, z, &ux_exact, &uy_exact, &uz_exact);
       }
 
       errx = stokes->u.x[ind] - ux_exact;
       erry = stokes->u.y[ind] - uy_exact;
-      if (stokes->meshV->dim == 3)
+      if (stokes->mesh->dim == 3)
         errz = stokes->u.z[ind] - uz_exact;
 
       if (fabs(errx) > errxInf)
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
       errxDL2 += errx*errx;
       erryDL2 += erry*erry;
 
-      if (stokes->meshV->dim == 3) {
+      if (stokes->mesh->dim == 3) {
         if (fabs(errz) > errzInf)
           errzInf = fabs(errz);
         errzDL2 += errz*errz;
@@ -106,18 +106,18 @@ int main(int argc, char **argv)
 
   errxDL2 = sqrt(errxDL2);
   erryDL2 = sqrt(erryDL2);
-  if (stokes->meshV->dim == 3)
+  if (stokes->mesh->dim == 3)
     errzDL2 = sqrt(errzDL2);
 
   printf("-----\n");
 
   printf("errxInf = % .15e\n", errxInf);
   printf("erryInf = % .15e\n", erryInf);
-  if (stokes->meshV->dim == 3)
+  if (stokes->mesh->dim == 3)
     printf("errzInf = % .15e\n", errzInf);
   printf("errxDL2 = % .15e\n", errxDL2);
   printf("erryDL2 = % .15e\n", erryDL2);
-  if (stokes->meshV->dim == 3)
+  if (stokes->mesh->dim == 3)
     printf("errzDL2 = % .15e\n", errzDL2);
 #endif
 
@@ -129,19 +129,18 @@ int main(int argc, char **argv)
   printf("];\n");
 
   printf("x = [");
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    printf("% .15e\n", stokes->meshV->x[i]);
+  for (int i = 0; i < stokes->Ntotal; i++) {
+    printf("% .15e\n", stokes->mesh->x[i]);
   }
   printf("];\n");
 
   printf("y = [");
   for (int i = 0; i < stokes->NtotalV; i++) {
-    printf("% .15e\n", stokes->meshV->y[i]);
+    printf("% .15e\n", stokes->mesh->y[i]);
   }
   printf("];\n");
 
-  printf("NtotalV = %d\n", stokes->NtotalV);
-  printf("NtotalP = %d\n", stokes->NtotalP);
+  printf("Ntotal = %d\n", stokes->Ntotal);
 #endif
 
   /* Export solution. */

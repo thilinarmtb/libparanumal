@@ -1,4 +1,3 @@
-
 /*
 
 The MIT License (MIT)
@@ -28,58 +27,57 @@ SOFTWARE.
 // Px(:,n) = (I - u*v')*x(:,:,e)*(I-v*u')
 
 @kernel void stokesRankOneProjectionQuad2D(const dlong Nelements,
-					   @restrict const dfloat *u,
-					   @restrict const dfloat *v,
-					   @restrict const dfloat *x,
-					   @restrict dfloat *Px){
-  
+                                           @restrict const dfloat *u,
+                                           @restrict const dfloat *v,
+                                           @restrict const dfloat *x,
+                                           @restrict dfloat *Px){
+
   for (int e = 0; e < Nelements; e++; @outer(0)) {
 
-    @shared dfloat s_x[p_NqV][p_NqV];
-    
-    @exclusive dfloat r_x[p_NqV];
-    
-    for (int i = 0; i < p_NqV; i++; @inner(0)) {
-      
+    @shared dfloat s_x[p_Nq][p_Nq];
+
+    @exclusive dfloat r_x[p_Nq];
+
+    for (int i = 0; i < p_Nq; i++; @inner(0)) {
+
       dfloat res = 0;
 
-      for (int j = 0; j < p_NqV; j++) {
-	const dlong ind = e*p_NpV + j*p_NqV + i;
-	r_x[j] = x[ind];
-	res += v[j]*r_x[j];
+      for (int j = 0; j < p_Nq; j++) {
+        const dlong ind = e*p_Np + j*p_Nq + i;
+        r_x[j] = x[ind];
+        res += v[j]*r_x[j];
       }
 
-      for (int j = 0; j < p_NqV; j++) {
-	s_x[j][i] = r_x[j] - res*u[j];
+      for (int j = 0; j < p_Nq; j++) {
+        s_x[j][i] = r_x[j] - res*u[j];
       }
     }
-    
+
     @barrier("local");
 
-    for (int j = 0; j < p_NqV; j++; @inner(0)) {
-      
-      for (int i = 0; i < p_NqV; i++) {
-	r_x[i] = s_x[j][i];
+    for (int j = 0; j < p_Nq; j++; @inner(0)) {
+
+      for (int i = 0; i < p_Nq; i++) {
+        r_x[i] = s_x[j][i];
       }
-      
+
       dfloat res = 0;
-      for (int i = 0; i < p_NqV; i++) {
-	res += v[i]*r_x[i];
+      for (int i = 0; i < p_Nq; i++) {
+        res += v[i]*r_x[i];
       }
-      
-      for (int i = 0; i < p_NqV; i++) {
-	s_x[j][i] = r_x[i] - res*u[i];
+
+      for (int i = 0; i < p_Nq; i++) {
+        s_x[j][i] = r_x[i] - res*u[i];
       }
     }
-    
+
     @barrier("local");
-    
-    for (int i = 0; i < p_NqV; i++; @inner(0)) {
-      for (int j = 0; j < p_NqV; j++) {
-	const dlong ind = e*p_NpV + j*p_NqV + i;
-	Px[ind] = s_x[j][i];
+
+    for (int i = 0; i < p_Nq; i++; @inner(0)) {
+      for (int j = 0; j < p_Nq; j++) {
+        const dlong ind = e*p_Np + j*p_Nq + i;
+        Px[ind] = s_x[j][i];
       }
     }
   }
 }
-

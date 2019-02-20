@@ -74,11 +74,9 @@ typedef struct {
   setupAide options;       /* Configuration information. */
 
   int elementType;         /* Element type code */
-  mesh_t *meshV;           /* Velocity mesh */
-  //mesh_t *meshP;           /* Pressure mesh */
+  mesh_t *mesh;            /* Velocity mesh */
 
-  int NtotalV;             /* Total number of points in the velocity mesh */
-  int NtotalP;             /* Total number of points in the pressure mesh */
+  int Ntotal;              /* Total number of points in the velocity mesh */
   int Ndof;                /* Total number of degrees of freedom */
 
   stokesVec_t u;           /* Solution */
@@ -87,11 +85,8 @@ typedef struct {
   dfloat      *eta;        /* Viscosity */
   occa::memory o_eta;
 
-  dfloat      *P;          /* Pressure projection matrix */
-  occa::memory o_P;
-
-  dfloat       *uP;
-  occa::memory o_uP;
+  dfloat       *uP;        /* Vectors u, v for effecting pressure projection */
+  occa::memory o_uP;       /* P = I - uv^* */
   dfloat       *vP;
   occa::memory o_vP;
 
@@ -113,10 +108,6 @@ typedef struct {
   occa::kernel divergenceKernel;
   occa::kernel dotMultiplyKernel;
   occa::kernel gradientKernel;
-  occa::kernel lowerPressureKernel;
-  occa::kernel raisePressureKernel;
-  occa::kernel pressureProjectKernel;
-  occa::kernel pressureProjectTransKernel;
   occa::kernel rankOneProjectionKernel;
   occa::kernel stiffnessKernel;
   occa::kernel vecScaleKernel;
@@ -125,17 +116,13 @@ typedef struct {
   occa::kernel weightedInnerProductKernel;
 
   /* Scratch variables */
-  dlong NblockV;          /* Used for reductions over the velocity DOFs. */
-  dfloat *workV;
-  occa::memory o_workV;
-
-  dlong NblockP;          /* Used for reductions over the pressure DOFs. */
-  dfloat *workP;
-  occa::memory o_workP;
+  dlong Nblock;          /* Used for reductions */
+  dfloat *block;
+  occa::memory o_block;
 } stokes_t;
 
-stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
-void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
+stokes_t *stokesSetup(occa::properties &kernelInfo, setupAide options);
+void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfo);
 void stokesSolve(stokes_t *stokes);
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);

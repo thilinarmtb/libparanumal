@@ -38,10 +38,10 @@ SOFTWARE.
    * TODO:  Unroll the loop over n?
    */
   for (dlong e = 0; e < Nelements; e++; @outer(0)) {
-    for (int i = 0; i < p_NqV; i++; @inner(2)) {
-      for (int j = 0; j < p_NqV; j++; @inner(1)) {
-        for (int k = 0; k < p_NqV; k++; @inner(0)) {
-          const dlong id = e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + k;
+    for (int i = 0; i < p_Nq; i++; @inner(2)) {
+      for (int j = 0; j < p_Nq; j++; @inner(1)) {
+        for (int k = 0; k < p_Nq; k++; @inner(0)) {
+          const dlong id = e*p_Np + i*p_Nq*p_Nq + j*p_Nq + k;
 
           dfloat Gx0 = 0.0;
           dfloat Gx1 = 0.0;
@@ -55,42 +55,42 @@ SOFTWARE.
           dfloat Gz1 = 0.0;
           dfloat Gz2 = 0.0;
 
-          for (int n = 0; n < p_NqV; n++) {
-            const dlong id_ijn = e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + n;
-            const dlong id_ink = e*p_NpV + i*p_NqV*p_NqV + n*p_NqV + k;
-            const dlong id_njk = e*p_NpV + n*p_NqV*p_NqV + j*p_NqV + k;
+          for (int n = 0; n < p_Nq; n++) {
+            const dlong id_ijn = e*p_Np + i*p_Nq*p_Nq + j*p_Nq + n;
+            const dlong id_ink = e*p_Np + i*p_Nq*p_Nq + n*p_Nq + k;
+            const dlong id_njk = e*p_Np + n*p_Nq*p_Nq + j*p_Nq + k;
 
-            const dlong gid_ijn = e*p_NpV*p_Nvgeo + i*p_NqV*p_NqV + j*p_NqV + n;
-            const dlong gid_ink = e*p_NpV*p_Nvgeo + i*p_NqV*p_NqV + n*p_NqV + k;
-            const dlong gid_njk = e*p_NpV*p_Nvgeo + n*p_NqV*p_NqV + j*p_NqV + k;
+            const dlong gid_ijn = e*p_Np*p_Nvgeo + i*p_Nq*p_Nq + j*p_Nq + n;
+            const dlong gid_ink = e*p_Np*p_Nvgeo + i*p_Nq*p_Nq + n*p_Nq + k;
+            const dlong gid_njk = e*p_Np*p_Nvgeo + n*p_Nq*p_Nq + j*p_Nq + k;
 
-            const dfloat JW_ijn = vgeo[gid_ijn + p_NpV*p_JWID];
-            const dfloat JW_ink = vgeo[gid_ink + p_NpV*p_JWID];
-            const dfloat JW_njk = vgeo[gid_njk + p_NpV*p_JWID];
+            const dfloat JW_ijn = vgeo[gid_ijn + p_Np*p_JWID];
+            const dfloat JW_ink = vgeo[gid_ink + p_Np*p_JWID];
+            const dfloat JW_njk = vgeo[gid_njk + p_Np*p_JWID];
 
-            const dfloat drdxJW_ijn = vgeo[gid_ijn + p_NpV*p_RXID]*JW_ijn;
-            const dfloat drdyJW_ijn = vgeo[gid_ijn + p_NpV*p_RYID]*JW_ijn;
-            const dfloat drdzJW_ijn = vgeo[gid_ijn + p_NpV*p_RZID]*JW_ijn;
+            const dfloat drdxJW_ijn = vgeo[gid_ijn + p_Np*p_RXID]*JW_ijn;
+            const dfloat drdyJW_ijn = vgeo[gid_ijn + p_Np*p_RYID]*JW_ijn;
+            const dfloat drdzJW_ijn = vgeo[gid_ijn + p_Np*p_RZID]*JW_ijn;
 
-            const dfloat dsdxJW_ink = vgeo[gid_ink + p_NpV*p_SXID]*JW_ink;
-            const dfloat dsdyJW_ink = vgeo[gid_ink + p_NpV*p_SYID]*JW_ink;
-            const dfloat dsdzJW_ink = vgeo[gid_ink + p_NpV*p_SZID]*JW_ink;
+            const dfloat dsdxJW_ink = vgeo[gid_ink + p_Np*p_SXID]*JW_ink;
+            const dfloat dsdyJW_ink = vgeo[gid_ink + p_Np*p_SYID]*JW_ink;
+            const dfloat dsdzJW_ink = vgeo[gid_ink + p_Np*p_SZID]*JW_ink;
 
-            const dfloat dtdxJW_njk = vgeo[gid_njk + p_NpV*p_TXID]*JW_njk;
-            const dfloat dtdyJW_njk = vgeo[gid_njk + p_NpV*p_TYID]*JW_njk;
-            const dfloat dtdzJW_njk = vgeo[gid_njk + p_NpV*p_TZID]*JW_njk;
+            const dfloat dtdxJW_njk = vgeo[gid_njk + p_Np*p_TXID]*JW_njk;
+            const dfloat dtdyJW_njk = vgeo[gid_njk + p_Np*p_TYID]*JW_njk;
+            const dfloat dtdzJW_njk = vgeo[gid_njk + p_Np*p_TZID]*JW_njk;
 
-            Gx0 += D[n*p_NqV + k]*pRaised[id_ijn]*drdxJW_ijn;
-            Gx1 += D[n*p_NqV + j]*pRaised[id_ink]*dsdxJW_ink;
-            Gx2 += D[n*p_NqV + i]*pRaised[id_njk]*dtdxJW_njk;
+            Gx0 += D[n*p_Nq + k]*pRaised[id_ijn]*drdxJW_ijn;
+            Gx1 += D[n*p_Nq + j]*pRaised[id_ink]*dsdxJW_ink;
+            Gx2 += D[n*p_Nq + i]*pRaised[id_njk]*dtdxJW_njk;
 
-            Gy0 += D[n*p_NqV + k]*pRaised[id_ijn]*drdyJW_ijn;
-            Gy1 += D[n*p_NqV + j]*pRaised[id_ink]*dsdyJW_ink;
-            Gy2 += D[n*p_NqV + i]*pRaised[id_njk]*dtdyJW_njk;
+            Gy0 += D[n*p_Nq + k]*pRaised[id_ijn]*drdyJW_ijn;
+            Gy1 += D[n*p_Nq + j]*pRaised[id_ink]*dsdyJW_ink;
+            Gy2 += D[n*p_Nq + i]*pRaised[id_njk]*dtdyJW_njk;
 
-            Gz0 += D[n*p_NqV + k]*pRaised[id_ijn]*drdzJW_ijn;
-            Gz1 += D[n*p_NqV + j]*pRaised[id_ink]*dsdzJW_ink;
-            Gz2 += D[n*p_NqV + i]*pRaised[id_njk]*dtdzJW_njk;
+            Gz0 += D[n*p_Nq + k]*pRaised[id_ijn]*drdzJW_ijn;
+            Gz1 += D[n*p_Nq + j]*pRaised[id_ink]*dsdzJW_ink;
+            Gz2 += D[n*p_Nq + i]*pRaised[id_njk]*dtdzJW_njk;
           }
 
           v[id + 0*NtotalV] += -Gx0 - Gx1 - Gx2;

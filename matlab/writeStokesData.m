@@ -1,7 +1,8 @@
-% TODO:  Remove Chebfun dependency.
-
+% This code requires Chebfun.
+%
+% TODO:  Remove this dependency.
 function writeStokesData(N)
-	fname = sprintf('stokes%02d.dat', N);
+	fname = sprintf('stokesN%02d.dat', N);
 	fid = fopen(fname, 'w');
 
 	Q = legpoly(0:N, 'norm');
@@ -28,16 +29,12 @@ function writeStokesData(N)
 	u3 = S(1, 1)*U(:, 1);
 	v3 = V(:, 1);
 
-	writeFloatMatrix(fid, P1, 'Pressure projection matrix - L2-orthogonal');
-	writeFloatMatrix(fid, P2, 'Pressure projection matrix - Interpolatory');
-	writeFloatMatrix(fid, P3, 'Pressure projection matrix - Pseudoinverse');
 	writeFloatMatrix(fid, u1, 'Pressure projection rank-1 update - L2 orthogonal (u)');
 	writeFloatMatrix(fid, v1, 'Pressure projection rank-1 update - L2 orthogonal (v)');
 	writeFloatMatrix(fid, u2, 'Pressure projection rank-1 update - Interpolatory (u)');
 	writeFloatMatrix(fid, v2, 'Pressure projection rank-1 update - Interpolatory (v)');
 	writeFloatMatrix(fid, u3, 'Pressure projection rank-1 update - Pseudoinverse (u)');
 	writeFloatMatrix(fid, v3, 'Pressure projection rank-1 update - Pseudoinverse (v)');
-
 
 	fclose(fid);
 end

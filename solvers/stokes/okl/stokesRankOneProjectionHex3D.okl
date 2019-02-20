@@ -28,87 +28,87 @@ SOFTWARE.
 // Px(:,n) = (I - u*v')*x(:,:,e)*(I-v*u')
 
 @kernel void stokesRankOneProjectionHex3D(const dlong Nelements,
-					  @restrict const dfloat *u,
-					  @restrict const dfloat *v,
-					  @restrict const dfloat *x,
-					  @restrict dfloat *Px){
-  
+                                          @restrict const dfloat *u,
+                                          @restrict const dfloat *v,
+                                          @restrict const dfloat *x,
+                                          @restrict dfloat *Px){
+
   for (int e = 0; e < Nelements; e++; @outer(0)) {
 
-    @shared dfloat s_x[p_NqV][p_NqV][p_NqV];
-    
-    @exclusive dfloat r_x[p_NqV];
-    
-    for (int j = 0; j < p_NqV; j++; @inner(1)) {    
-      for (int i = 0; i < p_NqV; i++; @inner(0)) {
-	
-	dfloat res = 0;
+    @shared dfloat s_x[p_Nq][p_Nq][p_Nq];
 
-#pragma unroll p_NqV
-	for (int k = 0; k < p_NqV; k++) {
-	  const dlong ind = e*p_NpV + k*p_NqV*p_NqV + j*p_NqV + i;
-	  r_x[k] = x[ind];
-	  res += v[k]*r_x[k];
-	}
+    @exclusive dfloat r_x[p_Nq];
 
-#pragma unroll p_NqV
-	for (int k = 0; k < p_NqV; k++) {
-	  s_x[k][j][i] = r_x[k] - res*u[k];
-	}
+    for (int j = 0; j < p_Nq; j++; @inner(1)) {    
+      for (int i = 0; i < p_Nq; i++; @inner(0)) {
+
+        dfloat res = 0;
+
+        #pragma unroll p_Nq
+        for (int k = 0; k < p_Nq; k++) {
+          const dlong ind = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          r_x[k] = x[ind];
+          res += v[k]*r_x[k];
+        }
+
+        #pragma unroll p_Nq
+        for (int k = 0; k < p_Nq; k++) {
+          s_x[k][j][i] = r_x[k] - res*u[k];
+        }
       }
     }
-    
+
     @barrier("local");
 
-    for (int k = 0; k < p_NqV; k++; @inner(1)) {    
-      for (int i = 0; i < p_NqV; i++; @inner(0)) {
-	
-	dfloat res = 0;
+    for (int k = 0; k < p_Nq; k++; @inner(1)) {    
+      for (int i = 0; i < p_Nq; i++; @inner(0)) {
 
-#pragma unroll p_NqV
-	for (int j = 0; j < p_NqV; j++) {
-	  r_x[j] = s_x[k][j][i];
-	  res += v[j]*r_x[j];
-	}
+        dfloat res = 0;
 
-#pragma unroll p_NqV
-	for (int j = 0; j < p_NqV; j++) {
-	  s_x[k][j][i] = r_x[j] - res*u[j];
-	}
+        #pragma unroll p_Nq
+        for (int j = 0; j < p_Nq; j++) {
+          r_x[j] = s_x[k][j][i];
+          res += v[j]*r_x[j];
+        }
+
+        #pragma unroll p_Nq
+        for (int j = 0; j < p_Nq; j++) {
+          s_x[k][j][i] = r_x[j] - res*u[j];
+        }
       }
     }
-    
+
     @barrier("local");
 
 
-    for (int k = 0; k < p_NqV; k++; @inner(1)) {    
-      for (int j = 0; j < p_NqV; j++; @inner(0)) {
-	
-	dfloat res = 0;
+    for (int k = 0; k < p_Nq; k++; @inner(1)) {    
+      for (int j = 0; j < p_Nq; j++; @inner(0)) {
 
-#pragma unroll p_NqV
-	for (int i = 0; i < p_NqV; i++) {
-	  r_x[i] = s_x[k][j][i];
-	  res += v[i]*r_x[i];
-	}
+        dfloat res = 0;
 
-#pragma unroll p_NqV
-	for (int i = 0; i < p_NqV; i++) {
-	  s_x[k][j][i] = r_x[i] - res*u[i];
-	}
+        #pragma unroll p_Nq
+        for (int i = 0; i < p_Nq; i++) {
+          r_x[i] = s_x[k][j][i];
+          res += v[i]*r_x[i];
+        }
+
+        #pragma unroll p_Nq
+        for (int i = 0; i < p_Nq; i++) {
+          s_x[k][j][i] = r_x[i] - res*u[i];
+        }
       }
     }
-    
+
     @barrier("local");
 
-    for (int j = 0; j < p_NqV; j++; @inner(1)) {    
-      for (int i = 0; i < p_NqV; i++; @inner(0)) {
+    for (int j = 0; j < p_Nq; j++; @inner(1)) {    
+      for (int i = 0; i < p_Nq; i++; @inner(0)) {
 
-#pragma unroll p_NqV
-	for (int k = 0; k < p_NqV; k++) {	
-	  const dlong ind = e*p_NpV + k*p_NqV*p_NqV + j*p_NqV + i;
-	  Px[ind] = s_x[k][j][i];
-	}
+        #pragma unroll p_Nq
+        for (int k = 0; k < p_Nq; k++) {	
+          const dlong ind = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          Px[ind] = s_x[k][j][i];
+        }
       }
     }
   }

@@ -32,10 +32,10 @@ SOFTWARE.
                                     @restrict dfloat *pRaised)
 {
   for (dlong e = 0; e < Nelements; e++; @outer(0)) {
-    for (int i = 0; i < p_NqV; i++; @inner(1)) {
-      for (int j = 0; j < p_NqV; j++; @inner(0)) {
-        const dlong id = e*p_NpV + i*p_NqV + j;
-        const dlong gid = e*p_NpV*p_Nvgeo + i*p_NqV + j;
+    for (int i = 0; i < p_Nq; i++; @inner(1)) {
+      for (int j = 0; j < p_Nq; j++; @inner(0)) {
+        const dlong id = e*p_Np + i*p_Nq + j;
+        const dlong gid = e*p_Np*p_Nvgeo + i*p_Nq + j;
 
         dfloat Gx0 = 0.0;
         dfloat Gx1 = 0.0;
@@ -43,21 +43,21 @@ SOFTWARE.
         dfloat Gy0 = 0.0;
         dfloat Gy1 = 0.0;
 
-        for (int k = 0; k < p_NqV; k++) {
-          Gx0 += D[j*p_NqV + k]*v[e*p_NpV + i*p_NqV + k + 0*NtotalV];
-          Gx1 += D[i*p_NqV + k]*v[e*p_NpV + k*p_NqV + j + 0*NtotalV];
+        for (int k = 0; k < p_Nq; k++) {
+          Gx0 += D[j*p_Nq + k]*v[e*p_Np + i*p_Nq + k + 0*NtotalV];
+          Gx1 += D[i*p_Nq + k]*v[e*p_Np + k*p_Nq + j + 0*NtotalV];
 
-          Gy0 += D[j*p_NqV + k]*v[e*p_NpV + i*p_NqV + k + 1*NtotalV];
-          Gy1 += D[i*p_NqV + k]*v[e*p_NpV + k*p_NqV + j + 1*NtotalV];
+          Gy0 += D[j*p_Nq + k]*v[e*p_Np + i*p_Nq + k + 1*NtotalV];
+          Gy1 += D[i*p_Nq + k]*v[e*p_Np + k*p_Nq + j + 1*NtotalV];
         }
 
-        const dfloat JW = vgeo[gid + p_NpV*p_JWID];
+        const dfloat JW = vgeo[gid + p_Np*p_JWID];
 
-        Gx0 *= vgeo[gid + p_NpV*p_RXID]*JW;
-        Gx1 *= vgeo[gid + p_NpV*p_SXID]*JW;
+        Gx0 *= vgeo[gid + p_Np*p_RXID]*JW;
+        Gx1 *= vgeo[gid + p_Np*p_SXID]*JW;
 
-        Gy0 *= vgeo[gid + p_NpV*p_RYID]*JW;
-        Gy1 *= vgeo[gid + p_NpV*p_SYID]*JW;
+        Gy0 *= vgeo[gid + p_Np*p_RYID]*JW;
+        Gy1 *= vgeo[gid + p_Np*p_SYID]*JW;
 
         pRaised[id] = -Gx0 - Gx1 - Gy0 - Gy1;
       }
