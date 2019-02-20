@@ -104,6 +104,11 @@ static void stokesSolveMINRES(stokes_t *stokes)
     a0 = c*del - cp*s*gam;
     a2 = s*del + cp*c*gam;
     a3 = sp*gam;
+
+    // HERE ==+>
+#if 0
+    stokesUpdateMINRES(stokes, -a2, -a3, -(del/gam), -(gam/gamp), z, w_old, w, r_old, r, p);
+#else
     stokesVecScaledAdd(stokes, -a2, w, 1.0, z);                /* z = z - a2*w - a3*w_old  */
     stokesVecScaledAdd(stokes, -a3, w_old, 1.0, z);
     stokesVecCopy(stokes, w, w_old);                           /* w_old = w                */
@@ -113,6 +118,8 @@ static void stokesSolveMINRES(stokes_t *stokes)
     if (i > 0)
       stokesVecScaledAdd(stokes, -(gam/gamp), r_old, 1.0, r);  /* r = r - (gam/gamp)*r_old */
     stokesVecCopy(stokes, z, r_old);                           /* r_old = z                */
+    // TO HERE <+=====
+#endif
     stokesPreconditioner(stokes, r, z);                        /* z = M\r                  */
     gamp = gam;
     stokesVecInnerProduct(stokes, z, r, &gam);                 /* gam = sqrt(r'*z)         */
@@ -122,8 +129,11 @@ static void stokesSolveMINRES(stokes_t *stokes)
     c  = a0/a1;
     sp = s;
     s  = gam/a1;
+
+    // FROM HERE
     stokesVecScale(stokes, w, 1.0/a1);                         /* w = w/a1                 */
     stokesVecScaledAdd(stokes, c*eta, w, 1.0, u);              /* u = u + c*eta*w          */
+    /// TO HERE
     eta = -s*eta;
   }
 

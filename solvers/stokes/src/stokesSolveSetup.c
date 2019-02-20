@@ -178,6 +178,11 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   stokes->vecZeroKernel              = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecZero.okl", "stokesVecZero", kernelInfoV);
   stokes->weightedInnerProductKernel = stokes->meshV->device.buildKernel(DHOLMES "/okl/weightedInnerProduct2.okl", "weightedInnerProduct2", kernelInfoV);
 
+  stokes->updateMINRESKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesUpdateMINRES.okl",
+								 "stokesUpdateMINRES", kernelInfoV);
+
+
+  
   /* TODO:  Replace this with parametrized filenames. */
   if ((stokes->meshV->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
     stokes->divergenceKernel           = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);

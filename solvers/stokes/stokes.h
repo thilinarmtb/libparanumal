@@ -124,6 +124,8 @@ typedef struct {
   occa::kernel vecZeroKernel;
   occa::kernel weightedInnerProductKernel;
 
+  occa::kernel updateMINRESKernel;
+  
   /* Scratch variables */
   dlong NblockV;          /* Used for reductions over the velocity DOFs. */
   dfloat *workV;
@@ -156,5 +158,17 @@ void stokesVecZero(stokes_t *stokes, stokesVec_t v);
 
 void stokesOperatorPrint(stokes_t *stokes);
 void stokesVecPrint(stokes_t *stokes, stokesVec_t v);
+
+void stokesUpdateMINRES(stokes_t *stokes,
+			const dfloat ma2, // -a2
+			const dfloat ma3, // -a3
+			const dfloat alpha, // -del/gam
+			const dfloat beta, // -gam/gamp
+			stokesVec_t &z,
+			stokesVec_t &wOld,
+			stokesVec_t &w,
+			stokesVec_t &rOld,
+			stokesVec_t &r,
+			stokesVec_t &p);
 
 #endif /* STOKES_H */
