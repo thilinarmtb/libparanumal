@@ -164,11 +164,7 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfo)
   stokes->vecScaledAddKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesVecScaledAdd.okl", "stokesVecScaledAdd", kernelInfo);
   stokes->vecZeroKernel              = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesVecZero.okl", "stokesVecZero", kernelInfo);
   stokes->weightedInnerProductKernel = stokes->mesh->device.buildKernel(DHOLMES "/okl/weightedInnerProduct2.okl", "weightedInnerProduct2", kernelInfo);
-
-  stokes->updateMINRESKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesUpdateMINRES.okl",
-								 "stokesUpdateMINRES", kernelInfoV);
-
-
+  stokes->updateMINRESKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesUpdateMINRES.okl", "stokesUpdateMINRES", kernelInfo);
   
   /* TODO:  Replace this with parametrized filenames. */
   if ((stokes->mesh->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
