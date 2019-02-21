@@ -82,7 +82,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
   stokesAllocateScratchVars(stokes);
   stokesSetupBCMask(stokes);
   stokesSetupKernels(stokes, kernelInfo);
-  stokesPreconditionerSetup(stokes);
+  stokesPreconditionerSetup(stokes, kernelInfo);
 
   return;
 }
@@ -93,6 +93,9 @@ static void stokesAllocateScratchVars(stokes_t *stokes)
   stokes->block = (dfloat*)calloc(stokes->Nblock, sizeof(dfloat));
   stokes->o_block = stokes->mesh->device.malloc(stokes->Nblock*sizeof(dfloat), stokes->block);
 
+  stokes->Nblock2 = mymax(1, (stokes->Nblock + STOKES_REDUCTION_BLOCK_SIZE - 1)/STOKES_REDUCTION_BLOCK_SIZE);
+  stokes->block2 = (dfloat*)calloc(stokes->Nblock2, sizeof(dfloat));
+  stokes->o_block2 = stokes->mesh->device.malloc(stokes->Nblock2*sizeof(dfloat), stokes->block2);
   return;
 }
 

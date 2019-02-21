@@ -52,21 +52,33 @@ CONTINUOUS
 MINRES
 
 [KRYLOV SOLVER ITERATION LIMIT]
-5000
+1000
 
 [KRYLOV SOLVER TOLERANCE]
 1.0e-8
 
-################################################
-############ PRECONDITIONER OPTIONS ############
-################################################
-
+# NONE    - No preconditioner
+# JACOBI  - "Boosted" Jacobi preconditioner
+# SCBLOCK - Schur-complement-based block matrix preconditioner
 [PRECONDITIONER]
-NONE
+#NONE
 #JACOBI
+SCBLOCK
+
+################################################
+######## JACOBI PRECONDITIONER OPTIONS #########
+################################################
 
 [JACOBI BOOST PARAMETER]
-1.0e-1
+#1.0e-3
+1.0
+
+################################################
+######## SCBLOCK PRECONDITIONER OPTIONS ########
+################################################
+
+[SCHUR COMPLEMENT PRECONDITIONER]
+NONE
 
 ################################################
 ################ OTHER OPTIONS #################

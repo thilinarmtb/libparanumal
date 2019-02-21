@@ -105,7 +105,6 @@ static void stokesSolveMINRES(stokes_t *stokes)
     a2 = s*del + cp*c*gam;
     a3 = sp*gam;
 
-    // HERE ==+>
 #if 1
     dfloat alpha =  -(del/gam);
     dfloat beta  = (i==0) ? 0: -(gam/gamp);
@@ -120,7 +119,6 @@ static void stokesSolveMINRES(stokes_t *stokes)
     if (i > 0)
       stokesVecScaledAdd(stokes, -(gam/gamp), r_old, 1.0, r);  /* r = r - (gam/gamp)*r_old */
     stokesVecCopy(stokes, z, r_old);                           /* r_old = z                */
-    // TO HERE <+=====
 #endif
 
     stokesPreconditioner(stokes, r, z);                        /* z = M\r                  */

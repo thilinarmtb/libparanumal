@@ -27,6 +27,7 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
+static void stokesSCBlockPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
 
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
 {
@@ -34,6 +35,8 @@ void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
     stokesVecCopy(stokes, v, Mv);
   } else if (stokes->options.compareArgs("PRECONDITIONER", "JACOBI")) {
     stokesJacobiPreconditioner(stokes, v, Mv);
+  } else if (stokes->options.compareArgs("PRECONDITIONER", "SCBLOCK")) {
+    stokesSCBlockPreconditioner(stokes, v, Mv);
   } else {
     printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.",
            stokes->options.getArgs("PRECONDITIONER").c_str());
@@ -49,4 +52,72 @@ static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVe
                             stokes->precon->invDiagA.o_v,
                             Mv.o_v);
   return;
+}
+
+static void stokesSCBlockPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+{
+  ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_x, Mv.o_x);
+  ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_y, Mv.o_y);
+  if (stokes->mesh->dim == 3)
+    ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_z, Mv.o_z);
+
+  Mv.o_p.copyFrom(v.o_p, stokes->Ntotal*sizeof(dfloat));
+
+  return;
+
+#if 0
+  stokesVecZero(stokes, v);
+  stokesVecZero(stokes, Mv);
+
+  stokesVec_t e;
+
+  stokesVecAllocate(stokes, &e);
+  for (int i = 0; i < stokes->Ntotal; i++) {
+    e.x[i] = 1.0;
+    e.y[i] = 1.0;
+    e.p[i] = 0.0;
+  }
+
+  stokesVecCopyHostToDevice(e);
+  stokesVecGatherScatter(stokes, e);
+
+  if (stokes->Nmasked) {
+    stokes->mesh->maskKernel(stokes->Nmasked, stokes->o_maskIds, e.o_x);
+    stokes->mesh->maskKernel(stokes->Nmasked, stokes->o_maskIds, e.o_y);
+    if (stokes->mesh->dim == 3)
+      stokes->mesh->maskKernel(stokes->Nmasked, stokes->o_maskIds, e.o_z);
+  }
+
+  stokesVecCopyDeviceToHost(e);
+  printf("e:\n");
+  stokesVecPrint(stokes, e);
+
+  stokesOperator(stokes, e, v);
+
+  stokesVecCopyDeviceToHost(v);
+  printf("Ae:\n");
+  stokesVecPrint(stokes, v);
+
+  ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_x, Mv.o_x);
+  ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_y, Mv.o_y);
+  if (stokes->mesh->dim == 3)
+    ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_z, Mv.o_z);
+
+  Mv.o_p.copyFrom(v.o_p, stokes->Ntotal*sizeof(dfloat));
+
+  stokesVecCopyDeviceToHost(Mv);
+  printf("MAe:\n");
+  stokesVecPrint(stokes, Mv);
+
+  dfloat err = 0.0;
+  for (int i = 0; i < stokes->Ntotal; i++) {
+    err += pow(e.x[i] - Mv.x[i], 2.0);
+    err += pow(e.y[i] - Mv.y[i], 2.0);
+  }
+  err = sqrt(err);
+
+  printf("err = % .15e\n", err);
+
+  exit(1);
+#endif
 }

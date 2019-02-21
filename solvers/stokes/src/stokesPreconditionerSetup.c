@@ -27,16 +27,19 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesJacobiPreconditionerSetup(stokes_t *stokes);
+static void stokesSCBlockPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfo);
 
 static void stokesBuildLocalContinuousDiagQuad2D(stokes_t* stokes, dlong e, dfloat *diagA);
 
-void stokesPreconditionerSetup(stokes_t *stokes)
+void stokesPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfo)
 {
   if (stokes->options.compareArgs("PRECONDITIONER", "NONE")) {
     stokes->precon = NULL;
     return;
   } else if (stokes->options.compareArgs("PRECONDITIONER", "JACOBI")) {
     stokesJacobiPreconditionerSetup(stokes);
+  } else if (stokes->options.compareArgs("PRECONDITIONER", "SCBLOCK")) {
+    stokesSCBlockPreconditionerSetup(stokes, kernelInfo);
   } else {
     printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.\n",
            stokes->options.getArgs("PRECONDITIONER").c_str());
@@ -45,6 +48,8 @@ void stokesPreconditionerSetup(stokes_t *stokes)
 
   return;
 }
+
+/*****************************************************************************/
 
 static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
 {
@@ -92,6 +97,50 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
 
   return;
 }
+
+static void stokesSCBlockPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfo)
+{
+  mesh_t     *mesh;
+  elliptic_t *elliptic;
+  setupAide  ellipticOptions;
+
+  mesh = stokes->mesh;
+  elliptic = new elliptic_t();
+
+  /* Set up the elliptic sub-solver. */
+  elliptic->mesh = mesh;
+  elliptic->dim = elliptic->mesh->dim;
+  elliptic->elementType = stokes->elementType;
+
+  /* TODO:  Map these to the Stokes setup file. */
+  ellipticOptions.setArgs("BASIS", "NODAL");
+  ellipticOptions.setArgs("DISCRETIZATION", "CONTINUOUS");
+  ellipticOptions.setArgs("DEBUG ENABLE OGS", "1");
+  ellipticOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
+  ellipticOptions.setArgs("KRYLOV SOLVER", "PCG");
+  ellipticOptions.setArgs("PRECONDITIONER", "NONE");
+  ellipticOptions.setArgs("VERBOSE", "FALSE");
+  elliptic->options = ellipticOptions;
+
+  elliptic->BCType = stokes->BCType;
+
+  elliptic->r = (dfloat*)calloc(stokes->Ntotal, sizeof(dfloat));
+  elliptic->o_r = mesh->device.malloc(stokes->Ntotal*sizeof(dfloat), elliptic->r);
+  elliptic->x = (dfloat*)calloc(stokes->Ntotal, sizeof(dfloat));
+  elliptic->o_x = mesh->device.malloc(stokes->Ntotal*sizeof(dfloat), elliptic->x);
+
+  /* TODO:  This allocates a whole lot of extra stuff---we may be able to share
+   * some scratch arrays with the stokes_t.
+   */
+  ellipticSolveSetup(elliptic, 0.0, kernelInfo);
+
+  stokes->precon = new stokesPrecon_t();
+  stokes->precon->elliptic = elliptic;
+
+  return;
+}
+
+/*****************************************************************************/
 
 /* TODO:  This was basically copied from the elliptic solver.
  *

@@ -10,6 +10,7 @@ HDRDIR = ../../include
 GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../../libs/parAlmond
+ELLIPTICDIR = ../elliptic
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -18,13 +19,18 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -g -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}/../elliptic"' -D DINS='"${CURDIR}/../ins"' -D DSTOKES='"${CURDIR}"' -Wfloat-conversion
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -I$(ELLIPTICDIR) -g -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}/../elliptic"' -D DSTOKES='"${CURDIR}"' -Wfloat-conversion
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+LIBS	=  -L$(ELLIPTICDIR) -lelliptic \
+				 -L$(ALMONDDIR) -lparAlmond \
+				 -L$(OGSDIR) -logs \
+				 -L$(GSDIR)/lib -lgs \
+				 -L$(OCCA_DIR)/lib $(links) \
+				 -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 INCLUDES = stokes.h
 DEPS = $(INCLUDES) \
@@ -121,7 +127,7 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-stokesMain: $(AOBJS) $(LOBJS) ./src/stokesMain.o libblas libogs libparAlmond
+stokesMain: $(AOBJS) $(LOBJS) ./src/stokesMain.o libblas libogs libparAlmond libelliptic
 	$(LD)  $(LDFLAGS)  -o stokesMain ./src/stokesMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib: $(AOBJS)
@@ -135,6 +141,9 @@ libblas:
 
 libparAlmond:
 	cd ../../libs/parAlmond; make -j lib; cd ../../solvers/stokes
+
+libelliptic:
+	cd ../elliptic; make -j lib; cd ../stokes
 
 all: lib stokesMain
 
