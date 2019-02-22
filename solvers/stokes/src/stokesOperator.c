@@ -89,6 +89,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                            v.o_v,
                            o_pProjected);
 
+  
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   stokes->o_vP,
                                   stokes->o_uP,
@@ -135,9 +136,15 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 #endif
 
   /* Gather-scatter for C0 FEM. */
-  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS"))
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")){
     stokesVecGatherScatter(stokes, Av);
-
+#if 0
+    ogsGatherScatter(Av.o_x, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+    ogsGatherScatter(Av.o_y, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+    if (stokes->mesh->dim == 3)
+      ogsGatherScatter(Av.o_z, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+#endif
+  }
   // TODO:  Make a function for this.
   //
   // TODO:  We only need to do this for C0 FEM.

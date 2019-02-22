@@ -74,8 +74,9 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
         stokesBuildLocalContinuousDiagQuad2D(stokes, e, stokes->precon->invDiagA.y + e*stokes->mesh->Np);
       }
 
-      for (int i = 0; i < stokes->Ntotal; i++)
+      for (int i = 0; i < stokes->Ntotal; i++){
         stokes->precon->invDiagA.p[i] = stokes->precon->boost;
+      }
     } else {
       printf("ERROR:  Not implemented.\n");
       exit(-1);
@@ -85,7 +86,8 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
     printf("ERROR:  Not implemented.\n");
     exit(-1);
   }
-  
+
+  // BADNESS
   for (int i = 0; i < stokes->Ndof; i++)
     stokes->precon->invDiagA.v[i] = 1.0/stokes->precon->invDiagA.v[i];
   
@@ -144,6 +146,33 @@ static void stokesSCBlockPreconditionerSetup(stokes_t *stokes, occa::properties 
   stokes->precon = new stokesPrecon_t();
   stokes->precon->elliptic = elliptic;
 
+  stokesVecAllocate(stokes, &stokes->precon->invMM);
+
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      stokes->precon->invMM.p[e*mesh->Np+n] = mesh->ggeo[e*mesh->Np*mesh->Nggeo+GWJID*mesh->Np+n];
+    }
+  }
+
+#if 1
+  // assemble mass matrix (suitable for C0 pressure)
+  stokesVecCopyHostToDevice(stokes->precon->invMM);
+  
+  stokesVecGatherScatter(stokes, stokes->precon->invMM);
+  
+  stokesVecCopyDeviceToHost(stokes->precon->invMM);
+#endif
+  
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dfloat val = stokes->precon->invMM.p[e*mesh->Np+n];
+      if(val)
+	stokes->precon->invMM.p[e*mesh->Np+n] = 1./val;
+    }
+  }
+  
+  stokesVecCopyHostToDevice(stokes->precon->invMM);
+   
   return;
 }
 

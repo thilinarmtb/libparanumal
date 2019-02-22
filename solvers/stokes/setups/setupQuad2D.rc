@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-1.msh
+../../meshes/unitSquareQuad2D-4.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -36,7 +36,7 @@ CUDA
 
 # Pressure degree is velocity degree - 1.
 [VELOCITY POLYNOMIAL DEGREE]
-7
+2
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS

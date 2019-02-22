@@ -70,6 +70,7 @@ typedef struct {
   /* Jacobi preconditioner */
   dfloat boost;          /* Jacobi boosting parameter. */
   stokesVec_t invDiagA;  /* Boosted inverse of the Stokes operator diagonal */
+  stokesVec_t invMM;  /* Boosted inverse of the mass operator diagonal */
 
   /* Schur-complement-based block matrix preconditioner */
   elliptic_t *elliptic;  /* Elliptic solver object for Poisson-type solves */

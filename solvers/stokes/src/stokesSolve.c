@@ -91,7 +91,7 @@ static void stokesSolveMINRES(stokes_t *stokes)
   /* MINRES iteration loop. */
   for (int i = 0; i < maxiter; i++) {
     if (verbose)
-      printf("MINRES:  it % 3d  eta = % .15e\n", i, eta);
+      printf("MINRES:  it % 3d  eta = % .15e, gamma = % .15e \n", i, eta, gam);
     if (fabs(eta) < tol) {
       if (verbose)
         printf("MINRES converged in %d iterations (eta = % .15e).\n", i, eta);

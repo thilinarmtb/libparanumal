@@ -57,31 +57,41 @@ static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVe
 static void stokesSCBlockPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
 {
 
-#if 0
-  ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_x, Mv.o_x);
-  ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_y, Mv.o_y);
-  if (stokes->mesh->dim == 3)
-    ellipticSolve(stokes->precon->elliptic, 0.0, 1.0e-8, v.o_z, Mv.o_z);
-#else
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
   if (stokes->mesh->dim == 3)
     ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_z, Mv.o_z);
-#endif
- 
-  Mv.o_p.copyFrom(v.o_p, stokes->Ntotal*sizeof(dfloat));
 
+#if 0
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, Mv.o_x, Mv.o_x);
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, Mv.o_y, Mv.o_y);
+  ogsGatherScatter(Mv.o_x, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+  ogsGatherScatter(Mv.o_y, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+#endif
+  
+  // ??????
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
+
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, Mv.o_p, Mv.o_p);
+  
+  ogsGatherScatter(Mv.o_p, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+
+#if 1
+  // ???????
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
-                                  stokes->o_vP,
+				  stokes->o_vP,
                                   stokes->o_uP,
                                   Mv.o_p,
 				  Mv.o_p);
-
+    
+  // ???????
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
-				  stokes->o_uP,
+                                  stokes->o_uP,
                                   stokes->o_vP,
                                   Mv.o_p,
 				  Mv.o_p);
+#endif
+
   
   return;
 

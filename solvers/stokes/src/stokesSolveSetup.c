@@ -71,9 +71,20 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
     printf("ERROR:  Cannot open file '%s' for reading.\n", fname);
   }
 
+#if 1
   readDfloatArray(fp, "Pressure projection rank-1 update - Interpolatory (u)", &stokes->uP, &Nrows, &Ncols);
   readDfloatArray(fp, "Pressure projection rank-1 update - Interpolatory (v)", &stokes->vP, &Nrows, &Ncols);
+#endif
+#if 0
+  readDfloatArray(fp, "Pressure projection rank-1 update - Pseudoinverse (u)", &stokes->uP, &Nrows, &Ncols);
+  readDfloatArray(fp, "Pressure projection rank-1 update - Pseudoinverse (v)", &stokes->vP, &Nrows, &Ncols);
+#endif
 
+#if 0
+  readDfloatArray(fp, "Pressure projection rank-1 update - L2 orthogonal (u)", &stokes->uP, &Nrows, &Ncols);
+  readDfloatArray(fp, "Pressure projection rank-1 update - L2 orthogonal (v)", &stokes->vP, &Nrows, &Ncols);
+#endif
+  
   fclose(fp);
 
   stokes->o_uP = stokes->mesh->device.malloc(stokes->mesh->Nq*sizeof(dfloat), stokes->uP);
