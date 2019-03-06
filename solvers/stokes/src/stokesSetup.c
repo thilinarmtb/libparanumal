@@ -191,6 +191,11 @@ static void stokesSetupRHS(stokes_t *stokes)
 // TODO:  Write a kernel for this.
 static void stokesRHSAddBC(stokes_t *stokes)
 {
+  const dfloat zero = 0.0;
+  const dfloat one  = 1.0;
+  const dfloat mone = -1.0;
+  const dfloat tau  = 1.0;
+
   stokesVec_t tmp;
 
   occa::memory o_pProjected = stokes->mesh->device.malloc(stokes->Ntotal*sizeof(dfloat));
@@ -254,6 +259,8 @@ static void stokesRHSAddBC(stokes_t *stokes)
   }
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  one,
+                                  mone,
                                   stokes->o_uP,
                                   stokes->o_vP,
                                   tmp.o_p,
@@ -274,10 +281,35 @@ static void stokesRHSAddBC(stokes_t *stokes)
                            o_pProjected);
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  one,
+                                  mone,
                                   stokes->o_vP,
                                   stokes->o_uP,
                                   o_pProjected,
                                   stokes->u.o_p);
+
+  // Pressure stabilization block.
+  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  zero,
+                                  one,
+                                  stokes->o_uP,
+                                  stokes->o_vP,
+                                  tmp.o_p,
+                                  o_pProjected);
+
+  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  zero,
+                                  tau,
+                                  stokes->o_vP,
+                                  stokes->o_uP,
+                                  o_pProjected,
+                                  o_pProjected);
+
+  stokes->vecScaledAddKernel(stokes->Ntotal,
+                             one,
+                             o_pProjected,
+                             one,
+                             stokes->u.o_p);
 
   stokesVecScaledAdd(stokes, -1.0, stokes->u, 1.0, stokes->f);
 

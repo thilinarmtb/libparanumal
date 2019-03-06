@@ -26,7 +26,10 @@ SOFTWARE.
 
 // Px(:,n) = (I - u*v')*x(:,:,e)*(I-v*u')
 
+// Computes Px = (alpha*I + beta*u*v')x, applied along each dimension.
 @kernel void stokesRankOneProjectionQuad2D(const dlong Nelements,
+                                           const dfloat alpha,
+                                           const dfloat beta,
                                            @restrict const dfloat *u,
                                            @restrict const dfloat *v,
                                            @restrict const dfloat *x,
@@ -49,7 +52,7 @@ SOFTWARE.
       }
 
       for (int j = 0; j < p_Nq; j++) {
-        s_x[j][i] = r_x[j] - res*u[j];
+        s_x[j][i] = alpha*r_x[j] + beta*res*u[j];
       }
     }
 
@@ -67,7 +70,7 @@ SOFTWARE.
       }
 
       for (int i = 0; i < p_Nq; i++) {
-        s_x[j][i] = r_x[i] - res*u[i];
+        s_x[j][i] = alpha*r_x[i] + beta*res*u[i];
       }
     }
 

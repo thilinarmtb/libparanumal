@@ -33,6 +33,11 @@ SOFTWARE.
  */
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 {
+  const dfloat zero = 0.0;
+  const dfloat one  = 1.0;
+  const dfloat mone = -1.0;
+  const dfloat tau  = 1.0;
+
   /* TODO:  We re-allocate these scratch variables every time we call the
    * operator, but they're going to go away eventually, so we don't care.  keep
    * re-allocating them.
@@ -70,6 +75,8 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   }
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  one,
+                                  mone,
                                   stokes->o_uP,
                                   stokes->o_vP,
                                   v.o_p,
@@ -91,10 +98,35 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 
   
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  one,
+                                  mone,
                                   stokes->o_vP,
                                   stokes->o_uP,
                                   o_pProjected,
                                   Av.o_p);
+
+  // Pressure stabilization block.
+  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  zero,
+                                  one,
+                                  stokes->o_uP,
+                                  stokes->o_vP,
+                                  v.o_p,
+                                  o_pProjected);
+
+  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  zero,
+                                  tau,
+                                  stokes->o_vP,
+                                  stokes->o_uP,
+                                  o_pProjected,
+                                  o_pProjected);
+
+  stokes->vecScaledAddKernel(stokes->Ntotal,
+                             one,
+                             o_pProjected,
+                             one,
+                             Av.o_p);
 
 #if 0
   /* Rank-boost for all-Neumann problem.
