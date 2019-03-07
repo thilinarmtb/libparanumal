@@ -56,43 +56,73 @@ static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVe
 
 static void stokesSCBlockPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
 {
+  const dfloat zero = 0.0;
+  const dfloat one  = 1.0;
+  const dfloat mone = -1.0;
+  const dfloat tau  = 1.0;
+
+  dfloat *tmp = (dfloat*)calloc(stokes->Ntotal, sizeof(dfloat));
+  occa::memory o_tmp = stokes->mesh->device.malloc(stokes->Ntotal*sizeof(dfloat), tmp);
 
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
   if (stokes->mesh->dim == 3)
     ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_z, Mv.o_z);
 
-#if 0
-  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, Mv.o_x, Mv.o_x);
-  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, Mv.o_y, Mv.o_y);
-  ogsGatherScatter(Mv.o_x, ogsDfloat, ogsAdd, stokes->mesh->ogs);
-  ogsGatherScatter(Mv.o_y, ogsDfloat, ogsAdd, stokes->mesh->ogs);
-#endif
-  
-  // ??????
-  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
-
-  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, Mv.o_p, Mv.o_p);
-  
-  ogsGatherScatter(Mv.o_p, ogsDfloat, ogsAdd, stokes->mesh->ogs);
-
 #if 1
-  // ???????
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->ogs->o_invDegree, Mv.o_x, Mv.o_x);
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->ogs->o_invDegree, Mv.o_y, Mv.o_y);
+  ogsGatherScatter(Mv.o_x, ogsDfloat, ogsAdd, stokes->ogs);
+  ogsGatherScatter(Mv.o_y, ogsDfloat, ogsAdd, stokes->ogs);
+#endif
+
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
-				  stokes->o_vP,
-                                  stokes->o_uP,
-                                  Mv.o_p,
-				  Mv.o_p);
-    
-  // ???????
-  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  zero,
+                                  one,
                                   stokes->o_uP,
                                   stokes->o_vP,
-                                  Mv.o_p,
-				  Mv.o_p);
-#endif
+                                  v.o_p,
+                                  o_tmp);
 
-  
+  stokes->vecScaleKernel(stokes->Ntotal, 1.0/tau, o_tmp);
+
+  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  zero,
+                                  one,
+                                  stokes->o_vP,
+                                  stokes->o_uP,
+                                  o_tmp,
+                                  o_tmp);
+
+  // ???????
+  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  one,
+                                  mone,
+                                  stokes->o_uP,
+                                  stokes->o_vP,
+                                  v.o_p,
+                                  Mv.o_p);
+
+  // ??????
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->precon->invMM.o_p, Mv.o_p, Mv.o_p);
+
+  // ???????
+  stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
+                                  one,
+                                  mone,
+                                  stokes->o_vP,
+                                  stokes->o_uP,
+                                  Mv.o_p,
+                                  Mv.o_p);
+
+  stokes->vecScaledAddKernel(stokes->Ntotal, one, o_tmp, one, Mv.o_p);
+
+  stokes->dotMultiplyKernel(stokes->Ntotal, stokes->mesh->ogs->o_invDegree, Mv.o_p, Mv.o_p);
+  ogsGatherScatter(Mv.o_p, ogsDfloat, ogsAdd, stokes->mesh->ogs);
+
+  free(tmp);
+  o_tmp.free();
+
   return;
 
 #if 0

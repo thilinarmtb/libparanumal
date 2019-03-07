@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-4.msh
+../../meshes/unitSquareQuad2D-2.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -36,7 +36,7 @@ CUDA
 
 # Pressure degree is velocity degree - 1.
 [VELOCITY POLYNOMIAL DEGREE]
-2
+6
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
@@ -52,7 +52,7 @@ CONTINUOUS
 MINRES
 
 [KRYLOV SOLVER ITERATION LIMIT]
-1000
+5000
 
 [KRYLOV SOLVER TOLERANCE]
 1.0e-8

@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 
       if (stokes->mesh->dim == 2) {
         //stokesTestSolutionConstantViscosityQuad2D(x, y, &ux_exact, &uy_exact);
-        stokesTestSolutionVariableViscosityQuad2D(x, y, &ux_exact, &uy_exact);
+        //stokesTestSolutionVariableViscosityQuad2D(x, y, &ux_exact, &uy_exact);
         if (stokes->mapB[e*stokes->mesh->Np + i] == 1) {
           stokes->u.x[ind] = cos(y);  // Manually insert the boundary data.
           stokes->u.y[ind] = sin(x);
