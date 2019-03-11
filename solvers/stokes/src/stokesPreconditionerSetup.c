@@ -27,16 +27,18 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesJacobiPreconditionerSetup(stokes_t *stokes);
+static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV);
 
 static void stokesBuildLocalContinuousDiagQuad2D(stokes_t* stokes, dlong e, dfloat *diagA);
 
-void stokesPreconditionerSetup(stokes_t *stokes)
+void stokesPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV)
 {
   if (stokes->options.compareArgs("PRECONDITIONER", "NONE")) {
     stokes->precon = NULL;
-    return;
   } else if (stokes->options.compareArgs("PRECONDITIONER", "JACOBI")) {
     stokesJacobiPreconditionerSetup(stokes);
+  } else if (stokes->options.compareArgs("PRECONDITIONER", "SCHURCOMPLEMENTBLOCKDIAG")) {
+    stokesSchurComplementBlockDiagPreconditionerSetup(stokes, kernelInfoV);
   } else {
     printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.\n",
            stokes->options.getArgs("PRECONDITIONER").c_str());
@@ -92,6 +94,89 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
 
   return;
 }
+
+static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV)
+{
+  mesh_t     *meshV;
+  elliptic_t *elliptic;
+  setupAide  ellipticOptions;
+
+  meshV = stokes->meshV;
+  elliptic = new elliptic_t();
+
+  /* Set up the elliptic sub-solver. */
+  elliptic->mesh = meshV;
+  elliptic->dim = elliptic->mesh->dim;
+  elliptic->elementType = stokes->elementType;
+
+  /* TODO:  Map these to the Stokes setup file. */
+  ellipticOptions.setArgs("BASIS", "NODAL");
+  ellipticOptions.setArgs("DISCRETIZATION", "CONTINUOUS");
+  ellipticOptions.setArgs("DEBUG ENABLE OGS", "1");
+  ellipticOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
+  ellipticOptions.setArgs("KRYLOV SOLVER", "PCG");
+  ellipticOptions.setArgs("PRECONDITIONER", "MULTIGRID");
+  ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDEGREES");
+  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
+  ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "2");
+  ellipticOptions.setArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT");
+  ellipticOptions.setArgs("PARALMOND CYCLE", "VCYCLE");
+  ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
+  ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "2");
+  ellipticOptions.setArgs("VERBOSE", "FALSE");
+  elliptic->options = ellipticOptions;
+
+  elliptic->BCType = stokes->BCType;
+
+  elliptic->r = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
+  elliptic->o_r = elliptic->mesh->device.malloc(stokes->NtotalV*sizeof(dfloat), elliptic->r);
+  elliptic->x = (dfloat*)calloc(stokes->NtotalV, sizeof(dfloat));
+  elliptic->o_x = elliptic->mesh->device.malloc(stokes->NtotalV*sizeof(dfloat), elliptic->x);
+
+  /* TODO:  This allocates a whole lot of extra stuff---we may be able to share
+   * some scratch arrays with the stokes_t.
+   */
+  ellipticSolveSetup(elliptic, 0.0, kernelInfoV);
+
+  stokes->precon = new stokesPrecon_t();
+  stokes->precon->elliptic = elliptic;
+
+  stokesVecAllocate(stokes, &stokes->precon->invMM);
+
+  for (dlong e = 0; e < stokes->meshP->Nelements; e++) {
+    for (int n = 0; n < stokes->meshP->Np; n++) {
+      stokes->precon->invMM.p[e*stokes->meshP->Np + n] = stokes->meshP->ggeo[e*stokes->meshP->Np*stokes->meshP->Nggeo + GWJID*stokes->meshP->Np + n];
+    }
+  }
+
+#if 1
+  // assemble mass matrix (suitable for C0 pressure)
+  stokesVecCopyHostToDevice(stokes->precon->invMM);
+  stokesVecGatherScatter(stokes, stokes->precon->invMM);
+  stokesVecCopyDeviceToHost(stokes->precon->invMM);
+#endif
+
+  for (dlong e = 0; e < stokes->meshP->Nelements; e++) {
+    for (int n = 0; n < stokes->meshP->Np; n++) {
+      dfloat val = stokes->precon->invMM.p[e*stokes->meshP->Np + n];
+      if (val) {
+        stokes->precon->invMM.p[e*stokes->meshP->Np + n] = 1.0/val;
+      } else if (val < 0) {
+        printf("APA:  Got negative value on pressure mass matrix diagonal!\n");
+        exit(-1);
+      } else {
+        printf("APA:  Got zero on pressure mass matrix diagonal!\n");
+        exit(-1);
+      }
+    }
+  }
+
+  stokesVecCopyHostToDevice(stokes->precon->invMM);
+
+  return;
+}
+
+/*****************************************************************************/
 
 /* TODO:  This was basically copied from the elliptic solver.
  *

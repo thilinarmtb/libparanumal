@@ -35,6 +35,7 @@ SOFTWARE.
 #include "mesh2D.h"
 #include "mesh3D.h"
 #include "parAlmond.hpp"
+#include "elliptic.h"
 
 /* Block size for reductions. */
 #define STOKES_REDUCTION_BLOCK_SIZE 256
@@ -68,6 +69,10 @@ typedef struct {
 typedef struct {
   dfloat boost;          /* Jacobi boosting parameter. */
   stokesVec_t invDiagA;  /* Boosted inverse of the Stokes operator diagonal */
+  stokesVec_t invMM;     /* Boosted inverse of the mass operator diagonal */
+
+  /* Schur-complement-based block matrix preconditioner */
+  elliptic_t *elliptic;  /* Elliptic solver object for Poisson-type solves */
 } stokesPrecon_t;
 
 typedef struct {
@@ -128,7 +133,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
 void stokesSolve(stokes_t *stokes);
 void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
-void stokesPreconditionerSetup(stokes_t *stokes);
+void stokesPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV);
 
 void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v);
 void stokesVecFree(stokes_t *stokes, stokesVec_t *v);

@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-1.msh
+../../meshes/unitSquareQuad2D-7.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -35,13 +35,13 @@ Serial
 ################################################
 
 [VELOCITY POLYNOMIAL DEGREE]
-2
+5
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-1
+4
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
@@ -64,8 +64,9 @@ MINRES
 ################################################
 
 [PRECONDITIONER]
-NONE
+#NONE
 #JACOBI
+SCHURCOMPLEMENTBLOCKDIAG
 
 [JACOBI BOOST PARAMETER]
 1.0e-1

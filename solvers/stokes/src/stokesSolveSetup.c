@@ -66,7 +66,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
   stokesAllocateScratchVars(stokes);
   stokesSetupBCMask(stokes);
   stokesSetupKernels(stokes, kernelInfoV, kernelInfoP);
-  stokesPreconditionerSetup(stokes);
+  stokesPreconditionerSetup(stokes, kernelInfoV);
 
   return;
 }

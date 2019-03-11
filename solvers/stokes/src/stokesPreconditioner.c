@@ -27,6 +27,7 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
+static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
 
 void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
 {
@@ -34,6 +35,8 @@ void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
     stokesVecCopy(stokes, v, Mv);
   } else if (stokes->options.compareArgs("PRECONDITIONER", "JACOBI")) {
     stokesJacobiPreconditioner(stokes, v, Mv);
+  } else if (stokes->options.compareArgs("PRECONDITIONER", "SCHURCOMPLEMENTBLOCKDIAG")) {
+    stokesSchurComplementBlockDiagPreconditioner(stokes, v, Mv);
   } else {
     printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.",
            stokes->options.getArgs("PRECONDITIONER").c_str());
@@ -48,5 +51,36 @@ static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVe
                             v.o_v,
                             stokes->precon->invDiagA.o_v,
                             Mv.o_v);
+  return;
+}
+
+static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+{
+  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
+  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
+  if (stokes->meshV->dim == 3)
+    ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_z, Mv.o_z);
+
+  stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
+
+  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_x, Mv.o_x);
+  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_y, Mv.o_y);
+  if (stokes->meshV->dim == 3)
+    stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_z, Mv.o_z);
+  stokes->dotMultiplyKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, Mv.o_p, Mv.o_p);
+
+  ogsGatherScatter(Mv.o_x, ogsDfloat, ogsAdd, stokes->ogs);
+  ogsGatherScatter(Mv.o_y, ogsDfloat, ogsAdd, stokes->ogs);
+  if (stokes->meshV->dim == 3)
+    ogsGatherScatter(Mv.o_z, ogsDfloat, ogsAdd, stokes->ogs);
+  ogsGatherScatter(Mv.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
+
+  if (stokes->Nmasked) {
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_x);
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_y);
+    if (stokes->meshV->dim == 3)
+      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_z);
+  }
+
   return;
 }
