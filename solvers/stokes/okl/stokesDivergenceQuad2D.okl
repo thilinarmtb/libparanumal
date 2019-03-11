@@ -64,3 +64,192 @@ SOFTWARE.
     }
   }
 }
+
+
+//unified @kernel, but might use too much memory
+// needs: p_pressureNq
+// needs: p_velocityNq
+@kernel void stokesDivergenceCubatureQuad2D(const dlong Nelements,
+					    const dlong NtotalV,
+					    @restrict const  dfloat *cubvgeo,    // cubNq^2 x Nvgeo x Nelements
+					    @restrict const  dfloat *cubD,       // cubNq x cubNq
+					    @restrict const  dfloat *cubVelocityInterp, // cubNq x velocityNq
+					    @restrict const  dfloat *cubPressureInterp, // cubNq x pressureNq 
+					    @restrict const  dfloat *U,
+					    @restrict dfloat *prhs){
+
+#define p_velocityNq (p_Nq)
+#define p_velocityNp (p_Np)
+#define p_pressureNq (p_Nq-1)
+#define p_pressureNp ((p_Nq-1)*(p_Nq-1)*(p_Nq-1))
+  
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+    
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+    @shared dfloat s_cubVelocityInterp[p_cubNq][p_velocityNq];
+    @shared dfloat s_cubPressureInterp[p_cubNq][p_pressureNq];
+
+    @shared dfloat s_u[p_cubNq][p_cubNq];
+    @shared dfloat s_v[p_cubNq][p_cubNq];
+    @shared dfloat s_divU[p_cubNq][p_cubNq];
+
+    @exclusive dfloat r_u, r_v, r_divU;
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        const int id = i+j*p_cubNq;
+	
+	if(id<p_pressureNq*p_cubNq){
+	  s_cubPressureInterp[0][id] = cubPressureInterp[id];
+	}
+
+	if(id<p_velocityNq*p_cubNq){
+	  s_cubVelocityInterp[0][id] = cubVelocityInterp[id];
+	}
+
+	s_cubD[0][id] = cubD[id];
+
+	if(i<p_velocityNq && j<p_velocityNq){
+	  dlong vid = i + j*p_velocityNq + e*p_velocityNp;
+	  s_u[j][i] = U[vid+0*NtotalV];
+	  s_v[j][i] = U[vid+1*NtotalV];
+	}
+      }
+    }
+    
+    @barrier("local");
+
+    //interpolate u,v in s
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+        if(a<p_Nq) {
+
+	  r_u = 0;
+	  r_v = 0;
+	  
+	  for(int b=0;b<p_velocityNq;++b){
+	    dfloat Ijb = s_cubVelocityInterp[j][b];
+	    r_u += Ijb*s_u[b][a];
+	    r_v += Ijb*s_v[b][a];
+	  }
+	}
+      }
+    }
+
+    @barrier("local");
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+        if(a<p_Nq) {
+	  s_u[j][a] = r_u;
+	  s_v[j][a] = r_v;
+	}
+      }
+    }
+
+    @barrier("local");
+    
+    //interpolate u,v in r
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	r_u = 0;
+	r_v = 0;
+	
+	for(int a=0;a<p_velocityNq;++a){
+	  dfloat Iia = s_cubVelocityInterp[i][a];
+	  r_u += Iia*s_u[j][a];
+	  r_v += Iia*s_v[j][a];
+	}
+      }
+    }
+
+    @barrier("local");
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	s_u[j][i] = r_u;
+	s_v[j][i] = r_v;
+      }
+    }
+
+    @barrier("local");
+
+    // differentiate in r,s
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
+
+	for(int n=0;n<p_cubNq;++n){
+	  dfloat Din = s_cubD[i][n];
+	  dfloat Djn = s_cubD[j][n];
+
+	  dudr += Din*s_u[j][n];
+	  dvdr += Din*s_v[j][n];
+
+	  duds += Djn*s_u[n][i];
+	  dvds += Djn*s_v[n][i];
+	}
+
+        const dlong gid = e*p_Np*p_Nvgeo + i*p_Nq + j;
+	
+	dfloat rx = cubvgeo[gid+p_cubNp*p_RXID];
+	dfloat sx = cubvgeo[gid+p_cubNp*p_SXID];
+	dfloat ry = cubvgeo[gid+p_cubNp*p_RYID];
+	dfloat sy = cubvgeo[gid+p_cubNp*p_SYID];
+	dfloat JW = cubvgeo[gid+p_cubNp*p_JWID];
+	
+	dfloat divU = rx*dudr + sx*duds + ry*dvdr + sy*dvds;
+	
+	s_divU[j][i] = JW*divU;
+      }
+    }
+    
+    @barrier("local");
+    
+    // test in 's'
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	
+	r_divU = 0;
+	
+	if(b<p_pressureNq){
+	  
+	  for(int j=0;j<p_cubNq;++j){
+	    dfloat Ijb = s_cubPressureInterp[j][b];
+	    
+	    r_divU += Ijb*s_divU[j][i];
+	  }
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	s_divU[b][i] = r_divU;
+      }
+    }
+    
+    @barrier("local");
+    
+    // test in 'r' and write
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+	
+	if(a<p_pressureNq && b<p_pressureNq){
+	  dfloat res = 0;
+	  for(int i=0;i<p_cubNq;++i){
+	    dfloat Iia = s_cubPressureInterp[i][a];
+	    
+	    res += Iia*s_divU[b][i];
+	  }
+	  
+	  dlong pid = a + b*p_velocityNq + e*p_pressureNp;
+	  prhs[pid] = res;
+	}
+      }
+    }
+  }
+}
