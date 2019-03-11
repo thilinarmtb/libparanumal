@@ -77,3 +77,200 @@ SOFTWARE.
     }
   }
 }
+
+// needs: p_pressureNq
+// needs: p_velocityNq
+@kernel void stokesGradientCubatureQuad2D(const dlong Nelements,
+					  const dlong NtotalV,
+					  @restrict const  dfloat *cubvgeo,    // cubNq^2 x Nvgeo x Nelements
+					  @restrict const  dfloat *cubD,       // cubNq x cubNq
+					  @restrict const  dfloat *cubVelocityInterp, // cubNq x velocityNq
+					  @restrict const  dfloat *cubPressureInterp, // cubNq x pressureNq 
+					  @restrict const  dfloat *P,
+					  @restrict dfloat *rhsU){
+  
+#define p_velocityNq (p_Nq)
+#define p_velocityNp (p_Np)
+#define p_pressureNq (p_Nq-1)
+#define p_pressureNp ((p_Nq-1)*(p_Nq-1)*(p_Nq-1))
+  
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+    
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+    @shared dfloat s_cubVelocityInterp[p_cubNq][p_velocityNq];
+    @shared dfloat s_cubPressureInterp[p_cubNq][p_pressureNq];
+
+    @shared dfloat s_p[p_cubNq][p_cubNq];
+    @shared dfloat s_prx[p_cubNq][p_cubNq];
+    @shared dfloat s_psx[p_cubNq][p_cubNq];
+    @shared dfloat s_pry[p_cubNq][p_cubNq];
+    @shared dfloat s_psy[p_cubNq][p_cubNq];
+
+    @shared dfloat s_dpdx[p_cubNq][p_cubNq];
+    @shared dfloat s_dpdy[p_cubNq][p_cubNq];
+
+    @exclusive dfloat r_p, r_dpdx, r_dpdy;
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        const int id = i+j*p_cubNq;
+	
+	if(id<p_pressureNq*p_cubNq){
+	  s_cubPressureInterp[0][id] = cubPressureInterp[id];
+	}
+
+	if(id<p_velocityNq*p_cubNq){
+	  s_cubVelocityInterp[0][id] = cubVelocityInterp[id];
+	}
+
+	s_cubD[0][id] = cubD[id];
+
+	if(i<p_pressureNq && j<p_pressureNq){
+	  dlong pid = i + j*p_pressureNq + e*p_pressureNp;
+	  s_p[j][i] = P[pid];
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    //interpolate p in s
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+        if(a<p_Nq) {
+	  
+	  r_p = 0;
+	  
+	  for(int b=0;b<p_pressureNq;++b){
+	    dfloat Ijb = s_cubPressureInterp[j][b];
+	    r_p += Ijb*s_p[b][a];
+	  }
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+        if(a<p_pressureNq) {
+	  s_p[j][a] = r_p;
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    //interpolate p in r
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	r_p = 0;
+	
+	for(int a=0;a<p_pressureNq;++a){
+	  dfloat Iia = s_cubPressureInterp[i][a];
+	  r_p += Iia*s_p[j][a];
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+        const dlong gid = e*p_cubNp*p_Nvgeo + i*p_cubNq + j;
+	
+	dfloat rx = cubvgeo[gid+p_cubNp*p_RXID];
+	dfloat sx = cubvgeo[gid+p_cubNp*p_SXID];
+	dfloat ry = cubvgeo[gid+p_cubNp*p_RYID];
+	dfloat sy = cubvgeo[gid+p_cubNp*p_SYID];
+	dfloat JW = cubvgeo[gid+p_cubNp*p_JWID];
+	
+	s_prx[j][i] = JW*r_p*rx;
+	s_psx[j][i] = JW*r_p*sx;
+	s_pry[j][i] = JW*r_p*ry;
+	s_psy[j][i] = JW*r_p*sy;
+      }
+    }
+
+    @barrier("local");
+    
+    // differentiate in r,s
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	dfloat dpdx = 0, dpdy = 0;
+
+	// px = (dphidx, p) = (dphidr, drdx*p) + (dphids, dsdx*p)
+	// py = (dphidy, p) = (dphidr, drdy*p) + (dphids, dsdy*p)
+	
+	for(int n=0;n<p_cubNq;++n){
+	  dfloat Dni = s_cubD[n][i]; // weak
+	  dfloat Dnj = s_cubD[n][j];
+
+	  dpdx += Dni*s_prx[j][n];
+	  dpdx += Dnj*s_psx[n][i];
+
+	  dpdy += Dni*s_pry[j][n];
+	  dpdy += Dnj*s_psy[n][i];
+	}
+
+	s_dpdx[j][i] = dpdx;
+	s_dpdy[j][i] = dpdy;
+      }
+    }
+    
+    @barrier("local");
+    
+    // test in 's'
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	
+	r_dpdx = 0;
+	r_dpdy = 0;
+	
+	if(b<p_velocityNq){
+	  
+	  for(int j=0;j<p_cubNq;++j){
+	    dfloat Ijb = s_cubVelocityInterp[j][b];
+	    
+	    r_dpdx += Ijb*s_dpdx[j][i];
+	    r_dpdy += Ijb*s_dpdy[j][i];
+	  }
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	s_dpdx[b][i] = r_dpdx;
+	s_dpdy[b][i] = r_dpdy;
+      }
+    }
+    
+    @barrier("local");
+    
+    // test in 'r' and write
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+	
+	if(a<p_velocityNq && b<p_velocityNq){
+	  dfloat resu = 0, resv = 0;;
+
+	  for(int i=0;i<p_cubNq;++i){
+	    dfloat Iia = s_cubVelocityInterp[i][a];
+	    
+	    resu += Iia*s_dpdx[b][i];
+	    resv += Iia*s_dpdy[b][i];
+	  }
+	  
+	  dlong vid = a + b*p_velocityNq + e*p_velocityNp;
+	  rhsU[vid+0*NtotalV] = resu;
+	  rhsU[vid+1*NtotalV] = resv;
+	}
+      }
+    }
+  }
+}

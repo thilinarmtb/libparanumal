@@ -66,7 +66,6 @@ SOFTWARE.
 }
 
 
-//unified @kernel, but might use too much memory
 // needs: p_pressureNq
 // needs: p_velocityNq
 @kernel void stokesDivergenceCubatureQuad2D(const dlong Nelements,
@@ -122,7 +121,7 @@ SOFTWARE.
     //interpolate u,v in s
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int a=0;a<p_cubNq;++a;@inner(0)){
-        if(a<p_Nq) {
+        if(a<p_velocityNq) {
 
 	  r_u = 0;
 	  r_v = 0;
@@ -140,7 +139,7 @@ SOFTWARE.
     
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int a=0;a<p_cubNq;++a;@inner(0)){
-        if(a<p_Nq) {
+        if(a<p_velocityNq) {
 	  s_u[j][a] = r_u;
 	  s_v[j][a] = r_v;
 	}
@@ -191,7 +190,7 @@ SOFTWARE.
 	  dvds += Djn*s_v[n][i];
 	}
 
-        const dlong gid = e*p_Np*p_Nvgeo + i*p_Nq + j;
+        const dlong gid = e*p_cubNp*p_Nvgeo + i*p_cubNq + j;
 	
 	dfloat rx = cubvgeo[gid+p_cubNp*p_RXID];
 	dfloat sx = cubvgeo[gid+p_cubNp*p_SXID];
@@ -246,7 +245,7 @@ SOFTWARE.
 	    res += Iia*s_divU[b][i];
 	  }
 	  
-	  dlong pid = a + b*p_velocityNq + e*p_pressureNp;
+	  dlong pid = a + b*p_pressureNq + e*p_pressureNp;
 	  prhs[pid] = res;
 	}
       }
