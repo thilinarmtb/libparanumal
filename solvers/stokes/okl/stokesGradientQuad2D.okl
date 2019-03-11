@@ -267,8 +267,8 @@ SOFTWARE.
 	  }
 	  
 	  dlong vid = a + b*p_velocityNq + e*p_velocityNp;
-	  rhsU[vid+0*NtotalV] = resu;
-	  rhsU[vid+1*NtotalV] = resv;
+	  rhsU[vid+0*NtotalV] += resu;
+	  rhsU[vid+1*NtotalV] += resv;
 	}
       }
     }
