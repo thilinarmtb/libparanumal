@@ -36,7 +36,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
   const dfloat zero = 0.0;
   const dfloat one  = 1.0;
   const dfloat mone = -1.0;
-  const dfloat tau  = 1.0;
+  const dfloat tau  = 0.0;
 
   /* TODO:  We re-allocate these scratch variables every time we call the
    * operator, but they're going to go away eventually, so we don't care.  keep
@@ -51,6 +51,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
    * TODO:  Fuse these into one big Stokes Ax kernel?
    */
 
+#if 0
   stokes->stiffnessKernel(stokes->mesh->Nelements,
                           stokes->mesh->o_ggeo,
                           stokes->mesh->o_Dmatrices,
@@ -73,6 +74,36 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                             v.o_z,
                             Av.o_z);
   }
+#else
+  stokes->stiffnessKernel(stokes->mesh->Nelements,
+                          stokes->mesh->o_cubggeo,
+                          stokes->o_cubD,
+                          stokes->o_cubInterp,
+                          stokes->o_cubInterp,
+                          stokes->o_cubEta,
+                          v.o_x,
+                          Av.o_x);
+
+  stokes->stiffnessKernel(stokes->mesh->Nelements,
+                          stokes->mesh->o_cubggeo,
+                          stokes->o_cubD,
+                          stokes->o_cubInterp,
+                          stokes->o_cubInterp,
+                          stokes->o_cubEta,
+                          v.o_y,
+                          Av.o_y);
+
+  if (stokes->mesh->dim == 3) {
+    stokes->stiffnessKernel(stokes->mesh->Nelements,
+                            stokes->mesh->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterp,
+                            stokes->o_cubInterp,
+                            stokes->o_cubEta,
+                            v.o_z,
+                            Av.o_z);
+  }
+#endif
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   one,
@@ -82,6 +113,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                                   v.o_p,
                                   o_pProjected);
 
+#if 0
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
                          stokes->mesh->o_Dmatrices,
@@ -95,7 +127,25 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                            stokes->mesh->o_vgeo,
                            v.o_v,
                            o_pProjected);
+#else
+  stokes->gradientKernel(stokes->mesh->Nelements,
+                         stokes->Ntotal,
+                         stokes->mesh->o_cubvgeo,
+                         stokes->o_cubD,
+                         stokes->o_cubInterp,
+                         stokes->o_cubInterp,
+                         o_pProjected,
+                         Av.o_v);
 
+  stokes->divergenceKernel(stokes->mesh->Nelements,
+                           stokes->Ntotal,
+                           stokes->mesh->o_cubvgeo,
+                           stokes->o_cubD,
+                           stokes->o_cubInterp,
+                           stokes->o_cubInterp,
+                           v.o_v,
+                           o_pProjected);
+#endif
   
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   one,
@@ -105,6 +155,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                                   o_pProjected,
                                   Av.o_p);
 
+#if 0
   // Pressure stabilization block.
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   zero,
@@ -127,6 +178,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                              o_pProjected,
                              one,
                              Av.o_p);
+#endif
 
 #if 0
   /* Rank-boost for all-Neumann problem.

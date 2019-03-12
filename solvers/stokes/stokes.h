@@ -92,6 +92,9 @@ typedef struct {
   dfloat      *eta;        /* Viscosity */
   occa::memory o_eta;
 
+  dfloat      *cubEta;     /* Viscosity on cubature nodes */
+  occa::memory o_cubEta;
+
   dfloat       *uP;        /* Vectors u, v for effecting pressure projection */
   occa::memory o_uP;       /* P = I - uv^* */
   dfloat       *vP;
@@ -110,6 +113,11 @@ typedef struct {
 
   int* mapB;               /* Node-wise BC type codes */
   occa::memory o_mapB;
+
+  dfloat *cubD;            /* Cubature differentiation matrix. */
+  occa::memory o_cubD;
+
+  occa::memory o_cubInterp; /* Cubature interpolation matrix. */
 
   /* OCCA kernels */
   occa::kernel divergenceKernel;

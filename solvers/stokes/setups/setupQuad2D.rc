@@ -36,7 +36,7 @@ CUDA
 
 # Pressure degree is velocity degree - 1.
 [VELOCITY POLYNOMIAL DEGREE]
-6
+2
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
@@ -61,9 +61,9 @@ MINRES
 # JACOBI  - "Boosted" Jacobi preconditioner
 # SCBLOCK - Schur-complement-based block matrix preconditioner
 [PRECONDITIONER]
-#NONE
+NONE
 #JACOBI
-SCBLOCK
+#SCBLOCK
 
 ################################################
 ######## JACOBI PRECONDITIONER OPTIONS #########

@@ -36,5 +36,15 @@ function writeStokesData(N)
 	writeFloatMatrix(fid, u3, 'Pressure projection rank-1 update - Pseudoinverse (u)');
 	writeFloatMatrix(fid, v3, 'Pressure projection rank-1 update - Pseudoinverse (v)');
 
+	cubNq = ceil(3*N/2) + 1;
+	[cubxk, cubwk] = legpts(cubNq);
+	cubwk = cubwk.';
+	cubQ = legpoly(0:(cubNq - 1));
+	cubV = feval(cubQ, cubxk);
+	cubL = cubQ*inv(cubV);
+	cubD = feval(diff(cubL), cubxk);
+
+	writeFloatMatrix(fid, cubD, 'Cubature 1D differentiation matrix');
+
 	fclose(fid);
 end

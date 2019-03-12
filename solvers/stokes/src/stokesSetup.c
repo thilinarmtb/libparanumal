@@ -175,6 +175,9 @@ static void stokesSetupRHS(stokes_t *stokes)
   // Gather-scatter for C0 FEM.
   stokesVecUnmaskedGatherScatter(stokes, stokes->f);
 
+  printf("APA:  Exiting...\n");
+  exit(-1);
+
   // TODO:  Make a function for this.
   //
   // TODO:  We only need to do this for C0 FEM.
@@ -194,7 +197,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
   const dfloat zero = 0.0;
   const dfloat one  = 1.0;
   const dfloat mone = -1.0;
-  const dfloat tau  = 1.0;
+  const dfloat tau  = 0.0;
 
   stokesVec_t tmp;
 
@@ -235,6 +238,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
 
   stokesVecZero(stokes, stokes->u);
 
+#if 0
   stokes->stiffnessKernel(stokes->mesh->Nelements,
                           stokes->mesh->o_ggeo,
                           stokes->mesh->o_Dmatrices,
@@ -257,6 +261,33 @@ static void stokesRHSAddBC(stokes_t *stokes)
                             tmp.o_z,
                             stokes->u.o_z);
   }
+#else
+  stokes->stiffnessKernel(stokes->mesh->Nelements,
+                          stokes->mesh->o_cubggeo,
+                          stokes->o_cubD,
+                          stokes->o_cubInterp,
+                          stokes->o_cubInterp,
+                          tmp.o_x,
+                          stokes->u.o_x);
+
+  stokes->stiffnessKernel(stokes->mesh->Nelements,
+                          stokes->mesh->o_cubggeo,
+                          stokes->o_cubD,
+                          stokes->o_cubInterp,
+                          stokes->o_cubInterp,
+                          tmp.o_y,
+                          stokes->u.o_y);
+
+  if (stokes->mesh->dim == 3) {
+    stokes->stiffnessKernel(stokes->mesh->Nelements,
+                            stokes->mesh->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterp,
+                            stokes->o_cubInterp,
+                            tmp.o_z,
+                            stokes->u.o_z);
+  }
+#endif
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   one,
@@ -266,6 +297,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                                   tmp.o_p,
                                   o_pProjected);
 
+#if 1
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
                          stokes->mesh->o_Dmatrices,
@@ -279,6 +311,25 @@ static void stokesRHSAddBC(stokes_t *stokes)
                            stokes->mesh->o_vgeo,
                            tmp.o_v,
                            o_pProjected);
+#else
+  stokes->gradientKernel(stokes->mesh->Nelements,
+                         stokes->Ntotal,
+                         stokes->mesh->cubvgeo,
+                         stokes->o_cubD,
+                         stokes->o_cubInterp,
+                         stokes->o_cubInterp,
+                         o_pProjected,
+                         stokes->u.o_v);
+
+  stokes->divergenceKernel(stokes->mesh->Nelements,
+                           stokes->Ntotal,
+                           stokes->mesh->cubvgeo,
+                           stokes->o_cubD,
+                           stokes->o_cubInterp,
+                           stokes->o_cubInterp,
+                           tmp.o_v,
+                           o_pProjected);
+#endif
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   one,
@@ -288,6 +339,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                                   o_pProjected,
                                   stokes->u.o_p);
 
+#if 0
   // Pressure stabilization block.
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   zero,
@@ -310,6 +362,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                              o_pProjected,
                              one,
                              stokes->u.o_p);
+#endif
 
   stokesVecScaledAdd(stokes, -1.0, stokes->u, 1.0, stokes->f);
 

@@ -56,7 +56,38 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
       stokes->eta[i] = eta[i];
   }
 
+  stokes->cubEta = (dfloat*)calloc(stokes->mesh->Nelements*stokes->mesh->cubNp, sizeof(dfloat));
+  for (int i = 0; i < stokes->mesh->Nelements*stokes->mesh->cubNp; i++)
+    stokes->cubEta[i] = 1.0;
+
   stokes->o_eta = stokes->mesh->device.malloc(stokes->Ntotal*sizeof(dfloat), stokes->eta);
+  stokes->o_cubEta = stokes->mesh->device.malloc(stokes->mesh->Nelements*stokes->mesh->cubNp*sizeof(dfloat), stokes->cubEta);
+  stokes->o_cubInterp = stokes->mesh->device.malloc(stokes->mesh->Nq*stokes->mesh->cubNq*sizeof(dfloat), stokes->mesh->cubInterp);
+
+  stokes->mesh->cubggeo = (dfloat*)calloc(stokes->mesh->Nelements*stokes->mesh->Nggeo*stokes->mesh->cubNp, sizeof(dfloat));
+  for (int e = 0; e < stokes->mesh->Nelements; e++) {
+    for (int i = 0; i < stokes->mesh->cubNq; i++) {
+      for (int j = 0; j < stokes->mesh->cubNq; j++) {
+        dlong base;
+        int n = i*stokes->mesh->cubNq + j;
+
+        base = e*stokes->mesh->Nvgeo*stokes->mesh->cubNp + n;
+        dfloat rx = stokes->mesh->cubvgeo[base + stokes->mesh->cubNp*RXID];
+        dfloat ry = stokes->mesh->cubvgeo[base + stokes->mesh->cubNp*RYID];
+        dfloat sx = stokes->mesh->cubvgeo[base + stokes->mesh->cubNp*SXID];
+        dfloat sy = stokes->mesh->cubvgeo[base + stokes->mesh->cubNp*SYID];
+        dfloat JW = stokes->mesh->cubvgeo[base + stokes->mesh->cubNp*JWID];
+
+        base = e*stokes->mesh->Nggeo*stokes->mesh->cubNp + n;
+        stokes->mesh->cubggeo[base + stokes->mesh->cubNp*G00ID] = JW*(rx*rx + ry*ry);
+        stokes->mesh->cubggeo[base + stokes->mesh->cubNp*G01ID] = JW*(rx*sx + ry*sy);
+        stokes->mesh->cubggeo[base + stokes->mesh->cubNp*G11ID] = JW*(sx*sx + sy*sy);
+        stokes->mesh->cubggeo[base + stokes->mesh->cubNp*GWJID] = JW;
+      }
+    }
+  }
+
+  stokes->mesh->o_cubggeo = stokes->mesh->device.malloc(stokes->mesh->Nelements*stokes->mesh->Nggeo*stokes->mesh->cubNp*sizeof(dfloat), stokes->mesh->cubggeo);
 
   if (stokes->mesh->dim == 2) {
     kernelInfo["includes"] += DSTOKES "/data/stokesBoundary2D.h";
@@ -75,6 +106,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
   readDfloatArray(fp, "Pressure projection rank-1 update - Interpolatory (u)", &stokes->uP, &Nrows, &Ncols);
   readDfloatArray(fp, "Pressure projection rank-1 update - Interpolatory (v)", &stokes->vP, &Nrows, &Ncols);
 #endif
+
 #if 0
   readDfloatArray(fp, "Pressure projection rank-1 update - Pseudoinverse (u)", &stokes->uP, &Nrows, &Ncols);
   readDfloatArray(fp, "Pressure projection rank-1 update - Pseudoinverse (v)", &stokes->vP, &Nrows, &Ncols);
@@ -84,11 +116,18 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
   readDfloatArray(fp, "Pressure projection rank-1 update - L2 orthogonal (u)", &stokes->uP, &Nrows, &Ncols);
   readDfloatArray(fp, "Pressure projection rank-1 update - L2 orthogonal (v)", &stokes->vP, &Nrows, &Ncols);
 #endif
+
+  readDfloatArray(fp, "Cubature 1D differentiation matrix", &stokes->cubD, &Nrows, &Ncols);
+  if (Nrows != stokes->mesh->cubNq) {
+    printf("ERROR:  cubNq mismatch (%d vs. %d).\n", Nrows, stokes->mesh->cubNq);
+    exit(-1);
+  }
   
   fclose(fp);
 
   stokes->o_uP = stokes->mesh->device.malloc(stokes->mesh->Nq*sizeof(dfloat), stokes->uP);
   stokes->o_vP = stokes->mesh->device.malloc(stokes->mesh->Nq*sizeof(dfloat), stokes->vP);
+  stokes->o_cubD = stokes->mesh->device.malloc(stokes->mesh->cubNq*stokes->mesh->cubNq*sizeof(dfloat), stokes->cubD);
 
   stokesAllocateScratchVars(stokes);
   stokesSetupBCMask(stokes);
@@ -182,10 +221,21 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfo)
   
   /* TODO:  Replace this with parametrized filenames. */
   if ((stokes->mesh->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
-    stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfo);
+#if 1
+    //stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfo);
     stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfo);
+    //stokes->stiffnessKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfo);
+
+    stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceCubatureQuad2D", kernelInfo);
+    //stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientCubatureQuad2D", kernelInfo);
+    stokes->stiffnessKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessCubatureQuad2D", kernelInfo);
+#else
+    stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceCubatureQuad2D", kernelInfo);
+    stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientCubatureQuad2D", kernelInfo);
+    stokes->stiffnessKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessCubatureQuad2D", kernelInfo);
+#endif
+
     stokes->rankOneProjectionKernel = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesRankOneProjectionQuad2D.okl", "stokesRankOneProjectionQuad2D", kernelInfo);
-    stokes->stiffnessKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfo);
   } else if ((stokes->mesh->dim == 3) && (stokes->elementType == HEXAHEDRA)) {
     stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceHex3D.okl", "stokesDivergenceHex3D", kernelInfo);
     stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientHex3D.okl", "stokesGradientHex3D", kernelInfo);
