@@ -223,11 +223,11 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfo)
   if ((stokes->mesh->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
 #if 1
     //stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfo);
-    stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfo);
+    //stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfo);
     //stokes->stiffnessKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfo);
 
     stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceCubatureQuad2D", kernelInfo);
-    //stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientCubatureQuad2D", kernelInfo);
+    stokes->gradientKernel          = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientCubatureQuad2D", kernelInfo);
     stokes->stiffnessKernel         = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessCubatureQuad2D", kernelInfo);
 #else
     stokes->divergenceKernel        = stokes->mesh->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceCubatureQuad2D", kernelInfo);

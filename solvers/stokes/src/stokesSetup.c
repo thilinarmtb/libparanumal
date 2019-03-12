@@ -266,7 +266,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                           stokes->mesh->o_cubggeo,
                           stokes->o_cubD,
                           stokes->o_cubInterp,
-                          stokes->o_cubInterp,
+                          stokes->o_cubEta,
                           tmp.o_x,
                           stokes->u.o_x);
 
@@ -274,7 +274,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                           stokes->mesh->o_cubggeo,
                           stokes->o_cubD,
                           stokes->o_cubInterp,
-                          stokes->o_cubInterp,
+                          stokes->o_cubEta,
                           tmp.o_y,
                           stokes->u.o_y);
 
@@ -283,7 +283,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                             stokes->mesh->o_cubggeo,
                             stokes->o_cubD,
                             stokes->o_cubInterp,
-                            stokes->o_cubInterp,
+                            stokes->o_cubEta,
                             tmp.o_z,
                             stokes->u.o_z);
   }
@@ -297,7 +297,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                                   tmp.o_p,
                                   o_pProjected);
 
-#if 1
+#if 0
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
                          stokes->mesh->o_Dmatrices,
