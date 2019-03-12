@@ -128,7 +128,7 @@ static void stokesSCBlockPreconditionerSetup(stokes_t *stokes, occa::properties 
   ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
   ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "2");
 
-  ellipticOptions.setArgs("VERBOSE", "FALSE");
+  ellipticOptions.setArgs("VERBOSE", "TRUE");
   elliptic->options = ellipticOptions;
 
   elliptic->BCType = stokes->BCType;

@@ -240,58 +240,61 @@ static void stokesRHSAddBC(stokes_t *stokes)
 
   stokesVecZero(stokes, stokes->u);
 
-#if 0
-  printf("APA:  Old world (setup/stiffness).\n");
-  stokes->stiffnessKernel(stokes->mesh->Nelements,
-                          stokes->mesh->o_ggeo,
-                          stokes->mesh->o_Dmatrices,
-                          stokes->o_eta,
-                          tmp.o_x,
-                          stokes->u.o_x);
-
-  stokes->stiffnessKernel(stokes->mesh->Nelements,
-                          stokes->mesh->o_ggeo,
-                          stokes->mesh->o_Dmatrices,
-                          stokes->o_eta,
-                          tmp.o_y,
-                          stokes->u.o_y);
-
-  if (stokes->mesh->dim == 3) {
+  if(!stokes->options.compareArgs("STIFFNESS INTEGRATION TYPE", "CUBATURE")){
+    printf("APA:  Old world (setup/stiffness).\n");
     stokes->stiffnessKernel(stokes->mesh->Nelements,
-                            stokes->mesh->o_ggeo,
-                            stokes->mesh->o_Dmatrices,
-                            stokes->o_eta,
-                            tmp.o_z,
-                            stokes->u.o_z);
-  }
-#else
-  printf("APA:  New world (setup/stiffness).\n");
-  stokes->stiffnessKernel(stokes->mesh->Nelements,
-                          stokes->mesh->o_cubggeo,
-                          stokes->o_cubD,
-                          stokes->o_cubInterp,
-                          stokes->o_cubEta,
-                          tmp.o_x,
-                          stokes->u.o_x);
-
-  stokes->stiffnessKernel(stokes->mesh->Nelements,
-                          stokes->mesh->o_cubggeo,
-                          stokes->o_cubD,
-                          stokes->o_cubInterp,
-                          stokes->o_cubEta,
-                          tmp.o_y,
-                          stokes->u.o_y);
-
-  if (stokes->mesh->dim == 3) {
+			    stokes->mesh->o_ggeo,
+			    stokes->mesh->o_Dmatrices,
+			    stokes->o_eta,
+			    tmp.o_x,
+			    stokes->u.o_x);
+    
     stokes->stiffnessKernel(stokes->mesh->Nelements,
-                            stokes->mesh->o_cubggeo,
-                            stokes->o_cubD,
-                            stokes->o_cubInterp,
-                            stokes->o_cubEta,
-                            tmp.o_z,
-                            stokes->u.o_z);
+			    stokes->mesh->o_ggeo,
+			    stokes->mesh->o_Dmatrices,
+			    stokes->o_eta,
+			    tmp.o_y,
+			    stokes->u.o_y);
+    
+    if (stokes->mesh->dim == 3) {
+      stokes->stiffnessKernel(stokes->mesh->Nelements,
+			      stokes->mesh->o_ggeo,
+			      stokes->mesh->o_Dmatrices,
+			      stokes->o_eta,
+			      tmp.o_z,
+			      stokes->u.o_z);
+    }
   }
-#endif
+  else{
+    
+    printf("APA:  New world (setup/stiffness).\n");
+    stokes->stiffnessKernel(stokes->mesh->Nelements,
+			    stokes->mesh->o_cubggeo,
+			    stokes->o_cubD,
+			    stokes->o_cubInterp,
+			    stokes->o_cubEta,
+			    tmp.o_x,
+			    stokes->u.o_x);
+    
+    stokes->stiffnessKernel(stokes->mesh->Nelements,
+			    stokes->mesh->o_cubggeo,
+			    stokes->o_cubD,
+			    stokes->o_cubInterp,
+			    stokes->o_cubEta,
+			    tmp.o_y,
+			    stokes->u.o_y);
+    
+    if (stokes->mesh->dim == 3) {
+      stokes->stiffnessKernel(stokes->mesh->Nelements,
+			      stokes->mesh->o_cubggeo,
+			      stokes->o_cubD,
+			      stokes->o_cubInterp,
+			      stokes->o_cubEta,
+			      tmp.o_z,
+			      stokes->u.o_z);
+    }
+  }
+
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   one,
@@ -301,41 +304,41 @@ static void stokesRHSAddBC(stokes_t *stokes)
                                   tmp.o_p,
                                   o_pProjected);
 
-#if 0
-  printf("APA:  Old world (setup/grad-div).\n");
-  stokes->gradientKernel(stokes->mesh->Nelements,
-                         stokes->Ntotal,
-                         stokes->mesh->o_Dmatrices,
-                         stokes->mesh->o_vgeo,
-                         o_pProjected,
-                         stokes->u.o_v);
-
-  stokes->divergenceKernel(stokes->mesh->Nelements,
-                           stokes->Ntotal,
-                           stokes->mesh->o_Dmatrices,
-                           stokes->mesh->o_vgeo,
-                           tmp.o_v,
-                           o_pProjected);
-#else
-  printf("APA:  New world (setup/grad-div).\n");
-  stokes->gradientKernel(stokes->mesh->Nelements,
-                         stokes->Ntotal,
-                         stokes->mesh->o_cubvgeo,
-                         stokes->o_cubD,
-                         stokes->o_cubInterp,
-                         stokes->o_cubInterp,
-                         o_pProjected,
-                         stokes->u.o_v);
-
-  stokes->divergenceKernel(stokes->mesh->Nelements,
-                           stokes->Ntotal,
-                           stokes->mesh->o_cubvgeo,
-                           stokes->o_cubD,
-                           stokes->o_cubInterp,
-                           stokes->o_cubInterp,
-                           tmp.o_v,
-                           o_pProjected);
-#endif
+  if(!stokes->options.compareArgs("STIFFNESS INTEGRATION TYPE", "CUBATURE")){
+    printf("APA:  Old world (setup/grad-div).\n");
+    stokes->gradientKernel(stokes->mesh->Nelements,
+			   stokes->Ntotal,
+			   stokes->mesh->o_Dmatrices,
+			   stokes->mesh->o_vgeo,
+			   o_pProjected,
+			   stokes->u.o_v);
+    
+    stokes->divergenceKernel(stokes->mesh->Nelements,
+			     stokes->Ntotal,
+			     stokes->mesh->o_Dmatrices,
+			     stokes->mesh->o_vgeo,
+			     tmp.o_v,
+			     o_pProjected);
+  }else{
+    printf("APA:  New world (setup/grad-div).\n");
+    stokes->gradientKernel(stokes->mesh->Nelements,
+			   stokes->Ntotal,
+			   stokes->mesh->o_cubvgeo,
+			   stokes->o_cubD,
+			   stokes->o_cubInterp,
+			   stokes->o_cubInterp,
+			   o_pProjected,
+			   stokes->u.o_v);
+    
+    stokes->divergenceKernel(stokes->mesh->Nelements,
+			     stokes->Ntotal,
+			     stokes->mesh->o_cubvgeo,
+			     stokes->o_cubD,
+			     stokes->o_cubInterp,
+			     stokes->o_cubInterp,
+			     tmp.o_v,
+			     o_pProjected);
+  }
 
   stokes->rankOneProjectionKernel(stokes->mesh->Nelements,
                                   one,
