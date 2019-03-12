@@ -160,8 +160,8 @@ SOFTWARE.
       for(int a=0;a<p_cubNq;++a;@inner(0)){
 
 	int id = a + b*p_cubNq;
-        if(id<p_cubNq*p_Nq){
-          s_I[b][a] = cubInterp[id];
+        if(id<p_Nq*p_cubNq){
+	  s_I[0][id] = cubInterp[id];
         }
 
         s_cubD[b][a] = cubD[id];
