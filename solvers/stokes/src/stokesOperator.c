@@ -47,52 +47,98 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
    * TODO:  Fuse these into one big Stokes Ax kernel?
    */
 
-  stokes->stiffnessKernel(stokes->meshV->Nelements,
-                          stokes->meshV->o_ggeo,
-                          stokes->meshV->o_Dmatrices,
-                          stokes->o_eta,
-                          v.o_x,
-                          Av.o_x);
-
-  stokes->stiffnessKernel(stokes->meshV->Nelements,
-                          stokes->meshV->o_ggeo,
-                          stokes->meshV->o_Dmatrices,
-                          stokes->o_eta,
-                          v.o_y,
-                          Av.o_y);
-
-  if (stokes->meshV->dim == 3) {
+  if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) { 
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_ggeo,
                             stokes->meshV->o_Dmatrices,
                             stokes->o_eta,
-                            v.o_z,
-                            Av.o_z);
-  }
+                            v.o_x,
+                            Av.o_x);
 
-  stokes->raisePressureKernel(stokes->meshV->Nelements,
-                              o_interpRaise,
-                              v.o_p,
-                              o_pRaised);
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_ggeo,
+                            stokes->meshV->o_Dmatrices,
+                            stokes->o_eta,
+                            v.o_y,
+                            Av.o_y);
 
-  stokes->gradientKernel(stokes->meshV->Nelements,
-                         stokes->NtotalV,
-                         stokes->meshV->o_Dmatrices,
-                         stokes->meshV->o_vgeo,
-                         o_pRaised,
-                         Av.o_v);
+    if (stokes->meshV->dim == 3) {
+      stokes->stiffnessKernel(stokes->meshV->Nelements,
+                              stokes->meshV->o_ggeo,
+                              stokes->meshV->o_Dmatrices,
+                              stokes->o_eta,
+                              v.o_z,
+                              Av.o_z);
+    }
 
-  stokes->divergenceKernel(stokes->meshV->Nelements,
+    stokes->raisePressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                v.o_p,
+                                o_pRaised);
+
+    stokes->gradientKernel(stokes->meshV->Nelements,
                            stokes->NtotalV,
                            stokes->meshV->o_Dmatrices,
                            stokes->meshV->o_vgeo,
-                           v.o_v,
-                           o_pRaised);
+                           o_pRaised,
+                           Av.o_v);
 
-  stokes->lowerPressureKernel(stokes->meshV->Nelements,
-                              o_interpRaise,
-                              o_pRaised,
-                              Av.o_p);
+    stokes->divergenceKernel(stokes->meshV->Nelements,
+                             stokes->NtotalV,
+                             stokes->meshV->o_Dmatrices,
+                             stokes->meshV->o_vgeo,
+                             v.o_v,
+                             o_pRaised);
+
+    stokes->lowerPressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                o_pRaised,
+                                Av.o_p);
+  } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterpV,
+                            stokes->o_cubEta,
+                            v.o_x,
+                            Av.o_x);
+
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterpV,
+                            stokes->o_cubEta,
+                            v.o_y,
+                            Av.o_y);
+
+    if (stokes->meshV->dim == 3) {
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterpV,
+                            stokes->o_cubEta,
+                            v.o_z,
+                            Av.o_z);
+    }
+
+    stokes->gradientKernel(stokes->meshV->Nelements,
+			                     stokes->NtotalV,
+			                     stokes->meshV->o_cubvgeo,
+			                     stokes->o_cubD,
+			                     stokes->o_cubInterpV,
+			                     stokes->o_cubInterpP,
+			                     v.o_p,
+			                     Av.o_v);
+
+    stokes->divergenceKernel(stokes->meshV->Nelements,
+			                       stokes->NtotalV,
+			                       stokes->meshV->o_cubvgeo,
+			                       stokes->o_cubD,
+			                       stokes->o_cubInterpV,
+			                       stokes->o_cubInterpP,
+			                       v.o_v,
+			                       Av.o_p);
+  }
 
 #if 0
   /* Rank-boost for all-Neumann problem.

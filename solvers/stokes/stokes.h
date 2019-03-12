@@ -92,6 +92,18 @@ typedef struct {
   dfloat      *eta;        /* Viscosity */
   occa::memory o_eta;
 
+  dfloat      *cubEta;     /* Viscosity on cubature nodes */
+  occa::memory o_cubEta;
+
+  dfloat      *cubInterpV; /* Cubature interpolation matrix for the velocity mesh. */
+  occa::memory o_cubInterpV;
+
+  dfloat      *cubInterpP; /* Cubature interpolation matrix for the pressure mesh. */
+  occa::memory o_cubInterpP;
+
+  dfloat       *cubD;      /* Cubature differentiation matrix. */
+  occa::memory o_cubD;
+
   stokesPrecon_t *precon;  /* Preconditioner */
 
   ogs_t *ogs;              /* Gather-scatter handle (masked for BCs) */

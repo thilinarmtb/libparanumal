@@ -241,52 +241,98 @@ static void stokesRHSAddBC(stokes_t *stokes)
 
   stokesVecZero(stokes, stokes->u);
 
-  stokes->stiffnessKernel(stokes->meshV->Nelements,
-                          stokes->meshV->o_ggeo,
-                          stokes->meshV->o_Dmatrices,
-                          stokes->o_eta,
-                          tmp.o_x,
-                          stokes->u.o_x);
-
-  stokes->stiffnessKernel(stokes->meshV->Nelements,
-                          stokes->meshV->o_ggeo,
-                          stokes->meshV->o_Dmatrices,
-                          stokes->o_eta,
-                          tmp.o_y,
-                          stokes->u.o_y);
-
-  if (stokes->meshV->dim == 3) {
+  if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_ggeo,
                             stokes->meshV->o_Dmatrices,
                             stokes->o_eta,
-                            tmp.o_z,
-                            stokes->u.o_z);
-  }
+                            tmp.o_x,
+                            stokes->u.o_x);
 
-  stokes->raisePressureKernel(stokes->meshV->Nelements,
-                              o_interpRaise,
-                              tmp.o_p,
-                              o_pRaised);
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_ggeo,
+                            stokes->meshV->o_Dmatrices,
+                            stokes->o_eta,
+                            tmp.o_y,
+                            stokes->u.o_y);
 
-  stokes->gradientKernel(stokes->meshV->Nelements,
-                         stokes->NtotalV,
-                         stokes->meshV->o_Dmatrices,
-                         stokes->meshV->o_vgeo,
-                         o_pRaised,
-                         stokes->u.o_v);
+    if (stokes->meshV->dim == 3) {
+      stokes->stiffnessKernel(stokes->meshV->Nelements,
+                              stokes->meshV->o_ggeo,
+                              stokes->meshV->o_Dmatrices,
+                              stokes->o_eta,
+                              tmp.o_z,
+                              stokes->u.o_z);
+    }
 
-  stokes->divergenceKernel(stokes->meshV->Nelements,
+    stokes->raisePressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                tmp.o_p,
+                                o_pRaised);
+
+    stokes->gradientKernel(stokes->meshV->Nelements,
                            stokes->NtotalV,
                            stokes->meshV->o_Dmatrices,
                            stokes->meshV->o_vgeo,
-                           tmp.o_v,
-                           o_pRaised);
+                           o_pRaised,
+                           stokes->u.o_v);
 
-  stokes->lowerPressureKernel(stokes->meshV->Nelements,
-                              o_interpRaise,
-                              o_pRaised,
-                              stokes->u.o_p);
+    stokes->divergenceKernel(stokes->meshV->Nelements,
+                             stokes->NtotalV,
+                             stokes->meshV->o_Dmatrices,
+                             stokes->meshV->o_vgeo,
+                             tmp.o_v,
+                             o_pRaised);
+
+    stokes->lowerPressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                o_pRaised,
+                                stokes->u.o_p);
+  } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterpV,
+                            stokes->o_cubEta,
+                            tmp.o_x,
+                            stokes->u.o_x);
+
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterpV,
+                            stokes->o_cubEta,
+                            tmp.o_y,
+                            stokes->u.o_y);
+
+    if (stokes->meshV->dim == 3) {
+    stokes->stiffnessKernel(stokes->meshV->Nelements,
+                            stokes->meshV->o_cubggeo,
+                            stokes->o_cubD,
+                            stokes->o_cubInterpV,
+                            stokes->o_cubEta,
+                            tmp.o_z,
+                            stokes->u.o_z);
+    }
+
+    stokes->gradientKernel(stokes->meshV->Nelements,
+			                     stokes->NtotalV,
+			                     stokes->meshV->o_cubvgeo,
+			                     stokes->o_cubD,
+			                     stokes->o_cubInterpV,
+			                     stokes->o_cubInterpP,
+			                     tmp.o_p,
+			                     stokes->u.o_v);
+
+    stokes->divergenceKernel(stokes->meshV->Nelements,
+			                       stokes->NtotalV,
+			                       stokes->meshV->o_cubvgeo,
+			                       stokes->o_cubD,
+			                       stokes->o_cubInterpV,
+			                       stokes->o_cubInterpP,
+			                       tmp.o_v,
+			                       stokes->u.o_p);
+  }
 
   stokesVecScaledAdd(stokes, -1.0, stokes->u, 1.0, stokes->f);
 

@@ -134,3 +134,180 @@ SOFTWARE.
     }
   }
 }
+
+@kernel void stokesStiffnessCubatureQuad2D(const dlong Nelements,
+					                                 @restrict const dfloat *cubggeo,
+					                                 @restrict const dfloat *cubD,
+					                                 @restrict const dfloat *cubInterp,
+					                                 @restrict const dfloat *cubEta,
+					                                 @restrict const dfloat *q,
+					                                 @restrict       dfloat *Aq)
+{
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_q[p_cubNq][p_cubNq];
+    @shared dfloat s_q1[p_cubNq][p_cubNq];
+
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+
+    @shared dfloat s_qr[p_cubNq][p_cubNq];
+    @shared dfloat s_qs[p_cubNq][p_cubNq];
+
+    @shared dfloat s_I[p_cubNq][p_Nq];
+
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+
+        int id = a + b*p_cubNq;
+        if(id<p_Nq*p_cubNq){
+          s_I[0][id] = cubInterp[id];
+        }
+
+        s_cubD[b][a] = cubD[id];
+
+        if(a<p_Nq && b<p_Nq){
+          dlong id = e*p_Np + b*p_Nq + a;
+          s_q[b][a] = q[id];
+        }
+      }
+    }
+
+    // ============== interpolate in 3 dir ========================
+    // 2. interpolate in b
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+
+        if(a<p_Nq){
+
+          dfloat tmp = 0;
+          for(int b=0;b<p_Nq;++b){
+
+            const dfloat sIjb= s_I[j][b];
+
+            tmp  += sIjb*s_q[b][a];
+          }
+
+          s_q1[j][a] = tmp;
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // 3. transform in a
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+        dfloat tmp = 0;
+
+        for(int a=0;a<p_Nq;++a){
+
+          const dfloat sIia = s_I[i][a];
+          tmp  += sIia*s_q1[j][a];
+        }
+
+        s_q[j][i] = tmp;
+      }
+    }
+
+    //===============================================
+    // 5. differentiate once interpolated
+
+    for(int j=0; j<p_cubNq; ++j; @inner(1)) {
+      for(int i=0; i<p_cubNq; ++i; @inner(0)) {
+
+        const int gbase   = e*p_Nggeo*p_cubNp + j*p_cubNq + i;
+        const int etabase = e*p_cubNp         + j*p_cubNq + i;
+
+        //geofactors for k j i thread
+        const dfloat r_GwJ = cubggeo[gbase+p_GWJID*p_cubNp];
+
+        const dfloat r_G00 = cubggeo[gbase+p_G00ID*p_cubNp];
+        const dfloat r_G01 = cubggeo[gbase+p_G01ID*p_cubNp];
+        const dfloat r_G11 = cubggeo[gbase+p_G11ID*p_cubNp];
+
+        const dfloat r_eta = cubEta[etabase];
+
+        // 'r', 's', 't' derivatives
+        dfloat dr = 0.0f;
+        dfloat ds = 0.0f;
+
+#pragma unroll p_cubNq
+        for (int n = 0; n<p_cubNq; ++n) {
+          dr += s_cubD[i][n]*s_q[j][n];
+          ds += s_cubD[j][n]*s_q[n][i];
+        }
+
+        s_qr[j][i] = r_eta*(r_G00*dr + r_G01*ds);
+        s_qs[j][i] = r_eta*(r_G01*dr + r_G11*ds);
+      }
+    }
+
+    @barrier("local");
+
+    // weak diff
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+        dfloat lapqr = 0.0f, lapqs = 0.0f;
+
+#pragma unroll p_cubNq
+        for(int n=0;n<p_cubNq;++n){
+          lapqr += s_cubD[n][i]*s_qr[j][n];
+          lapqs += s_cubD[n][j]*s_qs[n][i];
+        }
+
+        s_q1[j][i] = lapqr + lapqs;
+      }
+    }
+
+    //=========== now project =================================================
+    // b -> c -> a
+
+    @barrier("local");
+
+    // test in b
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+        dfloat tmp = 0.0f;
+
+        if(b<p_Nq){
+
+#pragma unroll p_cubNq
+          for(int j=0;j<p_cubNq;++j){
+
+            const dfloat sIjb = s_I[j][b];
+            tmp  += sIjb*s_q1[j][i];
+          }
+        }
+
+        s_q[b][i] = tmp;
+      }
+    }
+
+    @barrier("local");
+
+    // transform back in a
+
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+
+        if(a<p_Nq && b<p_Nq){
+
+          dfloat tmp  = 0.0f;
+
+          for(int i=0;i<p_cubNq;++i){
+
+            const dfloat sIia = s_I[i][a];
+            tmp  += sIia*s_q[b][i];
+          }
+
+          dlong id = e*p_Np + b*p_Nq + a;
+          Aq[id] = tmp;
+
+        }//if
+      }//a
+    }//b
+  }//e
+}//kernel

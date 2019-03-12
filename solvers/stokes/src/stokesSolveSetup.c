@@ -33,7 +33,11 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
 
 void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
 {
-  int verbose = stokes->options.compareArgs("VERBOSE", "TRUE") ? 1 : 0;
+  FILE *fp;
+  char fname[BUFSIZ];
+  int  Nrows, Ncols, verbose;
+
+  verbose = stokes->options.compareArgs("VERBOSE", "TRUE") ? 1 : 0;
 
   stokes->NtotalV = stokes->meshV->Nelements*stokes->meshV->Np;
   stokes->NtotalP = stokes->meshP->Nelements*stokes->meshP->Np;
@@ -53,8 +57,67 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
     for (int i = 0; i < stokes->NtotalV; i++)
       stokes->eta[i] = eta[i];
   }
-
   stokes->o_eta = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat), stokes->eta);
+
+  stokes->cubEta = (dfloat*)calloc(stokes->meshV->Nelements*stokes->meshV->cubNp, sizeof(dfloat));
+  for (int i = 0; i < stokes->meshV->Nelements*stokes->meshV->cubNp; i++)
+    stokes->cubEta[i] = 1.0;
+  stokes->o_cubEta = stokes->meshV->device.malloc(stokes->meshV->Nelements*stokes->meshV->cubNp*sizeof(dfloat), stokes->cubEta);
+
+  sprintf(fname, DSTOKES "/data/stokesN%02d.dat", stokes->meshV->N);
+  fp = fopen(fname, "r");
+  if (!fp) {
+    printf("ERROR:  Cannot open file '%s' for reading.\n", fname);
+  }
+
+  readDfloatArray(fp, "Pressure 1D cubature interpolation matrix", &stokes->cubInterpP, &Nrows, &Ncols);
+  if (Nrows != stokes->meshV->cubNq) {
+    printf("ERROR:  cubNq mismatch in pressure interpolation matrix (%d vs. %d).\n", Nrows, stokes->meshV->cubNq);
+    exit(-1);
+  } else if (Ncols != stokes->meshP->Nq) {
+    printf("ERROR:  Pressure Nq mismatch in pressure interpolation matrix (%d vs. %d).\n", Ncols, stokes->meshP->Nq);
+    exit(-1);
+  }
+
+  readDfloatArray(fp, "Cubature 1D differentiation matrix", &stokes->cubD, &Nrows, &Ncols);
+  if (Nrows != stokes->meshV->cubNq) {
+    printf("ERROR:  cubNq mismatch in differentiation matrix (%d vs. %d).\n", Nrows, stokes->meshV->cubNq);
+    exit(-1);
+  }
+  
+  fclose(fp);
+
+  stokes->cubInterpV = stokes->meshV->cubInterp;
+
+  stokes->o_cubInterpV = stokes->meshV->device.malloc(stokes->meshV->Nq*stokes->meshV->cubNq*sizeof(dfloat), stokes->cubInterpV);
+  stokes->o_cubInterpP = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->cubNq*sizeof(dfloat), stokes->cubInterpP);
+  stokes->o_cubD = stokes->meshV->device.malloc(stokes->meshV->cubNq*stokes->meshV->cubNq*sizeof(dfloat), stokes->cubD);
+
+
+  stokes->meshV->cubggeo = (dfloat*)calloc(stokes->meshV->Nelements*stokes->meshV->Nggeo*stokes->meshV->cubNp, sizeof(dfloat));
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->cubNq; i++) {
+      for (int j = 0; j < stokes->meshV->cubNq; j++) {
+        dlong base;
+        int n = i*stokes->meshV->cubNq + j;
+
+        base = e*stokes->meshV->Nvgeo*stokes->meshV->cubNp + n;
+        dfloat rx = stokes->meshV->cubvgeo[base + stokes->meshV->cubNp*RXID];
+        dfloat ry = stokes->meshV->cubvgeo[base + stokes->meshV->cubNp*RYID];
+        dfloat sx = stokes->meshV->cubvgeo[base + stokes->meshV->cubNp*SXID];
+        dfloat sy = stokes->meshV->cubvgeo[base + stokes->meshV->cubNp*SYID];
+        dfloat JW = stokes->meshV->cubvgeo[base + stokes->meshV->cubNp*JWID];
+
+        base = e*stokes->meshV->Nggeo*stokes->meshV->cubNp + n;
+        stokes->meshV->cubggeo[base + stokes->meshV->cubNp*G00ID] = JW*(rx*rx + ry*ry);
+        stokes->meshV->cubggeo[base + stokes->meshV->cubNp*G01ID] = JW*(rx*sx + ry*sy);
+        stokes->meshV->cubggeo[base + stokes->meshV->cubNp*G11ID] = JW*(sx*sx + sy*sy);
+        stokes->meshV->cubggeo[base + stokes->meshV->cubNp*GWJID] = JW;
+      }
+    }
+  }
+
+  stokes->meshV->o_cubggeo = stokes->meshV->device.malloc(stokes->meshV->Nelements*stokes->meshV->Nggeo*stokes->meshV->cubNp*sizeof(dfloat), stokes->meshV->cubggeo);
 
   if (stokes->meshV->dim == 2) {
     kernelInfoV["includes"] += DSTOKES "/data/stokesBoundary2D.h";
@@ -144,10 +207,10 @@ static void stokesSetupBCMask(stokes_t *stokes)
 static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties& kernelInfoP)
 {
   kernelInfoV["defines/p_blockSize"] = STOKES_REDUCTION_BLOCK_SIZE;
-  kernelInfoV["defines/p_NpV"] = stokes->meshV->Np;
-  kernelInfoV["defines/p_NqV"] = stokes->meshV->Nq;
-  kernelInfoV["defines/p_NpP"] = stokes->meshP->Np;
-  kernelInfoV["defines/p_NqP"] = stokes->meshP->Nq;
+  kernelInfoV["defines/p_NpV"]   = stokes->meshV->Np;
+  kernelInfoV["defines/p_NqV"]   = stokes->meshV->Nq;
+  kernelInfoV["defines/p_NpP"]   = stokes->meshP->Np;
+  kernelInfoV["defines/p_NqP"]   = stokes->meshP->Nq;
 
   stokes->meshV->maskKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/mask.okl", "mask", kernelInfoV);
 
@@ -159,17 +222,28 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
 
   /* TODO:  Replace this with parametrized filenames. */
   if ((stokes->meshV->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
-    stokes->divergenceKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
-    stokes->gradientKernel       = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
-    stokes->lowerPressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureQuad2D.okl", "stokesLowerPressureQuad2D", kernelInfoV);
-    stokes->raisePressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureQuad2D.okl", "stokesRaisePressureQuad2D", kernelInfoV);
-    stokes->stiffnessKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfoV);
+    stokes->lowerPressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureQuad2D.okl", "stokesLowerPressureQuad2D", kernelInfoV);
+    stokes->raisePressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureQuad2D.okl", "stokesRaisePressureQuad2D", kernelInfoV);
+
+    if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
+      stokes->divergenceKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
+      stokes->gradientKernel   = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
+      stokes->stiffnessKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfoV);
+    } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
+      stokes->divergenceKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceCubatureQuad2D", kernelInfoV);
+      stokes->gradientKernel   = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientCubatureQuad2D", kernelInfoV);
+      stokes->stiffnessKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessCubatureQuad2D", kernelInfoV);
+    } else {
+      printf("ERROR:  Invalid value for option [INTEGRATION TYPE].\n");
+      exit(-1);
+    }
+
   } else if ((stokes->meshV->dim == 3) && (stokes->elementType == HEXAHEDRA)) {
-    stokes->divergenceKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceHex3D.okl", "stokesDivergenceHex3D", kernelInfoV);
-    stokes->gradientKernel       = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientHex3D.okl", "stokesGradientHex3D", kernelInfoV);
-    stokes->lowerPressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureHex3D.okl", "stokesLowerPressureHex3D", kernelInfoV);
-    stokes->raisePressureKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureHex3D.okl", "stokesRaisePressureHex3D", kernelInfoV);
-    stokes->stiffnessKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessHex3D.okl", "stokesStiffnessHex3D", kernelInfoV);
+    stokes->lowerPressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureHex3D.okl", "stokesLowerPressureHex3D", kernelInfoV);
+    stokes->raisePressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureHex3D.okl", "stokesRaisePressureHex3D", kernelInfoV);
+    stokes->divergenceKernel    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceHex3D.okl", "stokesDivergenceHex3D", kernelInfoV);
+    stokes->gradientKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientHex3D.okl", "stokesGradientHex3D", kernelInfoV);
+    stokes->stiffnessKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessHex3D.okl", "stokesStiffnessHex3D", kernelInfoV);
   }
 
   return;
