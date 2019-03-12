@@ -314,7 +314,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
 #else
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
-                         stokes->mesh->cubvgeo,
+                         stokes->mesh->o_cubvgeo,
                          stokes->o_cubD,
                          stokes->o_cubInterp,
                          stokes->o_cubInterp,
@@ -323,7 +323,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
 
   stokes->divergenceKernel(stokes->mesh->Nelements,
                            stokes->Ntotal,
-                           stokes->mesh->cubvgeo,
+                           stokes->mesh->o_cubvgeo,
                            stokes->o_cubD,
                            stokes->o_cubInterp,
                            stokes->o_cubInterp,
