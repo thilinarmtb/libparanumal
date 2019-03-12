@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-2.msh
+../../meshes/unitSquareQuad2D-1.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h

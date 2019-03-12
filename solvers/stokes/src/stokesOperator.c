@@ -52,6 +52,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
    */
 
 #if 0
+  printf("APA:  Old world (solve/stiffness).\n");
   stokes->stiffnessKernel(stokes->mesh->Nelements,
                           stokes->mesh->o_ggeo,
                           stokes->mesh->o_Dmatrices,
@@ -75,10 +76,10 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                             Av.o_z);
   }
 #else
+  printf("APA:  New world (solve/stiffness).\n");
   stokes->stiffnessKernel(stokes->mesh->Nelements,
                           stokes->mesh->o_cubggeo,
                           stokes->o_cubD,
-                          stokes->o_cubInterp,
                           stokes->o_cubInterp,
                           stokes->o_cubEta,
                           v.o_x,
@@ -88,7 +89,6 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                           stokes->mesh->o_cubggeo,
                           stokes->o_cubD,
                           stokes->o_cubInterp,
-                          stokes->o_cubInterp,
                           stokes->o_cubEta,
                           v.o_y,
                           Av.o_y);
@@ -97,7 +97,6 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
     stokes->stiffnessKernel(stokes->mesh->Nelements,
                             stokes->mesh->o_cubggeo,
                             stokes->o_cubD,
-                            stokes->o_cubInterp,
                             stokes->o_cubInterp,
                             stokes->o_cubEta,
                             v.o_z,
@@ -114,6 +113,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                                   o_pProjected);
 
 #if 0
+  printf("APA:  Old world (solve/grad-div).\n");
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
                          stokes->mesh->o_Dmatrices,
@@ -128,6 +128,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                            v.o_v,
                            o_pProjected);
 #else
+  printf("APA:  New world (solve/grad-div).\n");
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
                          stokes->mesh->o_cubvgeo,
@@ -229,6 +230,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
       ogsGatherScatter(Av.o_z, ogsDfloat, ogsAdd, stokes->mesh->ogs);
 #endif
   }
+
   // TODO:  Make a function for this.
   //
   // TODO:  We only need to do this for C0 FEM.

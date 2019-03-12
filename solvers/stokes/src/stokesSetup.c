@@ -172,11 +172,13 @@ static void stokesSetupRHS(stokes_t *stokes)
   // Apply the boundary conditions.
   stokesRHSAddBC(stokes);
 
+  //stokesVecCopyDeviceToHost(stokes->f);
+  //stokesVecPrint(stokes, stokes->f);
+  //printf("APA:  Exiting...\n");
+  //exit(-1);
+
   // Gather-scatter for C0 FEM.
   stokesVecUnmaskedGatherScatter(stokes, stokes->f);
-
-  printf("APA:  Exiting...\n");
-  exit(-1);
 
   // TODO:  Make a function for this.
   //
@@ -239,6 +241,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
   stokesVecZero(stokes, stokes->u);
 
 #if 0
+  printf("APA:  Old world (setup/stiffness).\n");
   stokes->stiffnessKernel(stokes->mesh->Nelements,
                           stokes->mesh->o_ggeo,
                           stokes->mesh->o_Dmatrices,
@@ -262,6 +265,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                             stokes->u.o_z);
   }
 #else
+  printf("APA:  New world (setup/stiffness).\n");
   stokes->stiffnessKernel(stokes->mesh->Nelements,
                           stokes->mesh->o_cubggeo,
                           stokes->o_cubD,
@@ -298,6 +302,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                                   o_pProjected);
 
 #if 0
+  printf("APA:  Old world (setup/grad-div).\n");
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
                          stokes->mesh->o_Dmatrices,
@@ -312,6 +317,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
                            tmp.o_v,
                            o_pProjected);
 #else
+  printf("APA:  New world (setup/grad-div).\n");
   stokes->gradientKernel(stokes->mesh->Nelements,
                          stokes->Ntotal,
                          stokes->mesh->o_cubvgeo,

@@ -48,6 +48,11 @@ int main(int argc, char **argv)
   setupAide options(argv[1]);
 
   stokes = stokesSetup(kernelInfo, options);
+
+  //stokesOperatorPrint(stokes);
+  //printf("APA:  Exiting...\n");
+  //exit(-1);
+
   stokesSolve(stokes);
 
   stokesVecCopyDeviceToHost(stokes->u);

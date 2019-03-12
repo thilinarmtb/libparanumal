@@ -99,7 +99,19 @@ static void stokesSolveMINRES(stokes_t *stokes)
     }
 
     stokesVecScale(stokes, z, 1.0/gam);                        /* z = z/gam                */
+
+    //printf("z = \n");
+    //stokesVecCopyDeviceToHost(z);
+    //stokesVecPrint(stokes, z);
+
     stokesOperator(stokes, z, p);                              /* p = Az                   */
+
+    //printf("p = \n");
+    //stokesVecCopyDeviceToHost(p);
+    //stokesVecPrint(stokes, p);
+    //printf("APA:  Exiting...\n");
+    //exit(-1);
+
     stokesVecInnerProduct(stokes, p, z, &del);                 /* del = z'*p               */
     a0 = c*del - cp*s*gam;
     a2 = s*del + cp*c*gam;

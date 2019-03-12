@@ -77,6 +77,13 @@ SOFTWARE.
     }
   }
 }
+  
+#define p_velocityNq (p_Nq)
+#define p_velocityNp (p_Np)
+//#define p_pressureNq (p_Nq-1)
+//#define p_pressureNp ((p_Nq-1)*(p_Nq-1)*(p_Nq-1))
+#define p_pressureNq (p_Nq)
+#define p_pressureNp (p_Np)
 
 // needs: p_pressureNq
 // needs: p_velocityNq
@@ -87,13 +94,8 @@ SOFTWARE.
 					  @restrict const  dfloat *cubVelocityInterp, // cubNq x velocityNq
 					  @restrict const  dfloat *cubPressureInterp, // cubNq x pressureNq 
 					  @restrict const  dfloat *P,
-					  @restrict dfloat *rhsU){
-  
-#define p_velocityNq (p_Nq)
-#define p_velocityNp (p_Np)
-#define p_pressureNq (p_Nq-1)
-#define p_pressureNp ((p_Nq-1)*(p_Nq-1)*(p_Nq-1))
-  
+					  @restrict dfloat *rhsU)
+{
   for(dlong e=0; e<Nelements; ++e; @outer(0)) {
     
     @shared dfloat s_cubD[p_cubNq][p_cubNq];
