@@ -137,7 +137,9 @@ void MGLevel::setupSmoother() {
       dfloat rho = this->maxEigSmoothAx();
 
       lambda1 = rho;
-      lambda0 = rho/10.;
+      //      lambda0 = rho/10.;
+      lambda0 = rho/40.;
+      //      lambda0 = -rho;
     } else {
       stype = RICHARDSON;
 
@@ -436,6 +438,9 @@ dfloat MGLevel::maxEigSmoothAx(){
     }
   }
 
+  // 10% safety factor
+  rho *= 1.10;
+  
   // free memory
   free(H);
   free(WR);

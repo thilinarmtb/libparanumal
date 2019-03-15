@@ -33,7 +33,7 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
   setupAide options = elliptic->options;
 
   int Niter = 0;
-  int maxIter = 1000; 
+  int maxIter = 50; 
 
   double start = 0.0, end =0.0;
 

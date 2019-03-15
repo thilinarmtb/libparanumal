@@ -82,13 +82,15 @@ void MGLevel::smoothRichardson(occa::memory &o_r, occa::memory &o_x, bool xIsZer
 
   dfloat one = 1.; dfloat mone = -1.;
 
-  //res = r-Ax
-  this->Ax(o_x,o_res);
-  elliptic->scaledAddKernel(Nrows, one, o_r, mone, o_res);
-
-  //smooth the fine problem x = x + S(r-Ax)
-  this->smoother(o_res, o_res);
-  elliptic->scaledAddKernel(Nrows, one, o_res, one, o_x);
+  for(int it=0;it<1;++it){
+    //res = r-Ax
+    this->Ax(o_x,o_res);
+    elliptic->scaledAddKernel(Nrows, one, o_r, mone, o_res);
+    
+    //smooth the fine problem x = x + S(r-Ax)
+    this->smoother(o_res, o_res);
+    elliptic->scaledAddKernel(Nrows, one, o_res, one, o_x);
+  }
 }
 
 void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_x, bool xIsZero) {
