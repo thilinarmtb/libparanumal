@@ -477,6 +477,9 @@ dfloat parCSR::rhoDinvA(){
     }
   }
 
+  // 10% safety factor
+  rho *= 1.1;
+
   free(H);
   free(WR);
   free(WI);

@@ -118,12 +118,14 @@ void agmgLevel::smoothJacobi(occa::memory o_r, occa::memory o_x,
 
   static occa::memory o_res = o_scratch;
 
-  // res = r-A*x
-  o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
-
-  // x = x + alpha*inv(D)*res
-  vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_res, 1.0, o_x);
-  // occaTimerToc(parAlmond->device,"hyb smoothJacobi");
+  for(int it=0;it<1;++it){
+    // res = r-A*x
+    o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
+    
+    // x = x + alpha*inv(D)*res
+    vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_res, 1.0, o_x);
+    // occaTimerToc(parAlmond->device,"hyb smoothJacobi");
+  }
 }
 
 void agmgLevel::smoothDampedJacobi(occa::memory o_r, occa::memory o_x,
@@ -138,12 +140,14 @@ void agmgLevel::smoothDampedJacobi(occa::memory o_r, occa::memory o_x,
 
   static occa::memory o_res = o_scratch;
 
-  // res = r-A*x
-  o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
-
-  // x = x + alpha*inv(D)*res
-  vectorDotStar(Nrows, lambda, o_A->o_diagInv, o_res, 1.0, o_x);
-  // occaTimerToc(parAlmond->device,"device smoothDampedJacobi");
+  for(int it=0;it<1;++it){
+    // res = r-A*x
+    o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
+    
+    // x = x + alpha*inv(D)*res
+    vectorDotStar(Nrows, lambda, o_A->o_diagInv, o_res, 1.0, o_x);
+    // occaTimerToc(parAlmond->device,"device smoothDampedJacobi");
+  }
 }
 
 void agmgLevel::smoothChebyshev(occa::memory o_r, occa::memory o_x,

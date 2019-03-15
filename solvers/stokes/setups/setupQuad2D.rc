@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-3.msh
+../../meshes/unitSquareQuad2D-4.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -39,13 +39,13 @@ Serial
 ################################################
 
 [VELOCITY POLYNOMIAL DEGREE]
-2
+8
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-1
+7
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
