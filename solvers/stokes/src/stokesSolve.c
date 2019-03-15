@@ -76,6 +76,10 @@ static void stokesSolveMINRES(stokes_t *stokes)
   stokesPreconditioner(stokes, r, z);                          /* z = M\r                  */
   stokesVecInnerProduct(stokes, z, r, &gam);                   /* gam = sqrt(r'*z)         */
   gamp = 0.0;
+  if (gam < 0) {
+    printf("BAD:  gam < 0.\n");
+    exit(-1);
+  }
   gam  = sqrt(gam);
   eta  = gam;
   sp   = 0.0;

@@ -56,6 +56,13 @@ static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVe
 
 static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
 {
+  stokesVec_t tmp, tmp2, tmp3;
+
+  stokesVecAllocate(stokes, &tmp);
+  stokesVecAllocate(stokes, &tmp2);
+  stokesVecAllocate(stokes, &tmp3);
+
+#if 1
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
   if (stokes->meshV->dim == 3)
@@ -81,6 +88,28 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stoke
     if (stokes->meshV->dim == 3)
       stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_z);
   }
+#else
+  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
+  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
+
+  stokesOperator(stokes, Mv, tmp);
+  stokesVecScaledAdd(stokes, 1.0, v, -1.0, tmp);
+
+  ellipticPreconditioner(stokes->precon->elliptic, 0.0, tmp.o_x, tmp2.o_x);
+  ellipticPreconditioner(stokes->precon->elliptic, 0.0, tmp.o_y, tmp2.o_y);
+
+  stokesVecScaledAdd(stokes, 1.0, tmp2, 1.0, Mv);
+
+  Mv.o_p.copyFrom(v.o_p, stokes->NtotalP*sizeof(dfloat));
+
+  //stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
+  //stokes->dotMultiplyKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, Mv.o_p, Mv.o_p);
+  //ogsGatherScatter(Mv.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
+#endif
+
+  stokesVecFree(stokes, &tmp);
+  stokesVecFree(stokes, &tmp2);
+  stokesVecFree(stokes, &tmp3);
 
   return;
 }
