@@ -80,7 +80,9 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   if (dim == 2) {
     if (elementType == QUADRILATERALS) {
       meshOccaSetup2D(stokes->meshV, options, kernelInfoV);
-      meshOccaSetup2D(stokes->meshP, options, kernelInfoP);
+      //      meshOccaSetup2D(stokes->meshP, options, kernelInfoP);
+      void meshOccaSetup2D(mesh2D *mesh, occa::device &device, setupAide &newOptions, occa::properties &kernelInfo);
+      meshOccaSetup2D(stokes->meshP, stokes->meshV->device, options, kernelInfoP);
     } else {
       printf("ERROR:  Support for 2D elements other than QUADRILATERALS not yet implemented.\n");
       MPI_Finalize();

@@ -106,6 +106,7 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
     printf("Rank %d: Ncores = %d, Nthreads = %d, device_id = %d \n", rank, Ncores, Nthreads, device_id);
   
   mesh->device.setup(deviceConfig);
-
+  mesh->device.dontUseRefs();
+  
   occa::initTimer(mesh->device);
 }
