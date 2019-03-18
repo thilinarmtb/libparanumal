@@ -116,9 +116,9 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
   ellipticOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
   ellipticOptions.setArgs("KRYLOV SOLVER", "PCG");
   ellipticOptions.setArgs("PRECONDITIONER", "MULTIGRID");
-  //  ellipticOptions.setArgs("PRECONDITIONER", "FULLALMOND");
-  //  ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDEGREES");
-  ellipticOptions.setArgs("MULTIGRID COARSENING", "ALLDEGREES");
+  //ellipticOptions.setArgs("PRECONDITIONER", "FULLALMOND");
+  ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDEGREES");
+  //  ellipticOptions.setArgs("MULTIGRID COARSENING", "ALLDEGREES");
   ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
   //  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI");
   ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "2");
@@ -142,6 +142,9 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
    */
   ellipticSolveSetup(elliptic, 0.0, kernelInfoV);
 
+  parAlmond::Report(elliptic->precon->parAlmond);
+  
+  
   stokes->precon = new stokesPrecon_t();
   stokes->precon->elliptic = elliptic;
 
