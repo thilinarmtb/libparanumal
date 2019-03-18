@@ -32,10 +32,7 @@ SOFTWARE.
 
 #include "mesh2D.h"
 
-void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
-
-  // conigure device
-  occaDeviceConfig(mesh, newOptions);
+void meshOccaPopulate2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
 
   //make seperate stream for halo exchange
   mesh->defaultStream = mesh->device.getStream();
@@ -601,4 +598,21 @@ void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kern
   kernelInfo["defines/" "p_JWID"]= JWID;
   kernelInfo["defines/" "p_IJWID"]= IJWID;
 
+}
+
+void meshOccaSetup2D(mesh2D *mesh, occa::device &device, setupAide &newOptions, occa::properties &kernelInfo){
+
+
+  mesh->device = device;
+  
+  meshOccaPopulate2D(mesh, newOptions, kernelInfo);
+  
+}
+
+void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
+
+  // conigure device
+  occaDeviceConfig(mesh, newOptions);
+
+  meshOccaPopulate2D(mesh, newOptions, kernelInfo);
 }
