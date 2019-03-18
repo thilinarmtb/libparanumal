@@ -63,13 +63,11 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stoke
   stokesVecAllocate(stokes, &tmp3);
 
 #if 1
-  printf("X-velocity: \n");
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
-  printf("Y-velocity: \n");
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
   if (stokes->meshV->dim == 3)
     ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_z, Mv.o_z);
-  printf("Pressure: \n");
+
   stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
 
   stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_x, Mv.o_x);

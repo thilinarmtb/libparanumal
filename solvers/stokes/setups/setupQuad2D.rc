@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-8.msh
+../../meshes/unitSquareQuad2D-7.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -18,8 +18,8 @@ data/stokesDirichletTestQuad2D.h
 4
 
 [INTEGRATION TYPE]
-#GLL
-CUBATURE
+GLL
+#CUBATURE
 
 ################################################
 #################### DEVICE ####################
@@ -41,13 +41,13 @@ CUDA
 ################################################
 
 [VELOCITY POLYNOMIAL DEGREE]
-7
+2
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-6
+1
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS

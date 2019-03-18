@@ -93,8 +93,6 @@ void solver_t::kcycle(int k){
 
 void solver_t::device_kcycle(int k){
 
-  printf("Enter device_kcycle: %d\n", k);
-  
   multigridLevel *level = levels[k];
 
   dlong m = level->Nrows;
@@ -114,7 +112,6 @@ void solver_t::device_kcycle(int k){
   //check for base level
   if(k==baseLevel) {
     coarseLevel->solve(o_rhs, o_x);
-    printf("Exit device_kcycle: %d\n", k);
     return;
   }
 
@@ -160,15 +157,11 @@ void solver_t::device_kcycle(int k){
   // x = x + P xC
   levelC->prolongate(o_xC, o_x);
   level->smooth(o_rhs, o_x, false);
-
-  printf("Exit  device_kcycle: %d\n", k);
 }
 
 
 
 void solver_t::vcycle(int k) {
-
-  printf("Enter vcycle: %d\n", k);
 
   multigridLevel *level = levels[k];
 
@@ -181,7 +174,6 @@ void solver_t::vcycle(int k) {
   //check for base level
   if(k==baseLevel) {
     coarseLevel->solve(rhs, x);
-    printf("Exit  vcycle: %d\n", k);
     return;
   }
 
@@ -203,15 +195,11 @@ void solver_t::vcycle(int k) {
   levelC->prolongate(xC, x);
 
   level->smooth(rhs, x, false);
-
-  printf("Exit  vcycle: %d\n", k);
 }
 
 
 void solver_t::device_vcycle(int k){
 
-  printf("Enter device_vcycle: %d\n", k);
-  
   multigridLevel *level = levels[k];
 
   dlong m = level->Nrows;
@@ -225,16 +213,12 @@ void solver_t::device_vcycle(int k){
     o_rhs.copyTo(level->rhs, m*sizeof(dfloat));
     vcycle(k);
     o_x.copyFrom(level->x, m*sizeof(dfloat));
-
-    printf("Exit device_vcycle: %d\n", k);
     return;
   }
 
   //check for base level
   if(k==baseLevel) {
     coarseLevel->solve(o_rhs, o_x);
-
-    printf("Exit device_vcycle: %d\n", k);
     return;
   }
 
@@ -256,8 +240,6 @@ void solver_t::device_vcycle(int k){
   levelC->prolongate(o_xC, o_x);
 
   level->smooth(o_rhs, o_x, false);
-
-  printf("Exit device_vcycle: %d\n", k);
 }
 
 } //hamespace parAlmond
