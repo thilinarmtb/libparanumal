@@ -41,6 +41,8 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
   /* number of second order geometric factors */
   mesh->Nggeo = 4;
   mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo*mesh->Np, sizeof(dfloat));
+
+  dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
   
   for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
@@ -61,11 +63,21 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
       dfloat xs = 0.25*( (1-rn)*(xe[3]-xe[0]) + (1+rn)*(xe[2]-xe[1]) );
       dfloat yr = 0.25*( (1-sn)*(ye[1]-ye[0]) + (1+sn)*(ye[2]-ye[3]) );
       dfloat ys = 0.25*( (1-rn)*(ye[3]-ye[0]) + (1+rn)*(ye[2]-ye[1]) );
+
+      //      printf("dX/dR = [%17.15lf,%17.15lf;%17.15lf,%17.15lf]\n", xr, xs, yr, ys);
       
       /* compute geometric factors for affine coordinate transform*/
-      dfloat J = xr*ys - xs*yr;
-
+      dfloat J = xr*ys - xs*yr;      
       if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
+      
+      dfloat hr = sqrt(xr*xr+yr*yr);
+      dfloat hs = sqrt(xs*xs+ys*ys);
+      
+      minJ = mymin(J, minJ);
+      maxJ = mymax(J, maxJ);
+      maxSkew = mymax(maxSkew, hr/hs);
+      maxSkew = mymax(maxSkew, hs/hr);
+      
       dfloat rx =  ys/J;
       dfloat ry = -xs/J;
       dfloat sx = -yr/J;
@@ -88,7 +100,8 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
       mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G00ID] = JW*(rx*rx + ry*ry);
       mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G01ID] = JW*(rx*sx + ry*sy);
       mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G11ID] = JW*(sx*sx + sy*sy);
-      mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*GWJID] = JW;
+      mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*GWJID] = JW;      
+      
     }
 
     //geometric data for quadrature
@@ -127,4 +140,7 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
       }
     }
   }
+
+  printf("J in range [%g,%g] and max Skew = %g\n", minJ, maxJ, maxSkew);
+  
 }

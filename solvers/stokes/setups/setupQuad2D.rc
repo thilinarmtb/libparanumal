@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-4.msh
+../../meshes/unitSquareQuad2D-7.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -18,15 +18,17 @@ data/stokesDirichletTestQuad2D.h
 4
 
 [INTEGRATION TYPE]
-#GLL
-CUBATURE
+GLL
+#CUBATURE
 
 ################################################
 #################### DEVICE ####################
 ################################################
 
 [THREAD MODEL]
-Serial
+#OpenCL
+CUDA
+#Serial
 
 [PLATFORM NUMBER]
 0
@@ -39,13 +41,13 @@ Serial
 ################################################
 
 [VELOCITY POLYNOMIAL DEGREE]
-8
+2
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-7
+1
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
@@ -61,7 +63,7 @@ MINRES
 1000
 
 [KRYLOV SOLVER TOLERANCE]
-1.0e-8
+1.0e-6
 
 ################################################
 ############ PRECONDITIONER OPTIONS ############

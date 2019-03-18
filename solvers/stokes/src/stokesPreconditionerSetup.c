@@ -116,15 +116,17 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
   ellipticOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
   ellipticOptions.setArgs("KRYLOV SOLVER", "PCG");
   ellipticOptions.setArgs("PRECONDITIONER", "MULTIGRID");
-  ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDEGREES");
-  //  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
-  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI");
-  ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "4");
+  //  ellipticOptions.setArgs("PRECONDITIONER", "FULLALMOND");
+  //  ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDEGREES");
+  ellipticOptions.setArgs("MULTIGRID COARSENING", "ALLDEGREES");
+  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
+  //  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI");
+  ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "2");
   ellipticOptions.setArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT");
-  ellipticOptions.setArgs("PARALMOND CYCLE", "VCYCLE");
-  //ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
-  ellipticOptions.setArgs("PARALMOND SMOOTHER", "DAMPEDJACOBI");
-  ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "4");
+  ellipticOptions.setArgs("PARALMOND CYCLE", "KCYCLE");
+  ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
+  //  ellipticOptions.setArgs("PARALMOND SMOOTHER", "DAMPEDJACOBI");
+  ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "2");
   ellipticOptions.setArgs("VERBOSE", "FALSE");
   elliptic->options = ellipticOptions;
 

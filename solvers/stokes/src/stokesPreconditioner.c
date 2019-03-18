@@ -62,7 +62,7 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stoke
   stokesVecAllocate(stokes, &tmp2);
   stokesVecAllocate(stokes, &tmp3);
 
-#if 0
+#if 1
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
   if (stokes->meshV->dim == 3)
@@ -103,7 +103,8 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stoke
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, tmp.o_x, tmp2.o_x);
   ellipticPreconditioner(stokes->precon->elliptic, 0.0, tmp.o_y, tmp2.o_y);
 
-  dfloat relax = 0.222;
+  //  dfloat relax = 0.222;
+  dfloat relax = 0;
   stokesVecScaledAdd(stokes, relax, tmp2, 1.0, Mv);
 
   stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, Mv.o_x, Mv.o_x);
