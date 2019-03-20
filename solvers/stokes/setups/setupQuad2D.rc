@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-2.msh
+../../meshes/unitSquareQuad2D-5.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -71,9 +71,9 @@ MINRES
 ################################################
 
 [PRECONDITIONER]
-NONE
+#NONE
 #JACOBI
-#SCHURCOMPLEMENTBLOCKDIAG
+SCHURCOMPLEMENTBLOCKDIAG
 
 [JACOBI BOOST PARAMETER]
 1.0e-1

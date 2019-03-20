@@ -149,7 +149,7 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
 {
   stokesVec_t u, f, e, w, p1, p2, p3, v1, v2, v3, tmp;
   dfloat      g1, g2, c1, s1, c2, s2, c3, s3, h0, h1, h2, h3, a;
-  dfloat      maxiter, tol;
+  dfloat      resnormest, maxiter, tol;
   int         verbose;
 
   stokes->options.getArgs("KRYLOV SOLVER ITERATION LIMIT", maxiter);
@@ -186,19 +186,24 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
   stokesVecInnerProduct(stokes, v2, v2, &g1);             /* g1 = norm(v2)                       */
   g1 = sqrt(g1);
   stokesVecScale(stokes, v2, 1.0/g1);                     /* v2 = v2/g1                          */
+  resnormest = g1;
 
   /* Adjust the tolerance to account for small initial residual norm. */
-  tol = mymax(tol*fabs(g1), tol);
+  tol = mymax(tol*fabs(resnormest), tol);
   if (verbose)
-    printf("DQGMRES:  initial gamma = % .15e, target %.15e\n", g1, tol);
+    printf("DQGMRES:  initial res. norm est. = % .15e, target %.15e\n", resnormest, tol);
 
   /* DQGMRES iteration loop. */
   for (int i = 0; i < maxiter; i++) {
     if (verbose)
-      printf("DQGMRES:  it % 3d  gamma = % .15e\n", i, g1);
+      printf("DQGMRES:  it % 3d  gamma = % .15e, res. norm est. = % .15e\n", i, g1, resnormest);
+#if 1
     if (fabs(g1) < tol) {
+#else
+    if (fabs(resnormest) < tol) {
+#endif
       if (verbose)
-        printf("DQGMRES converged in %d iterations (gamma = % .15e).\n", i, g1);
+        printf("DQGMRES converged in %d iterations (gamma = % .15e, res. norm est. = % .15e).\n", i, g1, resnormest);
       break;
     }
 
@@ -250,6 +255,8 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
     /* Apply new rotation to the right-hand side. */
     g2 = -s3*g1;
     g1 =  c3*g1;
+
+    resnormest = fabs(g2)*(fabs(s3)*resnormest + fabs(c3));
 
     /* Update the solution.
      *
