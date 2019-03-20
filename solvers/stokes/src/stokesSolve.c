@@ -27,12 +27,15 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesSolveMINRES(stokes_t *stokes);
+static void stokesSolveDQGMRES(stokes_t *stokes);
 
 void stokesSolve(stokes_t *stokes)
 {
   if (stokes->options.compareArgs("KRYLOV SOLVER", "MINRES")) {
     stokesSolveMINRES(stokes);
-  } else {
+  } else if (stokes->options.compareArgs("KRYLOV SOLVER", "DQGMRES")) {
+    stokesSolveDQGMRES(stokes);
+  }else {
     printf("ERROR:  Invalid value %s for [KRYLOV SOLVER] option.",
            stokes->options.getArgs("KRYLOV SOLVER").c_str());
     exit(-1);
@@ -138,6 +141,164 @@ static void stokesSolveMINRES(stokes_t *stokes)
   stokesVecFree(stokes, &r_old);
   stokesVecFree(stokes, &w);
   stokesVecFree(stokes, &w_old);
+
+  return;
+}
+
+static void stokesSolveDQGMRES(stokes_t *stokes)
+{
+  stokesVec_t u, f, e, w, p1, p2, p3, v1, v2, v3, tmp;
+  dfloat      g1, g2, c1, s1, c2, s2, c3, s3, h0, h1, h2, h3, a;
+  dfloat      maxiter, tol;
+  int         verbose;
+
+  stokes->options.getArgs("KRYLOV SOLVER ITERATION LIMIT", maxiter);
+  stokes->options.getArgs("KRYLOV SOLVER TOLERANCE",       tol);
+
+  verbose = 0;
+  if (stokes->options.compareArgs("VERBOSE", "TRUE"))
+    verbose = 1;
+
+  u = stokes->u;
+  f = stokes->f;
+
+  /* Allocate work vectors.
+   *
+   * TODO:  These vectors reside entirely on the device---no need to waste
+   * memory for their host counterparts.
+   *
+   * TODO:  Put these in the stokes_t so we don't re-allocate them every time
+   * we want to solve.
+   *
+   * TODO:  Can we eliminate two of these so that we use the same storage as MINRES?
+   */
+  stokesVecAllocate(stokes, &e);
+  stokesVecAllocate(stokes, &w);
+  stokesVecAllocate(stokes, &v1);
+  stokesVecAllocate(stokes, &v2);
+  stokesVecAllocate(stokes, &v3);
+  stokesVecAllocate(stokes, &p1);
+  stokesVecAllocate(stokes, &p2);
+  stokesVecAllocate(stokes, &p3);
+
+  stokesOperator(stokes, u, v2);                          /* v2 = f - A*u0    (initial residual) */
+  stokesVecScaledAdd(stokes, 1.0, f, -1.0, v2);
+  stokesVecInnerProduct(stokes, v2, v2, &g1);             /* g1 = norm(v2)                       */
+  g1 = sqrt(g1);
+  stokesVecScale(stokes, v2, 1.0/g1);                     /* v2 = v2/g1                          */
+
+  /* Adjust the tolerance to account for small initial residual norm. */
+  tol = mymax(tol*fabs(g1), tol);
+  if (verbose)
+    printf("DQGMRES:  initial gamma = % .15e, target %.15e\n", g1, tol);
+
+  /* DQGMRES iteration loop. */
+  for (int i = 0; i < maxiter; i++) {
+    if (verbose)
+      printf("DQGMRES:  it % 3d  gamma = % .15e\n", i, g1);
+    if (fabs(g1) < tol) {
+      if (verbose)
+        printf("DQGMRES converged in %d iterations (gamma = % .15e).\n", i, g1);
+      break;
+    }
+
+    /* Compute initial choice for the next vector. */
+    stokesPreconditioner(stokes, v2, w);                  /* w = M\v2                            */
+    stokesOperator(stokes, w, v3);                        /* v3 = Aw                             */
+
+    /* Orthogonalize (incompletely). */
+    if (i > 0) {
+      stokesVecInnerProduct(stokes, v3, v1, &h1);         /* h1 = v1'*v3                         */
+      stokesVecScaledAdd(stokes, -h1, v1, 1.0, v3);       /* v3 = v3 - h1*v1                     */
+    }
+    stokesVecInnerProduct(stokes, v3, v2, &h2);           /* h2 = v3'v2                          */
+    stokesVecScaledAdd(stokes, -h2, v2, 1.0, v3);         /* v3 = v3 - h2*v2                     */
+
+    /* Normalize. */
+    stokesVecInnerProduct(stokes, v3, v3, &h3);           /* h3 = norm(v3)                       */
+    h3 = sqrt(h3);
+    stokesVecScale(stokes, v3, 1.0/h3);                   /* v3 = v3/h3                          */
+
+    /* Apply previous rotations to the new column of the Hessenberg matrix. */
+    if (i > 1) {
+      h0 = s1*h1;
+      h1 = c1*h1;
+    }
+
+    if (i > 0) {
+      dfloat h1n, h2n;
+      h1n =  c2*h1 + s2*h2;
+      h2n = -s2*h1 + c2*h2;
+      h1 = h1n;
+      h2 = h2n;
+    }
+
+    /* Compute rotation to eliminate the new subdiagonal entry. */
+    a = hypot(h2, h3);
+    if (h3 != 0.0) {
+      c3 = h2/a;
+      s3 = h3/a;
+    } else {
+      c3 = 1.0;
+      s3 = 0.0;
+    }
+
+    /* Apply new rotation to the Hessenberg matrix. */
+    h2 = a;
+    h3 = 0.0;
+
+    /* Apply new rotation to the right-hand side. */
+    g2 = -s3*g1;
+    g1 =  c3*g1;
+
+    /* Update the solution.
+     *
+     * TODO:  This can be made more efficient.
+     */
+    stokesVecCopy(stokes, w, p3);                         /* p3 = w                              */
+    if (i > 1)
+      stokesVecScaledAdd(stokes, -h0, p1, 1.0, p3);       /* p3 = p3 - h0*p1                     */
+    if (i > 0)
+      stokesVecScaledAdd(stokes, -h1, p2, 1.0, p3);       /* p3 = p3 - h1*p2                     */
+    stokesVecScale(stokes, p3, 1.0/h2);                   /* p3 = p3/h2                          */
+
+    stokesVecScaledAdd(stokes, g1, p3, 1.0, e);           /* e = e + g1*p3                       */
+
+    /* Rotate the variables.
+     *
+     * NB:  Vector assignments copy *pointers*, not values.
+     */
+    tmp = v1;
+    v1 = v2;
+    v2 = v3;
+    v3 = tmp;
+
+    tmp = p1;
+    p1 = p2;
+    p2 = p3;
+    p3 = tmp;
+
+    c1 = c2;
+    s1 = s2;
+
+    c2 = c3;
+    s2 = s3;
+
+    g1 = g2;
+  }
+
+  /* Undo the right preconditioning. */
+  stokesVecScaledAdd(stokes, 1.0, e, 1.0, u);
+
+  /* Free work vectors. */
+  stokesVecFree(stokes, &e);
+  stokesVecFree(stokes, &w);
+  stokesVecFree(stokes, &v1);
+  stokesVecFree(stokes, &v2);
+  stokesVecFree(stokes, &v3);
+  stokesVecFree(stokes, &p1);
+  stokesVecFree(stokes, &p2);
+  stokesVecFree(stokes, &p3);
 
   return;
 }
