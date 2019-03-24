@@ -129,6 +129,10 @@ LOBJS = \
 stokesMain: $(AOBJS) $(LOBJS) ./src/stokesMain.o libblas libogs libparAlmond libelliptic
 	$(LD)  $(LDFLAGS)  -o stokesMain ./src/stokesMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
+sparseMxM: ./src/sparseMxM.o
+	$(LD)  $(LDFLAGS)  -o sparseMxM ./src/sparseMxM.o $(paths) $(LIBS)
+
+
 lib: $(AOBJS)
 	ar -cr libstokes.a $(AOBJS)
 
