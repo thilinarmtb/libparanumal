@@ -28,34 +28,36 @@ SOFTWARE.
 				  const dlong offset,
 				  @restrict const dfloat *vgeo,
 				  @restrict const dfloat *D,
+				  const dfloat lambda,
 				  @restrict const dfloat *eta,
 				  @restrict const dfloat *q,
+				  @restrict dfloat *pRaised,
 				  @restrict dfloat *Aq){
+
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
     
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_D[p_NqV][p_NqV];
 
-    @shared dfloat s_U[p_Nq][p_Nq];
-    @shared dfloat s_GUr[p_Nq][p_Nq];
-    @shared dfloat s_GUs[p_Nq][p_Nq];
+    @shared dfloat s_U[p_NqV][p_NqV];
+    @shared dfloat s_GUr[p_NqV][p_NqV];
+    @shared dfloat s_GUs[p_NqV][p_NqV];
 
-    @shared dfloat s_V[p_Nq][p_Nq];
-    @shared dfloat s_GVr[p_Nq][p_Nq];
-    @shared dfloat s_GVs[p_Nq][p_Nq];
+    @shared dfloat s_V[p_NqV][p_NqV];
+    @shared dfloat s_GVr[p_NqV][p_NqV];
+    @shared dfloat s_GVs[p_NqV][p_NqV];
 
-    @exclusive dfloat r_U,  r_V;
     @exclusive dfloat r_AU, r_AV;
     
     // array of threads
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
+    for(int j=0;j<p_NqV;++j;@inner(1)){
+      for(int i=0;i<p_NqV;++i;@inner(0)){
         //load D into local memory
         // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        s_D[j][i] = D[p_NqV*j+i]; // D is column major
 
         // load pencil of u into register
-        const dlong base = i + j*p_Nq + e*p_Np;
+        const dlong base = i + j*p_NqV + e*p_NpV;
 	
 	s_U[j][i] = q[base + 0*offset]; 
 	s_V[j][i] = q[base + 1*offset];
@@ -67,53 +69,53 @@ SOFTWARE.
 
     @barrier("local");
     
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
+    for(int j=0;j<p_NqV;++j;@inner(1)){
+      for(int i=0;i<p_NqV;++i;@inner(0)){
 	
 	dfloat Ur = 0.f, Us = 0.f; 
 	dfloat Vr = 0.f, Vs = 0.f;
 	
-#pragma unroll p_Nq
-	for(int m = 0; m < p_Nq; m++) {
+#pragma unroll p_NqV
+	for(int m = 0; m < p_NqV; m++) {
 	  dfloat Dim = s_D[i][m]; 
 	  dfloat Djm = s_D[j][m];
 	  
 	  Ur += Dim*s_U[j][m];
-	  Us += Djm*s_U[m][i];
-	  
 	  Vr += Dim*s_V[j][m];
+
+	  Us += Djm*s_U[m][i];
 	  Vs += Djm*s_V[m][i];
 	}
 	
 	// prefetch geometric factors
-	const dlong gbase = e*p_Nvgeo*p_Np + j*p_Nq + i;
+	const dlong gbase = e*p_Nvgeo*p_NpV + j*p_NqV + i;
 	
-	const dfloat rx = vgeo[gbase+p_RXID*p_Np];
-	const dfloat sx = vgeo[gbase+p_SXID*p_Np];
+	const dfloat rx = vgeo[gbase+p_RXID*p_NpV];
+	const dfloat sx = vgeo[gbase+p_SXID*p_NpV];
 	
-	const dfloat ry = vgeo[gbase+p_RYID*p_Np];
-	const dfloat sy = vgeo[gbase+p_SYID*p_Np];
+	const dfloat ry = vgeo[gbase+p_RYID*p_NpV];
+	const dfloat sy = vgeo[gbase+p_SYID*p_NpV];
 	
-	const dfloat JW = vgeo[gbase+p_JWID*p_Np];
+	const dfloat JW = vgeo[gbase+p_JWID*p_NpV];
+
+	const dlong pid = i + j*p_NqV + e*p_NpV; // 2 ?
+	const dfloat pk = pRaised[pid]; 
+	const dfloat JWpk = JW*pk;// note sign
 	
-	const dfloat G00 = (rx*rx+ry*ry)*JW;
-	const dfloat G01 = (rx*sx+ry*sy)*JW;
-	const dfloat G11 = (sx*sx+sy*sy)*JW;
+        const dfloat eta_ji = eta[pid];
 	
-	const dlong pid = i + j*p_Nq + e*p_Np + 2*offset; // 2 ?
-	
-	const dfloat pk = q[pid]; 
-	
-	const dfloat JWpk = -JW*pk;
+	const dfloat G00 = (rx*rx+ry*ry)*JW*eta_ji;
+	const dfloat G01 = (rx*sx+ry*sy)*JW*eta_ji;
+	const dfloat G11 = (sx*sx+sy*sy)*JW*eta_ji;
 	
 	// (grad phi, grad U - delta_x p)
 	// (grad phi, grad V - delta_y p)
 	// (grad phi, grad W - delta_z p)
-	s_GUr[j][i] = (G00*Ur + G01*Us) + rx*JWpk;
-	s_GVr[j][i] = (G00*Vr + G01*Vs) + ry*JWpk;
+	s_GUr[j][i] = (G00*Ur + G01*Us) - rx*JWpk;
+	s_GVr[j][i] = (G00*Vr + G01*Vs) - ry*JWpk;
 	
-	s_GUs[j][i] = (G01*Ur + G11*Us) + sx*JWpk;
-	s_GVs[j][i] = (G01*Vr + G11*Vs) + sy*JWpk;
+	s_GUs[j][i] = (G01*Ur + G11*Us) - sx*JWpk;
+	s_GVs[j][i] = (G01*Vr + G11*Vs) - sy*JWpk;
 	
 	r_AU += JW*lambda*s_U[j][i];
 	r_AV += JW*lambda*s_V[j][i];
@@ -123,19 +125,19 @@ SOFTWARE.
 	AP += rx*Ur + sx*Us;
 	AP += ry*Vr + sy*Vs;
 	
-	Aq[pid] = AP;
+	pRaised[pid] = -JW*AP;
       }
     }
     
     @barrier("local");
     
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
+    for(int j=0;j<p_NqV;++j;@inner(1)){
+      for(int i=0;i<p_NqV;++i;@inner(0)){
 	
-	dfloat AUtmp = 0, AVtmp = 0, AWtmp = 0;
+	dfloat AUtmp = 0, AVtmp = 0;
 	
-#pragma unroll p_Nq
-	for(int m = 0; m < p_Nq; m++){
+#pragma unroll p_NqV
+	for(int m = 0; m < p_NqV; m++){
 	  dfloat Dmi = s_D[m][i];
 	  dfloat Dmj = s_D[m][j];
 	  
@@ -150,7 +152,7 @@ SOFTWARE.
 	r_AV += AVtmp;
 	
 	// write out U,V
-	const dlong id = e*p_Np + j*p_Nq + i;
+	const dlong id = e*p_NpV + j*p_NqV + i;
 	Aq[id+0*offset] = r_AU;
 	Aq[id+1*offset] = r_AV;
       }

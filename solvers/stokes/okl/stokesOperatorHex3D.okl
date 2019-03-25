@@ -184,7 +184,7 @@ SOFTWARE.
 	    APk += ry*Vr + sy*Vs + ty*r_Vt;
 	    APk += rz*Wr + sz*Ws + tz*r_Wt;
 	    
-	    Aq[pid] = APk;
+	    Aq[pid] = JW*APk;
 	    
           }
         }

@@ -129,7 +129,8 @@ typedef struct {
   occa::kernel vecScaledAddKernel;
   occa::kernel vecZeroKernel;
   occa::kernel weightedInnerProductKernel;
-
+  occa::kernel stokesOperatorKernel;
+  
   /* Scratch variables */
   dlong NblockV;          /* Used for reductions over the velocity DOFs. */
   dfloat *workV;

@@ -229,6 +229,7 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
       stokes->divergenceKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
       stokes->gradientKernel   = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
       stokes->stiffnessKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfoV);
+      stokes->stokesOperatorKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesOperatorQuad2D.okl", "stokesOperatorQuad2D", kernelInfoV);      
     } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
       stokes->divergenceKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceCubatureQuad2D", kernelInfoV);
       stokes->gradientKernel   = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientCubatureQuad2D", kernelInfoV);
