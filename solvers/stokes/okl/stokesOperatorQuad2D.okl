@@ -30,23 +30,21 @@ SOFTWARE.
 				  @restrict const dfloat *D,
 				  @restrict const dfloat *eta,
 				  @restrict const dfloat *q,
-				  @restrict dfloat *Aq)
-{
-  for(dlong e=0; e<Nelements; ++e; @outer(0)){
+				  @restrict dfloat *Aq){
 
+  for(dlong e=0; e<Nelements; ++e; @outer(0)){
+    
     @shared dfloat s_D[p_Nq][p_Nq];
 
     @shared dfloat s_U[p_Nq][p_Nq];
-    @shared dfloat s_V[p_Nq][p_Nq];
-
     @shared dfloat s_GUr[p_Nq][p_Nq];
     @shared dfloat s_GUs[p_Nq][p_Nq];
+
+    @shared dfloat s_V[p_Nq][p_Nq];
     @shared dfloat s_GVr[p_Nq][p_Nq];
     @shared dfloat s_GVs[p_Nq][p_Nq];
 
-    @exclusive dfloat r_Ut, r_Vt;
-
-    @exclusive dfloat r_U, r_V;
+    @exclusive dfloat r_U,  r_V;
     @exclusive dfloat r_AU, r_AV;
     
     // array of threads
@@ -147,7 +145,7 @@ SOFTWARE.
 	  AVtmp += Dmi*s_GVr[j][m];
 	  AVtmp += Dmj*s_GVs[m][i];
 	}
-
+	
 	r_AU += AUtmp;
 	r_AV += AVtmp;
 	
