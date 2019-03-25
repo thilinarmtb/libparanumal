@@ -49,7 +49,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 
   if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
 
-#if 1
+#if 0
     printf("STOKES: USING GLL\n");
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_ggeo,

@@ -120,13 +120,13 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
   //  ellipticOptions.setArgs("MULTIGRID COARSENING", "ALLDEGREES");
   ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDOFS");
   ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
-  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI");
-  //ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "10");
+  //  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI");
+  ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "1");
   ellipticOptions.setArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT");
   ellipticOptions.setArgs("PARALMOND CYCLE", "KCYCLE");
-  //  ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
-  ellipticOptions.setArgs("PARALMOND SMOOTHER", "DAMPEDJACOBI");
-  ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "10");
+  ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
+  //  ellipticOptions.setArgs("PARALMOND SMOOTHER", "DAMPEDJACOBI");
+  ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "1");
   ellipticOptions.setArgs("VERBOSE", "FALSE");
   ellipticOptions.setArgs("INTEGRATION TYPE", stokes->options.getArgs("INTEGRATION TYPE"));
   ellipticOptions.setArgs("ELLIPTIC INTEGRATION", stokes->options.getArgs("INTEGRATION TYPE"));
