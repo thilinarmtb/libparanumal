@@ -45,7 +45,7 @@ void stokesSolve(stokes_t *stokes)
 static void stokesSolveMINRES(stokes_t *stokes)
 {
   stokesVec_t u, p, z, r, r_old, w, w_old;
-  dfloat      a0, a1, a2, a3, del, gam, gamp, c, cp, s, sp, eta;
+  dfloat      a0, a1, a2, a3, del, gam, gamp, c, cp, s, sp, eta, Au;
   dfloat      maxiter, tol;
   int         verbose;
 
@@ -147,8 +147,8 @@ static void stokesSolveMINRES(stokes_t *stokes)
 
 static void stokesSolveDQGMRES(stokes_t *stokes)
 {
-  stokesVec_t u, f, e, w, p1, p2, p3, v1, v2, v3, tmp;
-  dfloat      g1, g2, c1, s1, c2, s2, c3, s3, h0, h1, h2, h3, a;
+  stokesVec_t u, f, e, w, p1, p2, p3, v1, v2, v3, tmp, res, Ax;
+  dfloat    g1 = -999999999999999999, g2 = -999999999999999999, c1 =-999999999999999999, s1 =-999999999999999999 , c2 = -999999999999999999, s2 =-999999999999999999 , c3 = -999999999999999999, s3 = -999999999999999999, h0 = -999999999999999999, h1 = -999999999999999999, h2 =-999999999999999999, h3=-999999999999999999, a=-999999999999999999;
   dfloat      resnormest, maxiter, tol;
   int         verbose;
 
@@ -180,7 +180,9 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
   stokesVecAllocate(stokes, &p1);
   stokesVecAllocate(stokes, &p2);
   stokesVecAllocate(stokes, &p3);
-
+  stokesVecAllocate(stokes, &res);
+  stokesVecAllocate(stokes, &Ax);
+  
   stokesOperator(stokes, u, v2);                          /* v2 = f - A*u0    (initial residual) */
   stokesVecScaledAdd(stokes, 1.0, f, -1.0, v2);
   stokesVecInnerProduct(stokes, v2, v2, &g1);             /* g1 = norm(v2)                       */
@@ -195,15 +197,34 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
 
   /* DQGMRES iteration loop. */
   for (int i = 0; i < maxiter; i++) {
-    if (verbose)
-      printf("DQGMRES:  it % 3d  gamma = % .15e, res. norm est. = % .15e\n", i, g1, resnormest);
-#if 1
+    
+    e.o_v.copyTo(res.o_v);
+    stokesVecScaledAdd(stokes, 1.0, u, 1.0, res);
+    stokesOperator(stokes, res, Ax);                          /* v2 = f - A*u0    (initial residual) */
+    stokesVecScaledAdd(stokes, -1.0, f, 1.0, Ax);
+
+    dfloat normr = 0;
+    stokesVecInnerProduct(stokes, Ax, Ax, &normr);             /* g1 = norm(v2)                       */
+
+    if (verbose){
+      printf("DQGMRES:  it % 3d  gamma = % .15e, res. norm est. = % .15e, ||r|| = %.15e), g2=%g, s3=%g, c3=%g).\n",
+	     i, g1, resnormest, sqrt(fabs(normr)), g2, s3, c3);
+    }
+
+    
+#if 0
     if (fabs(g1) < tol) {
-#else
-    if (fabs(resnormest) < tol) {
 #endif
+#if 0
+      if (fabs(resnormest) < tol) {
+#endif
+#if 1
+	if (sqrt(fabs(normr)) < tol) {
+#endif
+	
       if (verbose)
-        printf("DQGMRES converged in %d iterations (gamma = % .15e, res. norm est. = % .15e).\n", i, g1, resnormest);
+        printf("DQGMRES converged in %d iterations (gamma = % .15e, res. norm est. = % .15e , ||r|| = %.15e, g2=%g, s3=%g, c3=%g).\n",
+	       i, g1, resnormest, sqrt(fabs(normr)), g2, s3, c3);
       break;
     }
 
@@ -216,9 +237,11 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
       stokesVecInnerProduct(stokes, v3, v1, &h1);         /* h1 = v1'*v3                         */
       stokesVecScaledAdd(stokes, -h1, v1, 1.0, v3);       /* v3 = v3 - h1*v1                     */
     }
+
     stokesVecInnerProduct(stokes, v3, v2, &h2);           /* h2 = v3'v2                          */
     stokesVecScaledAdd(stokes, -h2, v2, 1.0, v3);         /* v3 = v3 - h2*v2                     */
 
+    
     /* Normalize. */
     stokesVecInnerProduct(stokes, v3, v3, &h3);           /* h3 = norm(v3)                       */
     h3 = sqrt(h3);
@@ -263,10 +286,12 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
      * TODO:  This can be made more efficient.
      */
     stokesVecCopy(stokes, w, p3);                         /* p3 = w                              */
+
     if (i > 1)
       stokesVecScaledAdd(stokes, -h0, p1, 1.0, p3);       /* p3 = p3 - h0*p1                     */
     if (i > 0)
       stokesVecScaledAdd(stokes, -h1, p2, 1.0, p3);       /* p3 = p3 - h1*p2                     */
+
     stokesVecScale(stokes, p3, 1.0/h2);                   /* p3 = p3/h2                          */
 
     stokesVecScaledAdd(stokes, g1, p3, 1.0, e);           /* e = e + g1*p3                       */

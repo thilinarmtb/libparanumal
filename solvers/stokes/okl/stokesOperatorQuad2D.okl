@@ -71,6 +71,22 @@ SOFTWARE.
     
     for(int j=0;j<p_NqV;++j;@inner(1)){
       for(int i=0;i<p_NqV;++i;@inner(0)){
+
+	// prefetch geometric factors
+	const dlong gbase = e*p_Nvgeo*p_NpV + j*p_NqV + i;
+	
+	const dfloat rx = vgeo[gbase+p_RXID*p_NpV];
+	const dfloat sx = vgeo[gbase+p_SXID*p_NpV];
+	
+	const dfloat ry = vgeo[gbase+p_RYID*p_NpV];
+	const dfloat sy = vgeo[gbase+p_SYID*p_NpV];
+	
+	const dfloat JW = vgeo[gbase+p_JWID*p_NpV];
+
+	const dlong pid = i + j*p_NqV + e*p_NpV; // 2 ?
+	const dfloat pk = pRaised[pid]; 
+	
+        const dfloat eta_ji = eta[pid];
 	
 	dfloat Ur = 0.f, Us = 0.f; 
 	dfloat Vr = 0.f, Vs = 0.f;
@@ -87,35 +103,21 @@ SOFTWARE.
 	  Vs += Djm*s_V[m][i];
 	}
 	
-	// prefetch geometric factors
-	const dlong gbase = e*p_Nvgeo*p_NpV + j*p_NqV + i;
-	
-	const dfloat rx = vgeo[gbase+p_RXID*p_NpV];
-	const dfloat sx = vgeo[gbase+p_SXID*p_NpV];
-	
-	const dfloat ry = vgeo[gbase+p_RYID*p_NpV];
-	const dfloat sy = vgeo[gbase+p_SYID*p_NpV];
-	
-	const dfloat JW = vgeo[gbase+p_JWID*p_NpV];
-
-	const dlong pid = i + j*p_NqV + e*p_NpV; // 2 ?
-	const dfloat pk = pRaised[pid]; 
-	const dfloat JWpk = JW*pk;// note sign
-	
-        const dfloat eta_ji = eta[pid];
-	
 	const dfloat G00 = (rx*rx+ry*ry)*JW*eta_ji;
 	const dfloat G01 = (rx*sx+ry*sy)*JW*eta_ji;
 	const dfloat G11 = (sx*sx+sy*sy)*JW*eta_ji;
 	
+	const dfloat JWpk = -JW*pk;// note sign
+
+
 	// (grad phi, grad U - delta_x p)
 	// (grad phi, grad V - delta_y p)
 	// (grad phi, grad W - delta_z p)
-	s_GUr[j][i] = (G00*Ur + G01*Us) - rx*JWpk;
-	s_GVr[j][i] = (G00*Vr + G01*Vs) - ry*JWpk;
+	s_GUr[j][i] = (G00*Ur + G01*Us) + rx*JWpk;
+	s_GVr[j][i] = (G00*Vr + G01*Vs) + ry*JWpk;
 	
-	s_GUs[j][i] = (G01*Ur + G11*Us) - sx*JWpk;
-	s_GVs[j][i] = (G01*Vr + G11*Vs) - sy*JWpk;
+	s_GUs[j][i] = (G01*Ur + G11*Us) + sx*JWpk;
+	s_GVs[j][i] = (G01*Vr + G11*Vs) + sy*JWpk;
 	
 	r_AU += JW*lambda*s_U[j][i];
 	r_AV += JW*lambda*s_V[j][i];

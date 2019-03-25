@@ -47,7 +47,10 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
    * TODO:  Fuse these into one big Stokes Ax kernel?
    */
 
-  if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) { 
+  if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
+
+#if 1
+    printf("STOKES: USING GLL\n");
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_ggeo,
                             stokes->meshV->o_Dmatrices,
@@ -94,7 +97,35 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                                 o_interpRaise,
                                 o_pRaised,
                                 Av.o_p);
+#else
+
+    printf("STOKES: USING MONOLITHIC STOKES KERNEL\n");
+
+    stokes->raisePressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                v.o_p,
+                                o_pRaised);
+
+    dfloat lambda = 0;
+    stokes->stokesOperatorKernel(stokes->meshV->Nelements,
+				 stokes->NtotalV, // offset
+				 stokes->meshV->o_vgeo, // note use of vgeo
+				 stokes->meshV->o_Dmatrices,
+				 lambda,
+				 stokes->o_eta,
+				 v.o_v,
+				 o_pRaised, // input & output
+				 Av.o_v); 
+
+    stokes->lowerPressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                o_pRaised,
+                                Av.o_p);
+
+    
+#endif
   } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
+    printf("STOKES: USING CUBATURE\n");
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_cubggeo,
                             stokes->o_cubD,
