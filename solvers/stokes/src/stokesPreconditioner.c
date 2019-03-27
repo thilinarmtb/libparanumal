@@ -27,16 +27,16 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
-static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
+static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv);
 
-void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+void stokesPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv)
 {
   if (stokes->options.compareArgs("PRECONDITIONER", "NONE")) {
     stokesVecCopy(stokes, v, Mv);
   } else if (stokes->options.compareArgs("PRECONDITIONER", "JACOBI")) {
     stokesJacobiPreconditioner(stokes, v, Mv);
   } else if (stokes->options.compareArgs("PRECONDITIONER", "SCHURCOMPLEMENTBLOCKDIAG")) {
-    stokesSchurComplementBlockDiagPreconditioner(stokes, v, Mv);
+    stokesSchurComplementBlockDiagPreconditioner(stokes, lambda, v, Mv);
   } else {
     printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.",
            stokes->options.getArgs("PRECONDITIONER").c_str());
@@ -54,7 +54,7 @@ static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVe
   return;
 }
 
-static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv)
 {
   stokesVec_t tmp, tmp2, tmp3;
 
@@ -63,10 +63,10 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, stoke
   stokesVecAllocate(stokes, &tmp3);
 
 #if 1
-  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
-  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
+  ellipticPreconditioner(stokes->precon->elliptic, lambda, v.o_x, Mv.o_x);
+  ellipticPreconditioner(stokes->precon->elliptic, lambda, v.o_y, Mv.o_y);
   if (stokes->meshV->dim == 3)
-    ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_z, Mv.o_z);
+    ellipticPreconditioner(stokes->precon->elliptic, lambda, v.o_z, Mv.o_z);
 
   stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
 

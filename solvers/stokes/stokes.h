@@ -141,12 +141,12 @@ typedef struct {
   occa::memory o_workP;
 } stokes_t;
 
-stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
-void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
-void stokesSolve(stokes_t *stokes);
-void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av);
-void stokesPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
-void stokesPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV);
+stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
+void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
+void stokesSolve(stokes_t *stokes, dfloat lambda);
+void stokesOperator(stokes_t *stokes, dfloat lambda,  stokesVec_t v, stokesVec_t Av);
+void stokesPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv);
+void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV);
 
 void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v);
 void stokesVecFree(stokes_t *stokes, stokesVec_t *v);
@@ -161,7 +161,7 @@ void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c);
 void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v);
 void stokesVecZero(stokes_t *stokes, stokesVec_t v);
 
-void stokesOperatorPrint(stokes_t *stokes);
+void stokesOperatorPrint(stokes_t *stokes, dfloat lambda);
 void stokesVecPrint(stokes_t *stokes, stokesVec_t v);
 
 #endif /* STOKES_H */

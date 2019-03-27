@@ -33,6 +33,7 @@ static void stokesTestSolutionConstantViscosityHex3D(dfloat x, dfloat y, dfloat 
 
 int main(int argc, char **argv)
 {
+  dfloat           lambda;
   stokes_t         *stokes;
   occa::properties kernelInfoV, kernelInfoP;
 
@@ -47,8 +48,10 @@ int main(int argc, char **argv)
 
   setupAide options(argv[1]);
 
-  stokes = stokesSetup(kernelInfoP, kernelInfoV, options);
-  stokesSolve(stokes);
+  options.getArgs("LAMBDA", lambda);
+
+  stokes = stokesSetup(lambda, kernelInfoP, kernelInfoV, options);
+  stokesSolve(stokes, lambda);
 
   stokesVecCopyDeviceToHost(stokes->u);
 

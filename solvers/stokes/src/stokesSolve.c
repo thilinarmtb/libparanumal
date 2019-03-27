@@ -26,15 +26,15 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesSolveMINRES(stokes_t *stokes);
-static void stokesSolveDQGMRES(stokes_t *stokes);
+static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda);
+static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda);
 
-void stokesSolve(stokes_t *stokes)
+void stokesSolve(stokes_t *stokes, dfloat lambda)
 {
   if (stokes->options.compareArgs("KRYLOV SOLVER", "MINRES")) {
-    stokesSolveMINRES(stokes);
+    stokesSolveMINRES(stokes, lambda);
   } else if (stokes->options.compareArgs("KRYLOV SOLVER", "DQGMRES")) {
-    stokesSolveDQGMRES(stokes);
+    stokesSolveDQGMRES(stokes, lambda);
   }else {
     printf("ERROR:  Invalid value %s for [KRYLOV SOLVER] option.",
            stokes->options.getArgs("KRYLOV SOLVER").c_str());
@@ -42,7 +42,7 @@ void stokesSolve(stokes_t *stokes)
   }
 }
 
-static void stokesSolveMINRES(stokes_t *stokes)
+static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda)
 {
   stokesVec_t u, p, z, r, r_old, w, w_old;
   dfloat      a0, a1, a2, a3, del, gam, gamp, c, cp, s, sp, eta, Au;
@@ -74,9 +74,9 @@ static void stokesSolveMINRES(stokes_t *stokes)
   stokesVecAllocate(stokes, &w);
   stokesVecAllocate(stokes, &w_old);
 
-  stokesOperator(stokes, u, r);                                /* r = f - Au               */
+  stokesOperator(stokes, lambda, u, r);                        /* r = f - Au               */
   stokesVecScaledAdd(stokes, 1.0, stokes->f, -1.0, r);
-  stokesPreconditioner(stokes, r, z);                          /* z = M\r                  */
+  stokesPreconditioner(stokes, lambda, r, z);                  /* z = M\r                  */
   stokesVecInnerProduct(stokes, z, r, &gam);                   /* gam = sqrt(r'*z)         */
   gamp = 0.0;
   if (gam < 0) {
@@ -106,7 +106,7 @@ static void stokesSolveMINRES(stokes_t *stokes)
     }
 
     stokesVecScale(stokes, z, 1.0/gam);                        /* z = z/gam                */
-    stokesOperator(stokes, z, p);                              /* p = Az                   */
+    stokesOperator(stokes, lambda, z, p);                      /* p = Az                   */
     stokesVecInnerProduct(stokes, p, z, &del);                 /* del = z'*p               */
     a0 = c*del - cp*s*gam;
     a2 = s*del + cp*c*gam;
@@ -120,7 +120,7 @@ static void stokesSolveMINRES(stokes_t *stokes)
     if (i > 0)
       stokesVecScaledAdd(stokes, -(gam/gamp), r_old, 1.0, r);  /* r = r - (gam/gamp)*r_old */
     stokesVecCopy(stokes, z, r_old);                           /* r_old = z                */
-    stokesPreconditioner(stokes, r, z);                        /* z = M\r                  */
+    stokesPreconditioner(stokes, lambda, r, z);                /* z = M\r                  */
     gamp = gam;
     stokesVecInnerProduct(stokes, z, r, &gam);                 /* gam = sqrt(r'*z)         */
     gam = sqrt(gam);
@@ -145,10 +145,10 @@ static void stokesSolveMINRES(stokes_t *stokes)
   return;
 }
 
-static void stokesSolveDQGMRES(stokes_t *stokes)
+static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
 {
   stokesVec_t u, f, e, w, p1, p2, p3, v1, v2, v3, tmp, res, Ax;
-  dfloat    g1 = -999999999999999999, g2 = -999999999999999999, c1 =-999999999999999999, s1 =-999999999999999999 , c2 = -999999999999999999, s2 =-999999999999999999 , c3 = -999999999999999999, s3 = -999999999999999999, h0 = -999999999999999999, h1 = -999999999999999999, h2 =-999999999999999999, h3=-999999999999999999, a=-999999999999999999;
+  dfloat      g1, g2, c1, s1, c2, s2, c3, s3, h0, h1, h2, h3, a;
   dfloat      resnormest, maxiter, tol;
   int         verbose;
 
@@ -158,6 +158,21 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
   verbose = 0;
   if (stokes->options.compareArgs("VERBOSE", "TRUE"))
     verbose = 1;
+
+  /* Initialize variables. */
+  g1 = -999999999999999999.0;
+  g2 = -999999999999999999.0;
+  c1 = -999999999999999999.0;
+  s1 = -999999999999999999.0;
+  c2 = -999999999999999999.0;
+  s2 = -999999999999999999.0;
+  c3 = -999999999999999999.0;
+  s3 = -999999999999999999.0;
+  h0 = -999999999999999999.0;
+  h1 = -999999999999999999.0;
+  h2 = -999999999999999999.0;
+  h3 = -999999999999999999.0;
+  a  = -999999999999999999.0;
 
   u = stokes->u;
   f = stokes->f;
@@ -183,7 +198,7 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
   stokesVecAllocate(stokes, &res);
   stokesVecAllocate(stokes, &Ax);
   
-  stokesOperator(stokes, u, v2);                          /* v2 = f - A*u0    (initial residual) */
+  stokesOperator(stokes, lambda, u, v2);                  /* v2 = f - A*u0    (initial residual) */
   stokesVecScaledAdd(stokes, 1.0, f, -1.0, v2);
   stokesVecInnerProduct(stokes, v2, v2, &g1);             /* g1 = norm(v2)                       */
   g1 = sqrt(g1);
@@ -200,11 +215,11 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
     
     e.o_v.copyTo(res.o_v);
     stokesVecScaledAdd(stokes, 1.0, u, 1.0, res);
-    stokesOperator(stokes, res, Ax);                          /* v2 = f - A*u0    (initial residual) */
+    stokesOperator(stokes, lambda, res, Ax);              /* v2 = f - A*u0    (initial residual) */
     stokesVecScaledAdd(stokes, -1.0, f, 1.0, Ax);
 
     dfloat normr = 0;
-    stokesVecInnerProduct(stokes, Ax, Ax, &normr);             /* g1 = norm(v2)                       */
+    stokesVecInnerProduct(stokes, Ax, Ax, &normr);        /* g1 = norm(v2)                       */
 
     if (verbose){
       printf("DQGMRES:  it % 3d  gamma = % .15e, res. norm est. = % .15e, ||r|| = %.15e), g2=%g, s3=%g, c3=%g).\n",
@@ -229,8 +244,8 @@ static void stokesSolveDQGMRES(stokes_t *stokes)
     }
 
     /* Compute initial choice for the next vector. */
-    stokesPreconditioner(stokes, v2, w);                  /* w = M\v2                            */
-    stokesOperator(stokes, w, v3);                        /* v3 = Aw                             */
+    stokesPreconditioner(stokes, lambda, v2, w);          /* w = M\v2                            */
+    stokesOperator(stokes, lambda, w, v3);                /* v3 = Aw                             */
 
     /* Orthogonalize (incompletely). */
     if (i > 0) {

@@ -31,7 +31,7 @@ SOFTWARE.
  *
  * TODO:  This only works for Quad2D at the moment.
  */
-void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
+void stokesOperator(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Av)
 {
   /* TODO:  We re-allocate these scratch variables every time we call the
    * operator, but they're going to go away eventually, so we don't care.  keep
@@ -106,7 +106,6 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
                                 v.o_p,
                                 o_pRaised);
 
-    dfloat lambda = 0;
     stokes->stokesOperatorKernel(stokes->meshV->Nelements,
 				 stokes->NtotalV, // offset
 				 stokes->meshV->o_vgeo, // note use of vgeo
@@ -231,7 +230,7 @@ void stokesOperator(stokes_t *stokes, stokesVec_t v, stokesVec_t Av)
 
 /*****************************************************************************/
 
-void stokesOperatorPrint(stokes_t *stokes)
+void stokesOperatorPrint(stokes_t *stokes, dfloat lambda)
 {
   stokesVec_t v, Av;
 
@@ -241,7 +240,7 @@ void stokesOperatorPrint(stokes_t *stokes)
   for (int i = 0; i < stokes->Ndof; i++) {
     v.v[i] = 1.0;
     stokesVecCopyHostToDevice(v);
-    stokesOperator(stokes, v, Av);
+    stokesOperator(stokes, lambda, v, Av);
     stokesVecCopyDeviceToHost(Av);
     stokesVecPrint(stokes, Av);
     v.v[i] = 0.0;

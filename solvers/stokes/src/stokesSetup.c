@@ -26,16 +26,16 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesSetupRHS(stokes_t *stokes);
-static void stokesRHSAddBC(stokes_t *stokes);
+static void stokesSetupRHS(stokes_t *stokes, dfloat lambda);
+static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda);
 
 static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
-static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
+static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionLeakyCavityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *fx, dfloat *fy, dfloat *fz);
 
-stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
+stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
   int      velocityN, pressureN, dim, elementType;
   int      velocityNtotal, pressureNtotal;
@@ -129,14 +129,14 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
   stokes->BCType = (int*)calloc(3, sizeof(int));
   memcpy(stokes->BCType, BCType, 3*sizeof(int));
 
-  stokesSolveSetup(stokes, eta, kernelInfoV, kernelInfoP);
-  stokesSetupRHS(stokes);
+  stokesSolveSetup(stokes, lambda, eta, kernelInfoV, kernelInfoP);
+  stokesSetupRHS(stokes, lambda);
 
   free(eta);
   return stokes;
 }
 
-static void stokesSetupRHS(stokes_t *stokes)
+static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
 {
   int dim;
 
@@ -156,7 +156,7 @@ static void stokesSetupRHS(stokes_t *stokes)
       if (dim == 2) {
         //stokesTestForcingFunctionConstantViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
         //stokesTestForcingFunctionVariableViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
-        stokesTestForcingFunctionDirichletQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
+        stokesTestForcingFunctionDirichletQuad2D(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
       } else if (dim == 3) {
         stokesTestForcingFunctionConstantViscosityHex3D(x, y, z, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
       }
@@ -182,7 +182,7 @@ static void stokesSetupRHS(stokes_t *stokes)
   stokesVecCopyHostToDevice(stokes->f);
 
   // Apply the boundary conditions.
-  stokesRHSAddBC(stokes);
+  stokesRHSAddBC(stokes, lambda);
 
   // Gather-scatter for C0 FEM.
   stokesVecUnmaskedGatherScatter(stokes, stokes->f);
@@ -201,7 +201,7 @@ static void stokesSetupRHS(stokes_t *stokes)
 }
 
 // TODO:  Write a kernel for this.
-static void stokesRHSAddBC(stokes_t *stokes)
+static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
 {
   stokesVec_t tmp;
 
@@ -244,6 +244,7 @@ static void stokesRHSAddBC(stokes_t *stokes)
   stokesVecZero(stokes, stokes->u);
 
   if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
+#if 0
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_ggeo,
                             stokes->meshV->o_Dmatrices,
@@ -290,6 +291,27 @@ static void stokesRHSAddBC(stokes_t *stokes)
                                 o_interpRaise,
                                 o_pRaised,
                                 stokes->u.o_p);
+#else
+    stokes->raisePressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                tmp.o_p,
+                                o_pRaised);
+
+    stokes->stokesOperatorKernel(stokes->meshV->Nelements,
+                                 stokes->NtotalV,
+                                 stokes->meshV->o_vgeo,
+                                 stokes->meshV->o_Dmatrices,
+                                 lambda,
+                                 stokes->o_eta,
+                                 tmp.o_v,
+                                 o_pRaised,
+                                 stokes->u.o_v);
+
+    stokes->lowerPressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                o_pRaised,
+                                stokes->u.o_p);
+#endif
   } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_cubggeo,
@@ -363,10 +385,10 @@ static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y,
   return;
 }
 
-static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
+static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy)
 {
-  *fx = 1.0 + cos(y);
-  *fy = 1.0 + sin(x);
+  *fx = 1.0 + (1.0 + lambda)*cos(y);
+  *fy = 1.0 + (1.0 + lambda)*sin(x);
   return;
 }
 

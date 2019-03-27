@@ -31,7 +31,7 @@ static void stokesAllocateScratchVars(stokes_t *stokes);
 static void stokesSetupBCMask(stokes_t *stokes);
 static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties& kernelInfoP);
 
-void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
+void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
 {
   FILE *fp;
   char fname[BUFSIZ];
@@ -93,7 +93,6 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
   stokes->o_cubInterpP = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->cubNq*sizeof(dfloat), stokes->cubInterpP);
   stokes->o_cubD = stokes->meshV->device.malloc(stokes->meshV->cubNq*stokes->meshV->cubNq*sizeof(dfloat), stokes->cubD);
 
-
   stokes->meshV->cubggeo = (dfloat*)calloc(stokes->meshV->Nelements*stokes->meshV->Nggeo*stokes->meshV->cubNp, sizeof(dfloat));
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->cubNq; i++) {
@@ -129,7 +128,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat *eta, occa::properties &kernelInf
   stokesAllocateScratchVars(stokes);
   stokesSetupBCMask(stokes);
   stokesSetupKernels(stokes, kernelInfoV, kernelInfoP);
-  stokesPreconditionerSetup(stokes, kernelInfoV);
+  stokesPreconditionerSetup(stokes, lambda, kernelInfoV);
 
   return;
 }

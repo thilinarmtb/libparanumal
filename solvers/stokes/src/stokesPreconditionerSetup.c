@@ -27,18 +27,24 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesJacobiPreconditionerSetup(stokes_t *stokes);
-static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV);
+static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV);
 
 static void stokesBuildLocalContinuousDiagQuad2D(stokes_t* stokes, dlong e, dfloat *diagA);
 
-void stokesPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV)
+void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV)
 {
   if (stokes->options.compareArgs("PRECONDITIONER", "NONE")) {
     stokes->precon = NULL;
   } else if (stokes->options.compareArgs("PRECONDITIONER", "JACOBI")) {
+    // TODO:  Update for lambda.
+    if (lambda != 0.0) {
+      printf("ERROR:  JACOBI preconditioner not implemented for nonzero LAMBDA.\n");
+      exit(-1);
+    }
+
     stokesJacobiPreconditionerSetup(stokes);
   } else if (stokes->options.compareArgs("PRECONDITIONER", "SCHURCOMPLEMENTBLOCKDIAG")) {
-    stokesSchurComplementBlockDiagPreconditionerSetup(stokes, kernelInfoV);
+    stokesSchurComplementBlockDiagPreconditionerSetup(stokes, lambda, kernelInfoV);
   } else {
     printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.\n",
            stokes->options.getArgs("PRECONDITIONER").c_str());
@@ -95,7 +101,7 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
   return;
 }
 
-static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, occa::properties &kernelInfoV)
+static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV)
 {
   mesh_t     *meshV;
   elliptic_t *elliptic;
@@ -142,7 +148,7 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
   /* TODO:  This allocates a whole lot of extra stuff---we may be able to share
    * some scratch arrays with the stokes_t.
    */
-  ellipticSolveSetup(elliptic, 0.0, kernelInfoV);
+  ellipticSolveSetup(elliptic, lambda, kernelInfoV);
 
   parAlmond::Report(elliptic->precon->parAlmond);
 

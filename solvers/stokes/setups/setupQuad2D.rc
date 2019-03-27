@@ -18,8 +18,8 @@ data/stokesDirichletTestQuad2D.h
 4
 
 [INTEGRATION TYPE]
-#GLL
-CUBATURE
+GLL
+#CUBATURE
 
 ################################################
 #################### DEVICE ####################
@@ -39,6 +39,9 @@ CUDA
 ################################################
 ################ PROBLEM SETUP #################
 ################################################
+
+[LAMBDA]
+10.0
 
 [VELOCITY POLYNOMIAL DEGREE]
 5
