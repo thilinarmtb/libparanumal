@@ -41,7 +41,7 @@ CUDA
 ################################################
 
 [LAMBDA]
-10.0
+0.0
 
 [VELOCITY POLYNOMIAL DEGREE]
 5
@@ -80,6 +80,14 @@ SCHURCOMPLEMENTBLOCKDIAG
 
 [JACOBI BOOST PARAMETER]
 1.0e-1
+
+[VELOCITY BLOCK PRECONDITIONER]
+MULTIGRID
+#JACOBI
+
+[PRESSURE BLOCK PRECONDITIONER]
+MASSMATRIX
+#MULTIGRID
 
 ################################################
 ################ OTHER OPTIONS #################

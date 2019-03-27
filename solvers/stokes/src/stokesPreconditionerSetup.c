@@ -109,6 +109,7 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
 
   meshV = stokes->meshV;
   elliptic = new elliptic_t();
+  stokes->precon = new stokesPrecon_t();
 
   /* Set up the elliptic sub-solver. */
   elliptic->mesh = meshV;
@@ -116,23 +117,26 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
   elliptic->elementType = stokes->elementType;
 
   /* TODO:  Map these to the Stokes setup file. */
+
   ellipticOptions.setArgs("BASIS", "NODAL");
   ellipticOptions.setArgs("DISCRETIZATION", "CONTINUOUS");
   ellipticOptions.setArgs("DEBUG ENABLE OGS", "1");
   ellipticOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
   ellipticOptions.setArgs("KRYLOV SOLVER", "PCG");
-  ellipticOptions.setArgs("PRECONDITIONER", "MULTIGRID");
-  //  ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDEGREES");
-  //  ellipticOptions.setArgs("MULTIGRID COARSENING", "ALLDEGREES");
-  ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDOFS");
-  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
-  //  ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI");
-  ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "1");
-  ellipticOptions.setArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT");
-  ellipticOptions.setArgs("PARALMOND CYCLE", "KCYCLE");
-  ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
-  //  ellipticOptions.setArgs("PARALMOND SMOOTHER", "DAMPEDJACOBI");
-  ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "1");
+
+  if (stokes->options.compareArgs("VELOCITY BLOCK PRECONDITIONER", "MULTIGRID")) {
+    ellipticOptions.setArgs("PRECONDITIONER", "MULTIGRID");
+    ellipticOptions.setArgs("MULTIGRID COARSENING", "HALFDOFS");
+    ellipticOptions.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
+    ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE", "1");
+    ellipticOptions.setArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT");
+    ellipticOptions.setArgs("PARALMOND CYCLE", "KCYCLE");
+    ellipticOptions.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
+    ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE", "1");
+  } else if (stokes->options.compareArgs("VELOCITY BLOCK PRECONDITIONER", "JACOBI")) {
+    ellipticOptions.setArgs("PRECONDITIONER", "JACOBI");
+  }
+
   ellipticOptions.setArgs("VERBOSE", "FALSE");
   ellipticOptions.setArgs("INTEGRATION TYPE", stokes->options.getArgs("INTEGRATION TYPE"));
   ellipticOptions.setArgs("ELLIPTIC INTEGRATION", stokes->options.getArgs("INTEGRATION TYPE"));
@@ -150,42 +154,87 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
    */
   ellipticSolveSetup(elliptic, lambda, kernelInfoV);
 
-  parAlmond::Report(elliptic->precon->parAlmond);
+  if (stokes->options.compareArgs("VELOCITY BLOCK PRECONDITIONER", "MULTIGRID"))
+    parAlmond::Report(elliptic->precon->parAlmond);
 
-  stokes->precon = new stokesPrecon_t();
-  stokes->precon->elliptic = elliptic;
+  stokes->precon->ellipticV = elliptic;
 
-  stokesVecAllocate(stokes, &stokes->precon->invMM);
+  if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MASSMATRIX")) {
+    stokesVecAllocate(stokes, &stokes->precon->invMM);
 
-  for (dlong e = 0; e < stokes->meshP->Nelements; e++) {
-    for (int n = 0; n < stokes->meshP->Np; n++) {
-      stokes->precon->invMM.p[e*stokes->meshP->Np + n] = stokes->meshP->ggeo[e*stokes->meshP->Np*stokes->meshP->Nggeo + GWJID*stokes->meshP->Np + n];
-    }
-  }
-
-#if 1
-  // assemble mass matrix (suitable for C0 pressure)
-  stokesVecCopyHostToDevice(stokes->precon->invMM);
-  stokesVecGatherScatter(stokes, stokes->precon->invMM);
-  stokesVecCopyDeviceToHost(stokes->precon->invMM);
-#endif
-
-  for (dlong e = 0; e < stokes->meshP->Nelements; e++) {
-    for (int n = 0; n < stokes->meshP->Np; n++) {
-      dfloat val = stokes->precon->invMM.p[e*stokes->meshP->Np + n];
-      if (val) {
-        stokes->precon->invMM.p[e*stokes->meshP->Np + n] = 1.0/val;
-      } else if (val < 0) {
-        printf("APA:  Got negative value on pressure mass matrix diagonal!\n");
-        exit(-1);
-      } else {
-        printf("APA:  Got zero on pressure mass matrix diagonal!\n");
-        exit(-1);
+    for (dlong e = 0; e < stokes->meshP->Nelements; e++) {
+      for (int n = 0; n < stokes->meshP->Np; n++) {
+        stokes->precon->invMM.p[e*stokes->meshP->Np + n] = stokes->meshP->ggeo[e*stokes->meshP->Np*stokes->meshP->Nggeo + GWJID*stokes->meshP->Np + n];
       }
     }
+
+    // assemble mass matrix (suitable for C0 pressure)
+    stokesVecCopyHostToDevice(stokes->precon->invMM);
+    stokesVecGatherScatter(stokes, stokes->precon->invMM);
+    stokesVecCopyDeviceToHost(stokes->precon->invMM);
+
+    for (dlong e = 0; e < stokes->meshP->Nelements; e++) {
+      for (int n = 0; n < stokes->meshP->Np; n++) {
+        dfloat val = stokes->precon->invMM.p[e*stokes->meshP->Np + n];
+        if (val) {
+          stokes->precon->invMM.p[e*stokes->meshP->Np + n] = 1.0/val;
+        } else if (val < 0) {
+          printf("APA:  Got negative value on pressure mass matrix diagonal!\n");
+          exit(-1);
+        } else {
+          printf("APA:  Got zero on pressure mass matrix diagonal!\n");
+          exit(-1);
+        }
+      }
+    }
+    
+    stokesVecCopyHostToDevice(stokes->precon->invMM);
+  } else if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID")) {
+    setupAide ellipticOptionsP;
+
+    stokes->precon->ellipticP = new elliptic_t();
+    stokes->precon->ellipticP->mesh = stokes->meshP;
+    stokes->precon->ellipticP->dim = stokes->precon->ellipticP->mesh->dim;
+    stokes->precon->ellipticP->elementType = stokes->elementType;
+
+    ellipticOptionsP.setArgs("BASIS", "NODAL");
+    ellipticOptionsP.setArgs("DISCRETIZATION", "CONTINUOUS");
+    ellipticOptionsP.setArgs("DEBUG ENABLE OGS", "1");
+    ellipticOptionsP.setArgs("DEBUG ENABLE REDUCTIONS", "1");
+    ellipticOptionsP.setArgs("KRYLOV SOLVER", "PCG");
+    ellipticOptionsP.setArgs("PRECONDITIONER", "MULTIGRID");
+    ellipticOptionsP.setArgs("MULTIGRID COARSENING", "HALFDOFS");
+    ellipticOptionsP.setArgs("MULTIGRID SMOOTHER", "DAMPEDJACOBI+CHEBYSHEV");
+    ellipticOptionsP.setArgs("MULTIGRID CHEBYSHEV DEGREE", "1");
+    ellipticOptionsP.setArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT");
+    ellipticOptionsP.setArgs("PARALMOND CYCLE", "KCYCLE");
+    ellipticOptionsP.setArgs("PARALMOND SMOOTHER", "CHEBYSHEV+DAMPEDJACOBI");
+    ellipticOptionsP.setArgs("PARALMOND CHEBYSHEV DEGREE", "1");
+    ellipticOptionsP.setArgs("VERBOSE", "FALSE");
+    ellipticOptionsP.setArgs("INTEGRATION TYPE", stokes->options.getArgs("INTEGRATION TYPE"));
+    ellipticOptionsP.setArgs("ELLIPTIC INTEGRATION", stokes->options.getArgs("INTEGRATION TYPE"));
+
+    stokes->precon->ellipticP->options = ellipticOptionsP;
+
+    stokes->precon->ellipticP->BCType = stokes->BCType;
+
+    stokes->precon->ellipticP->r = (dfloat*)calloc(stokes->NtotalP, sizeof(dfloat));
+    stokes->precon->ellipticP->o_r = stokes->precon->ellipticP->mesh->device.malloc(stokes->NtotalP*sizeof(dfloat), elliptic->r);
+    stokes->precon->ellipticP->x = (dfloat*)calloc(stokes->NtotalP, sizeof(dfloat));
+    stokes->precon->ellipticP->o_x = elliptic->mesh->device.malloc(stokes->NtotalP*sizeof(dfloat), elliptic->x);
+
+    /* TODO:  This allocates a whole lot of extra stuff---we may be able to share
+     * some scratch arrays with the stokes_t.
+     */
+    ellipticSolveSetup(stokes->precon->ellipticP, 0.0, kernelInfoV);
+
+    if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID"))
+      parAlmond::Report(stokes->precon->ellipticP->precon->parAlmond);
+
+    stokes->precon->ellipticP = elliptic;
+
   }
 
-  stokesVecCopyHostToDevice(stokes->precon->invMM);
 
   return;
 }

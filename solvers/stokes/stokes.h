@@ -67,12 +67,15 @@ typedef struct {
 } stokesVec_t;
 
 typedef struct {
+  /* Jacobi preconditioner. */
   dfloat boost;          /* Jacobi boosting parameter. */
   stokesVec_t invDiagA;  /* Boosted inverse of the Stokes operator diagonal */
-  stokesVec_t invMM;     /* Boosted inverse of the mass operator diagonal */
+
 
   /* Schur-complement-based block matrix preconditioner */
-  elliptic_t *elliptic;  /* Elliptic solver object for Poisson-type solves */
+  elliptic_t *ellipticV; /* Elliptic solver object for velocity preconditioning */
+  elliptic_t *ellipticP; /* Elliptic solver object for pressure multigrid */
+  stokesVec_t invMM;     /* Boosted inverse of the pressure mass operator diagonal */
 } stokesPrecon_t;
 
 typedef struct {

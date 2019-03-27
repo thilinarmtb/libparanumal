@@ -62,13 +62,19 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloa
   stokesVecAllocate(stokes, &tmp2);
   stokesVecAllocate(stokes, &tmp3);
 
-#if 1
-  ellipticPreconditioner(stokes->precon->elliptic, lambda, v.o_x, Mv.o_x);
-  ellipticPreconditioner(stokes->precon->elliptic, lambda, v.o_y, Mv.o_y);
+  ellipticPreconditioner(stokes->precon->ellipticV, lambda, v.o_x, Mv.o_x);
+  ellipticPreconditioner(stokes->precon->ellipticV, lambda, v.o_y, Mv.o_y);
   if (stokes->meshV->dim == 3)
-    ellipticPreconditioner(stokes->precon->elliptic, lambda, v.o_z, Mv.o_z);
+    ellipticPreconditioner(stokes->precon->ellipticV, lambda, v.o_z, Mv.o_z);
 
-  stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
+  if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MASSMATRIX")) {
+    stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
+  } else if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID")) {
+    ellipticPreconditioner(stokes->precon->ellipticP, 0.0, v.o_p, Mv.o_p);
+  }
+
+#if 0
+  /* TODO:  These lines appear to be unnecessary? */
 
   stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_x, Mv.o_x);
   stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_y, Mv.o_y);
@@ -88,34 +94,8 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloa
     if (stokes->meshV->dim == 3)
       stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_z);
   }
-#else
-
-  // zero pressure
-  stokesVecZero(stokes, Mv);
-  
-  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_x, Mv.o_x);
-  ellipticPreconditioner(stokes->precon->elliptic, 0.0, v.o_y, Mv.o_y);
-
-  stokesOperator(stokes, Mv, tmp);
-
-  stokesVecScaledAdd(stokes, 1.0, v, -1.0, tmp);
-
-  ellipticPreconditioner(stokes->precon->elliptic, 0.0, tmp.o_x, tmp2.o_x);
-  ellipticPreconditioner(stokes->precon->elliptic, 0.0, tmp.o_y, tmp2.o_y);
-
-  //  dfloat relax = 0.222;
-  dfloat relax = 0;
-  stokesVecScaledAdd(stokes, relax, tmp2, 1.0, Mv);
-
-  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, Mv.o_x, Mv.o_x);
-  ogsGatherScatter(Mv.o_x, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, Mv.o_y, Mv.o_y);
-  ogsGatherScatter(Mv.o_y, ogsDfloat, ogsAdd, stokes->meshV->ogs);
-  
-  stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
-  stokes->dotMultiplyKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, Mv.o_p, Mv.o_p);
-  ogsGatherScatter(Mv.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
 #endif
+
 
   stokesVecFree(stokes, &tmp);
   stokesVecFree(stokes, &tmp2);
