@@ -126,13 +126,13 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
 
   if (stokes->options.compareArgs("VELOCITY BLOCK PRECONDITIONER", "MULTIGRID")) {
     ellipticOptions.setArgs("PRECONDITIONER", "MULTIGRID");
-    ellipticOptions.setArgs("MULTIGRID COARSENING",                               stokes->options.getArgs("VELOCITY MULTIGRID COARSENING"));
-    ellipticOptions.setArgs("MULTIGRID SMOOTHER",                                 stokes->options.getArgs("VELOCITY MULTIGRID SMOOTHER"));
-    ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE",                         stokes->options.getArgs("VELOCITY MULTIGRID CHEBYSHEV DEGREE"));
-    ellipticOptions.setArgs("MULTIGRID CHEBYSHEV PARALMOND AGGREGATION STRATEGY", stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND AGGREGATION STRATEGY"));
-    ellipticOptions.setArgs("PARALMOND CYCLE",                                    stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND CYCLE"));
-    ellipticOptions.setArgs("PARALMOND SMOOTHER",                                 stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND SMOOTHER"));
-    ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE",                         stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND CHEBYSHEV DEGREE"));
+    ellipticOptions.setArgs("MULTIGRID COARSENING",           stokes->options.getArgs("VELOCITY MULTIGRID COARSENING"));
+    ellipticOptions.setArgs("MULTIGRID SMOOTHER",             stokes->options.getArgs("VELOCITY MULTIGRID SMOOTHER"));
+    ellipticOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE",     stokes->options.getArgs("VELOCITY MULTIGRID CHEBYSHEV DEGREE"));
+    ellipticOptions.setArgs("PARALMOND AGGREGATION STRATEGY", stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND AGGREGATION STRATEGY"));
+    ellipticOptions.setArgs("PARALMOND CYCLE",                stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND CYCLE"));
+    ellipticOptions.setArgs("PARALMOND SMOOTHER",             stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND SMOOTHER"));
+    ellipticOptions.setArgs("PARALMOND CHEBYSHEV DEGREE",     stokes->options.getArgs("VELOCITY MULTIGRID PARALMOND CHEBYSHEV DEGREE"));
   } else if (stokes->options.compareArgs("VELOCITY BLOCK PRECONDITIONER", "JACOBI")) {
     ellipticOptions.setArgs("PRECONDITIONER", "JACOBI");
   }
@@ -207,13 +207,13 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
     ellipticOptionsP.setArgs("KRYLOV SOLVER", "PCG");
     ellipticOptionsP.setArgs("PRECONDITIONER", "MULTIGRID");
 
-    ellipticOptionsP.setArgs("MULTIGRID COARSENING",                               stokes->options.getArgs("PRESSURE MULTIGRID COARSENING"));
-    ellipticOptionsP.setArgs("MULTIGRID SMOOTHER",                                 stokes->options.getArgs("PRESSURE MULTIGRID SMOOTHER"));
-    ellipticOptionsP.setArgs("MULTIGRID CHEBYSHEV DEGREE",                         stokes->options.getArgs("PRESSURE MULTIGRID CHEBYSHEV DEGREE"));
-    ellipticOptionsP.setArgs("MULTIGRID CHEBYSHEV PARALMOND AGGREGATION STRATEGY", stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND AGGREGATION STRATEGY"));
-    ellipticOptionsP.setArgs("PARALMOND CYCLE",                                    stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND CYCLE"));
-    ellipticOptionsP.setArgs("PARALMOND SMOOTHER",                                 stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND SMOOTHER"));
-    ellipticOptionsP.setArgs("PARALMOND CHEBYSHEV DEGREE",                         stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND CHEBYSHEV DEGREE"));
+    ellipticOptionsP.setArgs("MULTIGRID COARSENING",           stokes->options.getArgs("PRESSURE MULTIGRID COARSENING"));
+    ellipticOptionsP.setArgs("MULTIGRID SMOOTHER",             stokes->options.getArgs("PRESSURE MULTIGRID SMOOTHER"));
+    ellipticOptionsP.setArgs("MULTIGRID CHEBYSHEV DEGREE",     stokes->options.getArgs("PRESSURE MULTIGRID CHEBYSHEV DEGREE"));
+    ellipticOptionsP.setArgs("PARALMOND AGGREGATION STRATEGY", stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND AGGREGATION STRATEGY"));
+    ellipticOptionsP.setArgs("PARALMOND CYCLE",                stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND CYCLE"));
+    ellipticOptionsP.setArgs("PARALMOND SMOOTHER",             stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND SMOOTHER"));
+    ellipticOptionsP.setArgs("PARALMOND CHEBYSHEV DEGREE",     stokes->options.getArgs("PRESSURE MULTIGRID PARALMOND CHEBYSHEV DEGREE"));
 
     ellipticOptionsP.setArgs("VERBOSE", "FALSE");
     ellipticOptionsP.setArgs("INTEGRATION TYPE",     stokes->options.getArgs("INTEGRATION TYPE"));
