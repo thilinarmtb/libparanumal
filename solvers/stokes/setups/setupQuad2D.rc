@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-5.msh
+../../meshes/unitSquareQuad2D-3.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -41,16 +41,16 @@ CUDA
 ################################################
 
 [LAMBDA]
-0.0
+1.0e6
 
 [VELOCITY POLYNOMIAL DEGREE]
-5
+4
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-4
+3
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
@@ -86,8 +86,8 @@ MULTIGRID
 #JACOBI
 
 [PRESSURE BLOCK PRECONDITIONER]
-MASSMATRIX
-#MULTIGRID
+#MASSMATRIX
+MULTIGRID
 
 ################################################
 ################ OTHER OPTIONS #################

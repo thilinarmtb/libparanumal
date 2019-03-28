@@ -112,7 +112,7 @@ typedef struct {
   ogs_t *ogs;              /* Gather-scatter handle (masked for BCs) */
 
   /* Infrastructure for boundary conditions */
-  int *BCType;             /* Phyiscal-to-mathematical BC type code map. */
+  int *BCType;             /* Physical-to-mathematical BC type code map. */
   dlong Nmasked;           /* Number of nodes masked out due to boundary conditions */
 
   dlong* maskIds;          /* Indices of the nodes to be masked */
@@ -149,7 +149,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
 void stokesSolve(stokes_t *stokes, dfloat lambda);
 void stokesOperator(stokes_t *stokes, dfloat lambda,  stokesVec_t v, stokesVec_t Av);
 void stokesPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv);
-void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV);
+void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
 
 void stokesVecAllocate(stokes_t *stokes, stokesVec_t *v);
 void stokesVecFree(stokes_t *stokes, stokesVec_t *v);

@@ -27,11 +27,11 @@ SOFTWARE.
 #include "stokes.h"
 
 static void stokesJacobiPreconditionerSetup(stokes_t *stokes);
-static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV);
+static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV, occa::properties & kernelInfoP);
 
 static void stokesBuildLocalContinuousDiagQuad2D(stokes_t* stokes, dlong e, dfloat *diagA);
 
-void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV)
+void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
 {
   if (stokes->options.compareArgs("PRECONDITIONER", "NONE")) {
     stokes->precon = NULL;
@@ -44,7 +44,7 @@ void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties
 
     stokesJacobiPreconditionerSetup(stokes);
   } else if (stokes->options.compareArgs("PRECONDITIONER", "SCHURCOMPLEMENTBLOCKDIAG")) {
-    stokesSchurComplementBlockDiagPreconditionerSetup(stokes, lambda, kernelInfoV);
+    stokesSchurComplementBlockDiagPreconditionerSetup(stokes, lambda, kernelInfoV, kernelInfoP);
   } else {
     printf("ERROR:  Invalid value %s for [PRECONDITIONER] option.\n",
            stokes->options.getArgs("PRECONDITIONER").c_str());
@@ -101,7 +101,7 @@ static void stokesJacobiPreconditionerSetup(stokes_t *stokes)
   return;
 }
 
-static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV)
+static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP)
 {
   mesh_t     *meshV;
   elliptic_t *elliptic;
@@ -159,7 +159,8 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
 
   stokes->precon->ellipticV = elliptic;
 
-  if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MASSMATRIX")) {
+  if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MASSMATRIX") ||
+      stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID")) {
     stokesVecAllocate(stokes, &stokes->precon->invMM);
 
     for (dlong e = 0; e < stokes->meshP->Nelements; e++) {
@@ -189,7 +190,9 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
     }
     
     stokesVecCopyHostToDevice(stokes->precon->invMM);
-  } else if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID")) {
+  }
+
+  if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID")) {
     setupAide ellipticOptionsP;
 
     stokes->precon->ellipticP = new elliptic_t();
@@ -216,7 +219,9 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
 
     stokes->precon->ellipticP->options = ellipticOptionsP;
 
-    stokes->precon->ellipticP->BCType = stokes->BCType;
+    int BCType[3] = {0, 2, 2};
+    stokes->precon->ellipticP->BCType = (int*)calloc(3, sizeof(int));
+    memcpy(stokes->precon->ellipticP->BCType, BCType, 3*sizeof(int));
 
     stokes->precon->ellipticP->r = (dfloat*)calloc(stokes->NtotalP, sizeof(dfloat));
     stokes->precon->ellipticP->o_r = stokes->precon->ellipticP->mesh->device.malloc(stokes->NtotalP*sizeof(dfloat), elliptic->r);
@@ -226,15 +231,11 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
     /* TODO:  This allocates a whole lot of extra stuff---we may be able to share
      * some scratch arrays with the stokes_t.
      */
-    ellipticSolveSetup(stokes->precon->ellipticP, 0.0, kernelInfoV);
+    ellipticSolveSetup(stokes->precon->ellipticP, 0.0, kernelInfoP);
 
     if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID"))
       parAlmond::Report(stokes->precon->ellipticP->precon->parAlmond);
-
-    stokes->precon->ellipticP = elliptic;
-
   }
-
 
   return;
 }

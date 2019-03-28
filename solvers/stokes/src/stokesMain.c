@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
   options.getArgs("LAMBDA", lambda);
 
-  stokes = stokesSetup(lambda, kernelInfoP, kernelInfoV, options);
+  stokes = stokesSetup(lambda, kernelInfoV, kernelInfoP, options);
   stokesSolve(stokes, lambda);
 
   stokesVecCopyDeviceToHost(stokes->u);

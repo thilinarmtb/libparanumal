@@ -128,7 +128,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
   stokesAllocateScratchVars(stokes);
   stokesSetupBCMask(stokes);
   stokesSetupKernels(stokes, kernelInfoV, kernelInfoP);
-  stokesPreconditionerSetup(stokes, lambda, kernelInfoV);
+  stokesPreconditionerSetup(stokes, lambda, kernelInfoV, kernelInfoP);
 
   return;
 }

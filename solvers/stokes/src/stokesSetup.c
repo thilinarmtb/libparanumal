@@ -132,6 +132,57 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
   stokesSolveSetup(stokes, lambda, eta, kernelInfoV, kernelInfoP);
   stokesSetupRHS(stokes, lambda);
 
+#if 0
+  /* Load initial guess. */
+  const dfloat NOISE_SIZE = 1.0e-8;
+  srand48(67714070);
+
+  for (int e = 0; e < stokes->meshV->Nelements; e++) {
+    for (int i = 0; i < stokes->meshV->Np; i++) {
+      int    ind;
+      dfloat x, y, z;
+
+      ind = e*stokes->meshV->Np + i;
+      x = stokes->meshV->x[ind];
+      y = stokes->meshV->y[ind];
+      z = stokes->meshV->z[ind];
+
+      stokes->u.x[ind] = cos(y)*(1.0 + NOISE_SIZE*drand48());
+      stokes->u.y[ind] = sin(x)*(1.0 + NOISE_SIZE*drand48());
+    }
+  }
+
+  for (int e = 0; e < stokes->meshP->Nelements; e++) {
+    for (int i = 0; i < stokes->meshP->Np; i++) {
+      int    ind;
+      dfloat x, y, z;
+
+      ind = e*stokes->meshP->Np + i;
+      x = stokes->meshP->x[ind];
+      y = stokes->meshP->y[ind];
+      z = stokes->meshP->z[ind];
+
+      stokes->u.p[ind] = (x + y)*(1.0 + NOISE_SIZE*drand48());
+    }
+  }
+
+  //stokesVecCopyHostToDevice(stokes->u);
+
+  //stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, stokes->u.o_x, stokes->u.o_x);
+  //stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, stokes->u.o_y, stokes->u.o_y);
+  //if (stokes->meshV->dim == 3)
+  //  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, stokes->u.o_z, stokes->u.o_z);
+  //stokes->dotMultiplyKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, stokes->u.o_p, stokes->u.o_p);
+
+  //stokesVecUnmaskedGatherScatter(stokes, stokes->u);
+  //if (stokes->Nmasked) {
+  //  stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_x);
+  //  stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_y);
+  //  if (stokes->meshV->dim == 3)
+  //    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_z);
+  //}
+#endif
+
   free(eta);
   return stokes;
 }
@@ -223,19 +274,6 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
         tmp.x[ind] = cos(y);
         tmp.y[ind] = sin(x);
       }
-
-      /*
-      if (stokes->mapB[ind] == 1) {
-        if (fabs(y - 1.0) < 1.0e-12) {
-          tmp.x[ind] = 1.0;
-          tmp.y[ind] = 0.0;
-        } else {
-          tmp.x[ind] = 0.0;
-          tmp.y[ind] = 0.0;
-        }
-      }
-      */
-
     }
   }
 
