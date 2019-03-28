@@ -70,8 +70,6 @@ static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloa
   if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MASSMATRIX")) {
     stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
   } else if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID")) {
-    //Mv.o_p.copyFrom(v.o_p, stokes->NtotalP*sizeof(dfloat));
-
     stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
     ellipticPreconditioner(stokes->precon->ellipticP, 0.0, v.o_p, tmp.o_p);
     stokes->vecScaledAddKernel(stokes->NtotalP, lambda, tmp.o_p, 1.0, Mv.o_p);
