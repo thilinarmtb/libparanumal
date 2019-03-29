@@ -136,12 +136,6 @@ void stokesBuildContinuousQuad2D(stokes_t *stokes, dfloat lambda, nonZero_t **A,
 	      for(int kx=0;kx<mesh->Nq;++kx){
 
 		int id = kx+ky*mesh->Nq;
-		dlong gbase = e*mesh->Np*mesh->Nggeo + id;
-
-		dfloat Grr = mesh->ggeo[gbase + G00ID*mesh->Np];
-		dfloat Grs = mesh->ggeo[gbase + G01ID*mesh->Np];
-		dfloat Gss = mesh->ggeo[gbase + G11ID*mesh->Np];
-		
 		dlong vbase = e*mesh->Np*mesh->Nvgeo + id;
 
 		dfloat rx = mesh->vgeo[vbase + RXID*mesh->Np];
@@ -152,6 +146,7 @@ void stokesBuildContinuousQuad2D(stokes_t *stokes, dfloat lambda, nonZero_t **A,
 
 		dfloat Bn = (kx==nx)*(ky==ny);
 		dfloat Bm = (kx==mx)*(ky==my);
+
 		dfloat Brn = mesh->D[nx+kx*mesh->Nq]*(ky==ny);
 		dfloat Bsn = (kx==nx)*mesh->D[ny+ky*mesh->Nq];
 		dfloat Brm = mesh->D[mx+kx*mesh->Nq]*(ky==my);
@@ -166,8 +161,8 @@ void stokesBuildContinuousQuad2D(stokes_t *stokes, dfloat lambda, nonZero_t **A,
 		Auu += Bxn*JW*Bxm + Byn*JW*Bym; 
 		Avv += Bxn*JW*Bxm + Byn*JW*Bym; // clone
 
-		Auu += JW*lambda*Bn*Bm;
-		Avv += JW*lambda*Bn*Bm;
+		Auu += lambda*Bn*JW*Bm;
+		Avv += lambda*Bn*JW*Bm;
 		
 		Aup += Bxn*JW*Bm; // TW check sign  (dBn/dx, Bm)
 		Avp += Byn*JW*Bm; // TW check sign
