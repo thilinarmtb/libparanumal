@@ -25,18 +25,17 @@ SOFTWARE.
 */
 
 @kernel void stokesOperatorQuad2D(const dlong Nelements,
-				  const dlong offset,
-				  @restrict const dfloat *vgeo,
-				  @restrict const dfloat *D,
-				  const dfloat lambda,
-				  @restrict const dfloat *eta,
-				  @restrict const dfloat *q,
-				  @restrict dfloat *pRaised,
-				  @restrict dfloat *Aq){
-
-
+				                          const dlong offset,
+				                          @restrict const dfloat *vgeo,
+				                          @restrict const dfloat *D,
+				                          const dfloat lambda,
+				                          @restrict const dfloat *eta,
+				                          @restrict const dfloat *q,
+				                          @restrict dfloat *pRaised,
+                                  @restrict dfloat *Aq)
+{
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
-    
+
     @shared dfloat s_D[p_NqV][p_NqV];
 
     @shared dfloat s_U[p_NqV][p_NqV];
@@ -48,7 +47,7 @@ SOFTWARE.
     @shared dfloat s_GVs[p_NqV][p_NqV];
 
     @exclusive dfloat r_AU, r_AV;
-    
+
     // array of threads
     for(int j=0;j<p_NqV;++j;@inner(1)){
       for(int i=0;i<p_NqV;++i;@inner(0)){
@@ -58,105 +57,105 @@ SOFTWARE.
 
         // load pencil of u into register
         const dlong base = i + j*p_NqV + e*p_NpV;
-	
-	s_U[j][i] = q[base + 0*offset]; 
-	s_V[j][i] = q[base + 1*offset];
-	
-	r_AU = 0.f; // zero the accumulator
-	r_AV = 0.f; // zero the accumulator
+
+        s_U[j][i] = q[base + 0*offset];
+        s_V[j][i] = q[base + 1*offset];
+
+        r_AU = 0.f; // zero the accumulator
+        r_AV = 0.f; // zero the accumulator
       }
     }
 
     @barrier("local");
-    
+
     for(int j=0;j<p_NqV;++j;@inner(1)){
       for(int i=0;i<p_NqV;++i;@inner(0)){
 
-	// prefetch geometric factors
-	const dlong gbase = e*p_Nvgeo*p_NpV + j*p_NqV + i;
-	
-	const dfloat rx = vgeo[gbase+p_RXID*p_NpV];
-	const dfloat sx = vgeo[gbase+p_SXID*p_NpV];
-	
-	const dfloat ry = vgeo[gbase+p_RYID*p_NpV];
-	const dfloat sy = vgeo[gbase+p_SYID*p_NpV];
-	
-	const dfloat JW = vgeo[gbase+p_JWID*p_NpV];
+        // prefetch geometric factors
+        const dlong gbase = e*p_Nvgeo*p_NpV + j*p_NqV + i;
 
-	const dlong pid = i + j*p_NqV + e*p_NpV; // 2 ?
-	const dfloat pk = pRaised[pid]; 
-	
+        const dfloat rx = vgeo[gbase+p_RXID*p_NpV];
+        const dfloat sx = vgeo[gbase+p_SXID*p_NpV];
+
+        const dfloat ry = vgeo[gbase+p_RYID*p_NpV];
+        const dfloat sy = vgeo[gbase+p_SYID*p_NpV];
+
+        const dfloat JW = vgeo[gbase+p_JWID*p_NpV];
+
+        const dlong pid = i + j*p_NqV + e*p_NpV; // 2 ?
+        const dfloat pk = pRaised[pid];
+
         const dfloat eta_ji = eta[pid];
-	
-	dfloat Ur = 0.f, Us = 0.f; 
-	dfloat Vr = 0.f, Vs = 0.f;
-	
+
+        dfloat Ur = 0.f, Us = 0.f;
+        dfloat Vr = 0.f, Vs = 0.f;
+
 #pragma unroll p_NqV
-	for(int m = 0; m < p_NqV; m++) {
-	  dfloat Dim = s_D[i][m]; 
-	  dfloat Djm = s_D[j][m];
-	  
-	  Ur += Dim*s_U[j][m];
-	  Vr += Dim*s_V[j][m];
+        for(int m = 0; m < p_NqV; m++) {
+          dfloat Dim = s_D[i][m];
+          dfloat Djm = s_D[j][m];
 
-	  Us += Djm*s_U[m][i];
-	  Vs += Djm*s_V[m][i];
-	}
-	
-	const dfloat G00 = (rx*rx+ry*ry)*JW*eta_ji;
-	const dfloat G01 = (rx*sx+ry*sy)*JW*eta_ji;
-	const dfloat G11 = (sx*sx+sy*sy)*JW*eta_ji;
-	
-	const dfloat JWpk = -JW*pk;// note sign
+          Ur += Dim*s_U[j][m];
+          Vr += Dim*s_V[j][m];
+
+          Us += Djm*s_U[m][i];
+          Vs += Djm*s_V[m][i];
+        }
+
+        const dfloat G00 = (rx*rx+ry*ry)*JW*eta_ji;
+        const dfloat G01 = (rx*sx+ry*sy)*JW*eta_ji;
+        const dfloat G11 = (sx*sx+sy*sy)*JW*eta_ji;
+
+        const dfloat JWpk = -JW*pk;// note sign
 
 
-	// (grad phi, grad U - delta_x p)
-	// (grad phi, grad V - delta_y p)
-	// (grad phi, grad W - delta_z p)
-	s_GUr[j][i] = (G00*Ur + G01*Us) + rx*JWpk;
-	s_GVr[j][i] = (G00*Vr + G01*Vs) + ry*JWpk;
-	
-	s_GUs[j][i] = (G01*Ur + G11*Us) + sx*JWpk;
-	s_GVs[j][i] = (G01*Vr + G11*Vs) + sy*JWpk;
-	
-	r_AU += JW*lambda*s_U[j][i];
-	r_AV += JW*lambda*s_V[j][i];
-	
-	// (phi, divU)
-	dfloat AP = 0;
-	AP += rx*Ur + sx*Us;
-	AP += ry*Vr + sy*Vs;
-	
-	pRaised[pid] = -JW*AP;
+        // (grad phi, grad U - delta_x p)
+        // (grad phi, grad V - delta_y p)
+        // (grad phi, grad W - delta_z p)
+        s_GUr[j][i] = (G00*Ur + G01*Us) + rx*JWpk;
+        s_GVr[j][i] = (G00*Vr + G01*Vs) + ry*JWpk;
+
+        s_GUs[j][i] = (G01*Ur + G11*Us) + sx*JWpk;
+        s_GVs[j][i] = (G01*Vr + G11*Vs) + sy*JWpk;
+
+        r_AU += JW*lambda*s_U[j][i];
+        r_AV += JW*lambda*s_V[j][i];
+
+        // (phi, divU)
+        dfloat AP = 0;
+        AP += rx*Ur + sx*Us;
+        AP += ry*Vr + sy*Vs;
+
+        pRaised[pid] = -JW*AP;
       }
     }
-    
+
     @barrier("local");
-    
+
     for(int j=0;j<p_NqV;++j;@inner(1)){
       for(int i=0;i<p_NqV;++i;@inner(0)){
-	
-	dfloat AUtmp = 0, AVtmp = 0;
-	
+
+        dfloat AUtmp = 0, AVtmp = 0;
+
 #pragma unroll p_NqV
-	for(int m = 0; m < p_NqV; m++){
-	  dfloat Dmi = s_D[m][i];
-	  dfloat Dmj = s_D[m][j];
-	  
-	  AUtmp += Dmi*s_GUr[j][m];
-	  AUtmp += Dmj*s_GUs[m][i];
-	  
-	  AVtmp += Dmi*s_GVr[j][m];
-	  AVtmp += Dmj*s_GVs[m][i];
-	}
-	
-	r_AU += AUtmp;
-	r_AV += AVtmp;
-	
-	// write out U,V
-	const dlong id = e*p_NpV + j*p_NqV + i;
-	Aq[id+0*offset] = r_AU;
-	Aq[id+1*offset] = r_AV;
+        for(int m = 0; m < p_NqV; m++){
+          dfloat Dmi = s_D[m][i];
+          dfloat Dmj = s_D[m][j];
+
+          AUtmp += Dmi*s_GUr[j][m];
+          AUtmp += Dmj*s_GUs[m][i];
+
+          AVtmp += Dmi*s_GVr[j][m];
+          AVtmp += Dmj*s_GVs[m][i];
+        }
+
+        r_AU += AUtmp;
+        r_AV += AVtmp;
+
+        // write out U,V
+        const dlong id = e*p_NpV + j*p_NqV + i;
+        Aq[id+0*offset] = r_AU;
+        Aq[id+1*offset] = r_AV;
       }
     }
   }
