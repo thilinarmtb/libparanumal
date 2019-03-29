@@ -269,10 +269,17 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
+      z = stokes->meshV->z[ind];
 
       if (stokes->mapB[ind] == 1) {
-        tmp.x[ind] = cos(y);
-        tmp.y[ind] = sin(x);
+        if (stokes->meshV->dim == 2) {
+          tmp.x[ind] = cos(y);
+          tmp.y[ind] = sin(x);
+        } else if (stokes->meshV->dim == 3) {
+          tmp.x[ind] = -6.0*z*pow(1.0 - z*z, 2.0);
+          tmp.y[ind] = -6.0*x*pow(1.0 - x*x, 2.0);
+          tmp.z[ind] = -6.0*y*pow(1.0 - y*y, 2.0);
+        }
       }
     }
   }
@@ -282,7 +289,7 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
   stokesVecZero(stokes, stokes->u);
 
   if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
-#if 0
+#if 1
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_ggeo,
                             stokes->meshV->o_Dmatrices,

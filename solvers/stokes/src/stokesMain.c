@@ -84,7 +84,17 @@ int main(int argc, char **argv)
           stokesTestSolutionDirichletQuad2D(x, y, &ux_exact, &uy_exact);
         }
       } else if (stokes->meshV->dim == 3) {
-        stokesTestSolutionConstantViscosityHex3D(x, y, z, &ux_exact, &uy_exact, &uz_exact);
+        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+          stokes->u.x[ind] = -6.0*z*pow(1.0 - z*z, 2.0);  // Manually insert the boundary data.
+          stokes->u.y[ind] = -6.0*x*pow(1.0 - x*x, 2.0);
+          stokes->u.z[ind] = -6.0*y*pow(1.0 - y*y, 2.0);
+
+          ux_exact = -6.0*z*pow(1.0 - z*z, 2.0);  // Manually insert the boundary data.
+          uy_exact = -6.0*x*pow(1.0 - x*x, 2.0);
+          uz_exact = -6.0*y*pow(1.0 - y*y, 2.0);
+        } else {
+          stokesTestSolutionConstantViscosityHex3D(x, y, z, &ux_exact, &uy_exact, &uz_exact);
+        }
       }
 
       errx = stokes->u.x[ind] - ux_exact;

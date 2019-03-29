@@ -28,8 +28,10 @@ SOFTWARE.
 				 const dlong offset,
 				 @restrict const dfloat *vgeo,
 				 @restrict const dfloat *D,
+         const dfloat lambda,
 				 @restrict const dfloat *eta,
 				 @restrict const dfloat *q,
+         @restrict dfloat *pRaised,
 				 @restrict dfloat *Aq)
 {
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
@@ -153,9 +155,11 @@ SOFTWARE.
 	    const dfloat G12 = (sx*tx+sy*ty+sz*tz)*JW;
 	    const dfloat G22 = (tx*tx+ty*ty+tz*tz)*JW;
 
-	    const dlong pid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np + 3*offset;
+	    //const dlong pid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np + 3*offset;
+	    const dlong pid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
 
-	    const dfloat pk = q[pid]; 
+	    //const dfloat pk = q[pid]; 
+	    const dfloat pk = pRaised[pid]; 
 
 	    const dfloat JWpk = -JW*pk;
 	    
@@ -169,6 +173,15 @@ SOFTWARE.
 	    s_GUs[j][i] = (G01*Ur + G11*Us + G12*r_Ut) + sx*JWpk;
 	    s_GVs[j][i] = (G01*Vr + G11*Vs + G12*r_Vt) + sy*JWpk;
 	    s_GWs[j][i] = (G01*Wr + G11*Ws + G12*r_Wt) + sz*JWpk;
+
+	    // (phi, divU)
+	    dfloat APk = 0;
+	    APk += rx*Ur + sx*Us + tx*r_Ut;
+	    APk += ry*Vr + sy*Vs + ty*r_Vt;
+	    APk += rz*Wr + sz*Ws + tz*r_Wt;
+
+	    //Aq[pid] = JW*APk;
+	    pRaised[pid] = -JW*APk;
 	    
 	    r_Ut = G02*Ur + G12*Us + G22*r_Ut + tx*JWpk;
 	    r_Vt = G02*Vr + G12*Vs + G22*r_Vt + ty*JWpk;
@@ -178,13 +191,6 @@ SOFTWARE.
 	    r_AV[k] += JW*lambda*r_V[k];
 	    r_AW[k] += JW*lambda*r_W[k];
 	    
-	    // (phi, divU)
-	    dfloat APk = 0;
-	    APk += rx*Ur + sx*Us + tx*r_Ut;
-	    APk += ry*Vr + sy*Vs + ty*r_Vt;
-	    APk += rz*Wr + sz*Ws + tz*r_Wt;
-	    
-	    Aq[pid] = JW*APk;
 	    
           }
         }

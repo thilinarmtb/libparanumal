@@ -64,28 +64,30 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
     stokes->cubEta[i] = 1.0;
   stokes->o_cubEta = stokes->meshV->device.malloc(stokes->meshV->Nelements*stokes->meshV->cubNp*sizeof(dfloat), stokes->cubEta);
 
-  sprintf(fname, DSTOKES "/data/stokesN%02d.dat", stokes->meshV->N);
-  fp = fopen(fname, "r");
-  if (!fp) {
-    printf("ERROR:  Cannot open file '%s' for reading.\n", fname);
-  }
+  if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
+    sprintf(fname, DSTOKES "/data/stokesN%02d.dat", stokes->meshV->N);
+    fp = fopen(fname, "r");
+    if (!fp) {
+      printf("ERROR:  Cannot open file '%s' for reading.\n", fname);
+    }
 
-  readDfloatArray(fp, "Pressure 1D cubature interpolation matrix", &stokes->cubInterpP, &Nrows, &Ncols);
-  if (Nrows != stokes->meshV->cubNq) {
-    printf("ERROR:  cubNq mismatch in pressure interpolation matrix (%d vs. %d).\n", Nrows, stokes->meshV->cubNq);
-    exit(-1);
-  } else if (Ncols != stokes->meshP->Nq) {
-    printf("ERROR:  Pressure Nq mismatch in pressure interpolation matrix (%d vs. %d).\n", Ncols, stokes->meshP->Nq);
-    exit(-1);
-  }
+    readDfloatArray(fp, "Pressure 1D cubature interpolation matrix", &stokes->cubInterpP, &Nrows, &Ncols);
+    if (Nrows != stokes->meshV->cubNq) {
+      printf("ERROR:  cubNq mismatch in pressure interpolation matrix (%d vs. %d).\n", Nrows, stokes->meshV->cubNq);
+      exit(-1);
+    } else if (Ncols != stokes->meshP->Nq) {
+      printf("ERROR:  Pressure Nq mismatch in pressure interpolation matrix (%d vs. %d).\n", Ncols, stokes->meshP->Nq);
+      exit(-1);
+    }
 
-  readDfloatArray(fp, "Cubature 1D differentiation matrix", &stokes->cubD, &Nrows, &Ncols);
-  if (Nrows != stokes->meshV->cubNq) {
-    printf("ERROR:  cubNq mismatch in differentiation matrix (%d vs. %d).\n", Nrows, stokes->meshV->cubNq);
-    exit(-1);
+    readDfloatArray(fp, "Cubature 1D differentiation matrix", &stokes->cubD, &Nrows, &Ncols);
+    if (Nrows != stokes->meshV->cubNq) {
+      printf("ERROR:  cubNq mismatch in differentiation matrix (%d vs. %d).\n", Nrows, stokes->meshV->cubNq);
+      exit(-1);
+    }
+
+    fclose(fp);
   }
-  
-  fclose(fp);
 
   stokes->cubInterpV = stokes->meshV->cubInterp;
 
@@ -121,8 +123,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
   if (stokes->meshV->dim == 2) {
     kernelInfoV["includes"] += DSTOKES "/data/stokesBoundary2D.h";
   } else if (stokes->meshV->dim == 3) {
-    printf("ERROR:  Not implemented.\n");
-    exit(-1);
+    kernelInfoV["includes"] += DSTOKES "/data/stokesBoundary3D.h";
   }
 
   stokesAllocateScratchVars(stokes);
@@ -225,10 +226,10 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
     stokes->raisePressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureQuad2D.okl", "stokesRaisePressureQuad2D", kernelInfoV);
 
     if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
-      stokes->divergenceKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
-      stokes->gradientKernel   = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
-      stokes->stiffnessKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfoV);
-      stokes->stokesOperatorKernel  = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesOperatorQuad2D.okl", "stokesOperatorQuad2D", kernelInfoV);      
+      stokes->divergenceKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceQuad2D", kernelInfoV);
+      stokes->gradientKernel       = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientQuad2D", kernelInfoV);
+      stokes->stiffnessKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessQuad2D.okl", "stokesStiffnessQuad2D", kernelInfoV);
+      stokes->stokesOperatorKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesOperatorQuad2D.okl", "stokesOperatorQuad2D", kernelInfoV);
     } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
       stokes->divergenceKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceQuad2D.okl", "stokesDivergenceCubatureQuad2D", kernelInfoV);
       stokes->gradientKernel   = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientQuad2D.okl", "stokesGradientCubatureQuad2D", kernelInfoV);
@@ -241,9 +242,17 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   } else if ((stokes->meshV->dim == 3) && (stokes->elementType == HEXAHEDRA)) {
     stokes->lowerPressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureHex3D.okl", "stokesLowerPressureHex3D", kernelInfoV);
     stokes->raisePressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesRaisePressureHex3D.okl", "stokesRaisePressureHex3D", kernelInfoV);
-    stokes->divergenceKernel    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceHex3D.okl", "stokesDivergenceHex3D", kernelInfoV);
-    stokes->gradientKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientHex3D.okl", "stokesGradientHex3D", kernelInfoV);
-    stokes->stiffnessKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessHex3D.okl", "stokesStiffnessHex3D", kernelInfoV);
+
+    if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
+      stokes->divergenceKernel     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesDivergenceHex3D.okl", "stokesDivergenceHex3D", kernelInfoV);
+      stokes->gradientKernel       = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGradientHex3D.okl", "stokesGradientHex3D", kernelInfoV);
+      stokes->stiffnessKernel      = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesStiffnessHex3D.okl", "stokesStiffnessHex3D", kernelInfoV);
+      stokes->stokesOperatorKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesOperatorHex3D.okl", "stokesOperatorHex3D", kernelInfoV);
+    } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
+      printf("ERROR:  Not implemented.\n");
+      MPI_Finalize();
+      exit(-1);
+    }
   }
 
   return;
