@@ -330,7 +330,7 @@ SOFTWARE.
 
             Wr += Dim*s_W[k][j][m];
             Ws += Djm*s_W[k][m][i];
-	    Wt += Djm*s_W[m][j][i];
+	    Wt += Dkm*s_W[m][j][i];
           }
 
           //const dlong pid = i + j*p_NqV + k*p_NqV*p_NqV + e*p_NpV + 3*offset;
