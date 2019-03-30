@@ -288,6 +288,7 @@ SOFTWARE.
         // load pencil of u into register
         const dlong base = i + j*p_NqV + e*p_NpV;
 
+#pragma unroll p_NqV
         for(int k = 0; k < p_NqV; k++) {
           s_U[k][j][i] = q[base + k*p_NqV*p_NqV + 0*offset];
           s_V[k][j][i] = q[base + k*p_NqV*p_NqV + 1*offset];
@@ -321,15 +322,15 @@ SOFTWARE.
 	    dfloat Dkm = s_D[k][m];
 
             Ur += Dim*s_U[k][j][m];
-            Us += Djm*s_U[k][m][i];
-	    Ut += Dkm*s_U[m][j][i];
-
-            Vr += Dim*s_V[k][j][m];
-            Vs += Djm*s_V[k][m][i];
-	    Vt += Dkm*s_V[m][j][i];
-
+	    Vr += Dim*s_V[k][j][m];
             Wr += Dim*s_W[k][j][m];
+	    
+            Us += Djm*s_U[k][m][i];
+	    Vs += Djm*s_V[k][m][i];
             Ws += Djm*s_W[k][m][i];
+	    
+	    Ut += Dkm*s_U[m][j][i];
+	    Vt += Dkm*s_V[m][j][i];
 	    Wt += Dkm*s_W[m][j][i];
           }
 
@@ -358,26 +359,6 @@ SOFTWARE.
 
           const dfloat JW = vgeo[gbase+p_JWID*p_NpV];
 
-          const dfloat G00 = (rx*rx+ry*ry+rz*rz)*JW*eta_kji;
-          const dfloat G01 = (rx*sx+ry*sy+rz*sz)*JW*eta_kji;
-          const dfloat G02 = (rx*tx+ry*ty+rz*tz)*JW*eta_kji;
-          const dfloat G11 = (sx*sx+sy*sy+sz*sz)*JW*eta_kji;
-          const dfloat G12 = (sx*tx+sy*ty+sz*tz)*JW*eta_kji;
-          const dfloat G22 = (tx*tx+ty*ty+tz*tz)*JW*eta_kji;
-
-          const dfloat JWpk = -JW*pk;
-
-          // (grad phi, grad U - delta_x p)
-          // (grad phi, grad V - delta_y p)
-          // (grad phi, grad W - delta_z p)
-          s_GUr[j][i] = (G00*Ur + G01*Us + G02*Ut) + rx*JWpk;
-          s_GVr[j][i] = (G00*Vr + G01*Vs + G02*Vt) + ry*JWpk;
-          s_GWr[j][i] = (G00*Wr + G01*Ws + G02*Wt) + rz*JWpk;
-
-          s_GUs[j][i] = (G01*Ur + G11*Us + G12*Ut) + sx*JWpk;
-          s_GVs[j][i] = (G01*Vr + G11*Vs + G12*Vt) + sy*JWpk;
-          s_GWs[j][i] = (G01*Wr + G11*Ws + G12*Wt) + sz*JWpk;
-
           // (phi, divU)
           dfloat APk = 0;
           APk += rx*Ur + sx*Us + tx*Ut;
@@ -386,15 +367,33 @@ SOFTWARE.
 
           //Aq[pid] = JW*APk;
           pRaised[pid] = -JW*APk;
-
-          r_AU[k] += JW*lambda*s_U[k][j][i];
-          r_AV[k] += JW*lambda*s_V[k][j][i];
-          r_AW[k] += JW*lambda*s_W[k][j][i];
 	  
-          const dfloat r_Ut = G02*Ur + G12*Us + G22*r_Ut + tx*JWpk;
-          const dfloat r_Vt = G02*Vr + G12*Vs + G22*r_Vt + ty*JWpk;
-          const dfloat r_Wt = G02*Wr + G12*Ws + G22*r_Wt + tz*JWpk;
+          const dfloat JWpk = -JW*pk;
 
+          // (grad phi, grad U - delta_x p)
+          // (grad phi, grad V - delta_y p)
+          // (grad phi, grad W - delta_z p)
+          const dfloat G00 = (rx*rx+ry*ry+rz*rz)*JW*eta_kji;
+          const dfloat G01 = (rx*sx+ry*sy+rz*sz)*JW*eta_kji;
+          const dfloat G02 = (rx*tx+ry*ty+rz*tz)*JW*eta_kji;
+	  
+          s_GUr[j][i] = (G00*Ur + G01*Us + G02*Ut) + rx*JWpk;
+          s_GVr[j][i] = (G00*Vr + G01*Vs + G02*Vt) + ry*JWpk;
+          s_GWr[j][i] = (G00*Wr + G01*Ws + G02*Wt) + rz*JWpk;
+
+          const dfloat G11 = (sx*sx+sy*sy+sz*sz)*JW*eta_kji;
+          const dfloat G12 = (sx*tx+sy*ty+sz*tz)*JW*eta_kji;
+	  
+          s_GUs[j][i] = (G01*Ur + G11*Us + G12*Ut) + sx*JWpk;
+          s_GVs[j][i] = (G01*Vr + G11*Vs + G12*Vt) + sy*JWpk;
+          s_GWs[j][i] = (G01*Wr + G11*Ws + G12*Wt) + sz*JWpk;
+
+          const dfloat G22 = (tx*tx+ty*ty+tz*tz)*JW*eta_kji;
+	  
+          const dfloat r_Ut = G02*Ur + G12*Us + G22*Ut + tx*JWpk;
+          const dfloat r_Vt = G02*Vr + G12*Vs + G22*Vt + ty*JWpk;
+          const dfloat r_Wt = G02*Wr + G12*Ws + G22*Wt + tz*JWpk;
+	  
 #pragma unroll p_NqV
           for(int m = 0; m < p_NqV; m++){
 	    dfloat Dkm = s_D[k][m];
@@ -402,6 +401,10 @@ SOFTWARE.
             r_AV[m] += Dkm*r_Vt;
             r_AW[m] += Dkm*r_Wt;
 	  }
+	  
+          r_AU[k] += JW*lambda*s_U[k][j][i];
+          r_AV[k] += JW*lambda*s_V[k][j][i];
+          r_AW[k] += JW*lambda*s_W[k][j][i];	 
 	  
         }
       }
@@ -417,17 +420,15 @@ SOFTWARE.
           for(int m = 0; m < p_NqV; m++){
             // 9 shared, 18 flops => 12TB/s*18/(9*8) = 3TFLOPS/s
             dfloat Dmi = s_D[m][i];
-            dfloat Dmj = s_D[m][j];	    
+            dfloat Dmj = s_D[m][j];	     
 
             AUtmp += Dmi*s_GUr[j][m];
-            AUtmp += Dmj*s_GUs[m][i];
-
-            AVtmp += Dmi*s_GVr[j][m];
-            AVtmp += Dmj*s_GVs[m][i];
-
+	    AVtmp += Dmi*s_GVr[j][m];
             AWtmp += Dmi*s_GWr[j][m];
+	    
+            AUtmp += Dmj*s_GUs[m][i];
+            AVtmp += Dmj*s_GVs[m][i];
             AWtmp += Dmj*s_GWs[m][i];
-
           }
 
           r_AU[k] += AUtmp;
