@@ -24,7 +24,9 @@ SOFTWARE.
 
 */
 
-@kernel void stokesOperatorHex3D(const dlong Nelements,
+#define stokesOperatorHex3D_v01 stokesOperatorHex3D
+
+@kernel void stokesOperatorHex3D_v00(const dlong Nelements,
                                  const dlong offset,
                                  @restrict const dfloat *vgeo,
                                  @restrict const dfloat *D,
@@ -230,6 +232,210 @@ SOFTWARE.
         }
       }
     }
+    
+    // write out
+
+    for(int j=0;j<p_NqV;++j;@inner(1)){
+      for(int i=0;i<p_NqV;++i;@inner(0)){
+#pragma unroll p_NqV
+        for(int k = 0; k < p_NqV; k++){
+          const dlong id = e*p_NpV +k*p_NqV*p_NqV+ j*p_NqV + i;
+          Aq[id+0*offset] = r_AU[k];
+          Aq[id+1*offset] = r_AV[k];
+          Aq[id+2*offset] = r_AW[k];
+        }
+      }
+    }
+  }
+}
+
+
+@kernel void stokesOperatorHex3D_v01(const dlong Nelements,
+                                 const dlong offset,
+                                 @restrict const dfloat *vgeo,
+                                 @restrict const dfloat *D,
+                                 const dfloat lambda,
+                                 @restrict const dfloat *eta,
+                                 @restrict const dfloat *q,
+                                 @restrict dfloat *pRaised,
+                                 @restrict dfloat *Aq)
+{
+  for(dlong e=0; e<Nelements; ++e; @outer(0)){
+
+    @shared dfloat s_D[p_NqV][p_NqV];
+   
+    @shared dfloat s_U[p_NqV][p_NqV][p_NqV];
+    @shared dfloat s_V[p_NqV][p_NqV][p_NqV];
+    @shared dfloat s_W[p_NqV][p_NqV][p_NqV];
+
+    @shared dfloat s_GUr[p_NqV][p_NqV];
+    @shared dfloat s_GUs[p_NqV][p_NqV];
+    @shared dfloat s_GVr[p_NqV][p_NqV];
+    @shared dfloat s_GVs[p_NqV][p_NqV];
+    @shared dfloat s_GWr[p_NqV][p_NqV];
+    @shared dfloat s_GWs[p_NqV][p_NqV];
+    
+    // heavy on registers (FP64, 2*3*8 for N=7)
+    @exclusive dfloat r_AU[p_NqV], r_AV[p_NqV], r_AW[p_NqV];
+
+    // array of threads
+    for(int j=0;j<p_NqV;++j;@inner(1)){
+      for(int i=0;i<p_NqV;++i;@inner(0)){
+        //load D into local memory
+        // s_D[i][j] = d \phi_i at node j
+        s_D[j][i] = D[p_NqV*j+i]; // D is column major
+
+        // load pencil of u into register
+        const dlong base = i + j*p_NqV + e*p_NpV;
+
+        for(int k = 0; k < p_NqV; k++) {
+          s_U[k][j][i] = q[base + k*p_NqV*p_NqV + 0*offset];
+          s_V[k][j][i] = q[base + k*p_NqV*p_NqV + 1*offset];
+          s_W[k][j][i] = q[base + k*p_NqV*p_NqV + 2*offset];
+
+          r_AU[k] = 0.f; // zero the accumulator
+          r_AV[k] = 0.f; // zero the accumulator
+          r_AW[k] = 0.f; // zero the accumulator
+        }
+      }
+    }
+
+    // Layer by layer
+#pragma unroll p_NqV
+    for(int k = 0;k < p_NqV; k++){
+
+      @barrier("local");
+
+      for(int j=0;j<p_NqV;++j;@inner(1)){
+        for(int i=0;i<p_NqV;++i;@inner(0)){
+
+          dfloat Ur = 0.f, Us = 0.f, Ut = 0.f;
+          dfloat Vr = 0.f, Vs = 0.f, Vt = 0.f;
+          dfloat Wr = 0.f, Ws = 0.f, Wt = 0.f;
+
+#pragma unroll p_NqV
+          for(int m = 0; m < p_NqV; m++) {
+            // 12 shared, 18 flops => 12TB*18/(12*8) = 2.25TFLOPS/s
+            dfloat Dim = s_D[i][m];
+            dfloat Djm = s_D[j][m];
+	    dfloat Dkm = s_D[k][m];
+
+            Ur += Dim*s_U[k][j][m];
+            Us += Djm*s_U[k][m][i];
+	    Ut += Dkm*s_U[m][j][i];
+
+            Vr += Dim*s_V[k][j][m];
+            Vs += Djm*s_V[k][m][i];
+	    Vt += Dkm*s_V[m][j][i];
+
+            Wr += Dim*s_W[k][j][m];
+            Ws += Djm*s_W[k][m][i];
+	    Wt += Djm*s_W[m][j][i];
+          }
+
+          //const dlong pid = i + j*p_NqV + k*p_NqV*p_NqV + e*p_NpV + 3*offset;
+          const dlong pid = i + j*p_NqV + k*p_NqV*p_NqV + e*p_NpV;
+
+          //const dfloat pk = q[pid];
+          const dfloat pk = pRaised[pid];
+
+	  const dfloat eta_kji = eta[pid];
+	  
+          // prefetch geometric factors
+          const dlong gbase = e*p_Nvgeo*p_NpV + k*p_NqV*p_NqV + j*p_NqV + i;
+
+          const dfloat rx = vgeo[gbase+p_RXID*p_NpV];
+          const dfloat sx = vgeo[gbase+p_SXID*p_NpV];
+          const dfloat tx = vgeo[gbase+p_TXID*p_NpV];
+
+          const dfloat ry = vgeo[gbase+p_RYID*p_NpV];
+          const dfloat sy = vgeo[gbase+p_SYID*p_NpV];
+          const dfloat ty = vgeo[gbase+p_TYID*p_NpV];
+
+          const dfloat rz = vgeo[gbase+p_RZID*p_NpV];
+          const dfloat sz = vgeo[gbase+p_SZID*p_NpV];
+          const dfloat tz = vgeo[gbase+p_TZID*p_NpV];
+
+          const dfloat JW = vgeo[gbase+p_JWID*p_NpV];
+
+          const dfloat G00 = (rx*rx+ry*ry+rz*rz)*JW*eta_kji;
+          const dfloat G01 = (rx*sx+ry*sy+rz*sz)*JW*eta_kji;
+          const dfloat G02 = (rx*tx+ry*ty+rz*tz)*JW*eta_kji;
+          const dfloat G11 = (sx*sx+sy*sy+sz*sz)*JW*eta_kji;
+          const dfloat G12 = (sx*tx+sy*ty+sz*tz)*JW*eta_kji;
+          const dfloat G22 = (tx*tx+ty*ty+tz*tz)*JW*eta_kji;
+
+          const dfloat JWpk = -JW*pk;
+
+          // (grad phi, grad U - delta_x p)
+          // (grad phi, grad V - delta_y p)
+          // (grad phi, grad W - delta_z p)
+          s_GUr[j][i] = (G00*Ur + G01*Us + G02*Ut) + rx*JWpk;
+          s_GVr[j][i] = (G00*Vr + G01*Vs + G02*Vt) + ry*JWpk;
+          s_GWr[j][i] = (G00*Wr + G01*Ws + G02*Wt) + rz*JWpk;
+
+          s_GUs[j][i] = (G01*Ur + G11*Us + G12*Ut) + sx*JWpk;
+          s_GVs[j][i] = (G01*Vr + G11*Vs + G12*Vt) + sy*JWpk;
+          s_GWs[j][i] = (G01*Wr + G11*Ws + G12*Wt) + sz*JWpk;
+
+          // (phi, divU)
+          dfloat APk = 0;
+          APk += rx*Ur + sx*Us + tx*Ut;
+          APk += ry*Vr + sy*Vs + ty*Vt;
+          APk += rz*Wr + sz*Ws + tz*Wt;
+
+          //Aq[pid] = JW*APk;
+          pRaised[pid] = -JW*APk;
+
+          r_AU[k] += JW*lambda*s_U[k][j][i];
+          r_AV[k] += JW*lambda*s_V[k][j][i];
+          r_AW[k] += JW*lambda*s_W[k][j][i];
+	  
+          const dfloat r_Ut = G02*Ur + G12*Us + G22*r_Ut + tx*JWpk;
+          const dfloat r_Vt = G02*Vr + G12*Vs + G22*r_Vt + ty*JWpk;
+          const dfloat r_Wt = G02*Wr + G12*Ws + G22*r_Wt + tz*JWpk;
+
+#pragma unroll p_NqV
+          for(int m = 0; m < p_NqV; m++){
+	    dfloat Dkm = s_D[k][m];
+            r_AU[m] += Dkm*r_Ut;
+            r_AV[m] += Dkm*r_Vt;
+            r_AW[m] += Dkm*r_Wt;
+	  }
+	  
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_NqV;++j;@inner(1)){
+        for(int i=0;i<p_NqV;++i;@inner(0)){
+
+          dfloat AUtmp = 0, AVtmp = 0, AWtmp = 0;
+
+#pragma unroll p_NqV
+          for(int m = 0; m < p_NqV; m++){
+            // 9 shared, 18 flops => 12TB/s*18/(9*8) = 3TFLOPS/s
+            dfloat Dmi = s_D[m][i];
+            dfloat Dmj = s_D[m][j];	    
+
+            AUtmp += Dmi*s_GUr[j][m];
+            AUtmp += Dmj*s_GUs[m][i];
+
+            AVtmp += Dmi*s_GVr[j][m];
+            AVtmp += Dmj*s_GVs[m][i];
+
+            AWtmp += Dmi*s_GWr[j][m];
+            AWtmp += Dmj*s_GWs[m][i];
+
+          }
+
+          r_AU[k] += AUtmp;
+          r_AV[k] += AVtmp;
+          r_AW[k] += AWtmp;
+        }
+      }
+    }
 
     // write out
 
@@ -246,3 +452,4 @@ SOFTWARE.
     }
   }
 }
+
