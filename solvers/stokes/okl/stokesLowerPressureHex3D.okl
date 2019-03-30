@@ -24,6 +24,99 @@ SOFTWARE.
 
 */
 
+
+/* Raises the pressure variable into the velocity space. */
+@kernel void stokesLowerPressureHex3D(const dlong Nelements,
+                                      @restrict const dfloat *interpRaise,
+                                      @restrict const dfloat *pRaised,
+                                      @restrict dfloat *p)
+{
+
+  for (int e = 0; e < Nelements; e++; @outer(0)) {
+
+    @shared dfloat s_p[p_NqV][p_NqV];
+    @shared dfloat s_p1[p_NqV][p_NqV];
+    @shared dfloat s_interpRaise[p_NqV][p_NqP];
+    
+    @exclusive dfloat r_p[p_NqP];
+    
+    for (int j = 0; j < p_NqV; j++; @inner(1)) {
+      for (int i = 0; i < p_NqV; i++; @inner(0)) {
+	
+	if(i<p_NqP)
+	  s_interpRaise[j][i] = interpRaise[j*p_NqP+i];
+	
+	for(int c=0;c<p_NqP;++c){
+	  r_p[c] = 0;
+	}
+      }
+    }
+
+    @barrier("local");
+    
+    for (int j = 0; j < p_NqV; j++; @inner(1)) {
+      for (int i = 0; i < p_NqV; i++; @inner(0)) {
+	
+	for(int k=0;k<p_NqV;++k){
+	  dfloat pij = pRaised[e*p_NpV + k*p_NqV*p_NqV + j*p_NqV + i];
+	  for(int c=0;c<p_NqP;++c){
+	    r_p[c] += s_interpRaise[k][c]*pij;
+	  }
+	}
+      }
+    }
+    
+    for(int c=0;c<p_NqP;++c){
+
+      @barrier("local");
+      
+      for (int j = 0; j < p_NqV; j++; @inner(1)) {
+	for (int i = 0; i < p_NqV; i++; @inner(0)) {
+	  
+	  s_p[j][i] = r_p[c];
+	}
+      }
+      
+      @barrier("local");
+      
+      for (int b = 0; b < p_NqV; b++; @inner(1)) {
+	for (int i = 0; i < p_NqV; i++; @inner(0)) {
+	  
+	  if(b<p_NqP){
+	    dfloat Ip = 0;
+	    
+	    for(int j=0;j<p_NqV;++j){
+	      Ip += s_interpRaise[j][b]*s_p[j][i];
+	    }
+	    
+	    s_p1[b][i] = Ip;
+	  }
+	}
+      }
+      
+      @barrier("local");
+      
+      for (int b = 0; b < p_NqV; b++; @inner(1)) {
+	for (int a = 0; a < p_NqV; a++; @inner(0)) {
+
+	  if(a<p_NqP && b<p_NqP){
+	    dfloat Ip = 0;
+	    
+	    for(int i=0;i<p_NqV;++i){
+	      Ip += s_interpRaise[i][a]*s_p1[b][i];
+	    }
+	    
+	    p[e*p_NpP + c*p_NqP*p_NqP + b*p_NqP + a] = Ip;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+
+#if 0
 /* Lowers a raised pressure variable down to the pressure space by transposing
  * the raising operator.
  */
@@ -57,3 +150,4 @@ SOFTWARE.
   }
 }
 
+#endif
