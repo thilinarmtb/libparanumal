@@ -114,7 +114,7 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
-      z = stokes->meshV->y[ind];
+      z = stokes->meshV->z[ind];
 
       if (dim == 2) {
         eta[ind] = 1.0;
