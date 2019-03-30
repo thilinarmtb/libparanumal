@@ -80,8 +80,6 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
   if (dim == 2) {
     if (elementType == QUADRILATERALS) {
       meshOccaSetup2D(stokes->meshV, options, kernelInfoV);
-      //      meshOccaSetup2D(stokes->meshP, options, kernelInfoP);
-      void meshOccaSetup2D(mesh2D *mesh, occa::device &device, setupAide &newOptions, occa::properties &kernelInfo);
       meshOccaSetup2D(stokes->meshP, stokes->meshV->device, options, kernelInfoP);
     } else {
       printf("ERROR:  Support for 2D elements other than QUADRILATERALS not yet implemented.\n");
@@ -90,8 +88,11 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
     }
   } else if (dim == 3) {
     if (elementType == HEXAHEDRA) {
+      //      meshOccaSetup3D(stokes->meshV, options, kernelInfoV);
+      //      meshOccaSetup3D(stokes->meshP, options, kernelInfoP);
+
       meshOccaSetup3D(stokes->meshV, options, kernelInfoV);
-      meshOccaSetup3D(stokes->meshP, options, kernelInfoP);
+      meshOccaSetup3D(stokes->meshP, stokes->meshV->device, options, kernelInfoP);
     } else {
       printf("ERROR:  Support for 3D elements other than HEXAHEDRA not yet implemented.\n");
       MPI_Finalize();
