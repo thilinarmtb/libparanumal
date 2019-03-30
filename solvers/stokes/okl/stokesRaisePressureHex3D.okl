@@ -34,24 +34,85 @@ SOFTWARE.
    * so we don't care.
    */
   for (int e = 0; e < Nelements; e++; @outer(0)) {
-    for (int i = 0; i < p_NqV; i++; @inner(2)) {
+
+    @shared dfloat s_p[p_NqV][p_NqV];
+    @shared dfloat s_p1[p_NqV][p_NqV];
+    @shared dfloat s_interpRaise[p_NqV][p_NqP];
+    
+    @exclusive dfloat r_p[p_NqV];
+    
+    for (int b = 0; b < p_NqV; b++; @inner(1)) {
+      for (int a = 0; a < p_NqV; a++; @inner(0)) {
+
+	if(a<p_NqP)
+	  s_interpRaise[b][a] = interpRaise[b*p_NqP+a];
+	
+	for(int c=0;c<p_NqV;++c){
+	  r_p[c] = 0;
+	}
+      }
+    }
+
+    @barrier("local");
+    
+    for (int b = 0; b < p_NqV; b++; @inner(1)) {
+      for (int a = 0; a < p_NqV; a++; @inner(0)) {
+	
+	if(a<p_NqP && b<p_NqP){
+	  for(int c=0;c<p_NqP;++c){
+	    dfloat pab = p[e*p_NpP + c*p_NqP*p_NqP + b*p_NqP + a];
+	    for(int k=0;k<p_NqV;++k){
+	      r_p[k] += s_interpRaise[k][c]*pab;
+	    }
+	  }
+	}
+      }
+    }
+
+    for(int k=0;k<p_NqV;++k){
+
+      @barrier("local");
+      
+      for (int b = 0; b < p_NqV; b++; @inner(1)) {
+	for (int a = 0; a < p_NqV; a++; @inner(0)) {
+	  
+	  if(a<p_NqP && b<p_NqP){
+	    s_p[b][a] = r_p[k];
+	  }
+	}
+      }
+
+      @barrier("local");
+      
       for (int j = 0; j < p_NqV; j++; @inner(1)) {
-        for (int k = 0; k < p_NqV; k++; @inner(0)) {
-          const dlong ind = e*p_NpV + i*p_NqV*p_NqV + j*p_NqV + k;
-          pRaised[ind] = 0.0;
-          for (int ell = 0; ell < p_NqP; ell++) {
-            dfloat c = 0.0;
-            for (int m = 0; m < p_NqP; m++) {
-              dfloat b = 0.0;
-              for (int n = 0; n < p_NqP; n++)
-                b += interpRaise[k*p_NqP + n]*p[e*p_NpP + ell*p_NqP*p_NqP + m*p_NqP + n];
-              c += interpRaise[j*p_NqP + m]*b;
-            }
-            pRaised[ind] += interpRaise[i*p_NqP + ell]*c;
-          }
-        }
+	for (int a = 0; a < p_NqV; a++; @inner(0)) {
+	  
+	  if(a<p_NqP){
+	    dfloat Ip = 0;
+	    
+	    for(int b=0;b<p_NqP;++b){
+	      Ip += s_interpRaise[j][b]*s_p[b][a];
+	    }
+	    
+	    s_p1[j][a] = Ip;
+	  }
+	}
+      }
+
+      @barrier("local");
+      
+      for (int j = 0; j < p_NqV; j++; @inner(1)) {
+	for (int i = 0; i < p_NqV; i++; @inner(0)) {
+	  
+	  dfloat Ip = 0;
+	  
+	  for(int a=0;a<p_NqP;++a){
+	    Ip += s_interpRaise[i][a]*s_p1[j][a];
+	  }
+	  
+	  pRaised[e*p_NpV + k*p_NqV*p_NqV + j*p_NqV + i] = Ip;
+	}
       }
     }
   }
 }
-
