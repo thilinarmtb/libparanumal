@@ -1,0 +1,150 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void stokesMultipleGlobalWeightedInnerProducts(const dlong NnodesV,
+						       @restrict const  dfloat *  wV,
+						       const dlong NnodesP,
+						       @restrict const  dfloat *  wP,
+						       const dlong fsrNrhs, // how many inner products
+						       @restrict const  dfloat *  x, // one x
+						       @restrict const  dfloat *  y, // multiple y
+						       @restrict        dfloat *  wxy){
+  
+  
+  for(dlong b=0;b<(NnodesV+p_blockSize-1)/p_blockSize;++b;@outer(0)){
+    
+    @shared volatile dfloat s_wxy[p_fsrNrhs][p_blockSize];
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      
+      const dlong id = t + p_blockSize*b;
+      
+      dfloat res[p_fsrNrhs];
+
+      for(int fld=0;fld<fsrNrhs;++fld){
+	res[fld] = 0;
+      }
+	
+      if(id<NnodesV){
+	
+	const dfloat wVid = wV[id];
+	const dlong Ndof = NtotalV*p_DIM + NtotalP;
+	
+	dfloat Ux = x[id+0*NnodesV];
+	dfloat Uy = x[id+1*NnodesV];
+#if p_DIM==3
+	dfloat Uz = x[id+2*NnodesV];
+#endif
+
+	for(int fld=0;fld<fsrNrhs;++fld){
+	  dfloat Vx = y[id+0*NnodesV + fld*Ndof];
+	  dfloat Vy = y[id+1*NnodesV + fld*Ndof];
+#if p_DIM==3
+	  dfloat Vz = y[id+2*NnodesV + fld*Ndof];
+#endif
+	  
+	  res[fld] += Ux*Vx; // fmad
+	  res[fld] += Uy*Vy; // fmad
+	  
+#if p_DIM==3
+	  res[fld] += Uz*Vz; // fmad
+#endif
+	  
+	  res[fld] *= wVid;
+	}
+      }
+	
+      if(id<NnodesP){
+	const dfloat wPid = wP[id];
+	
+	dfloat P1 = x[id+p_DIM*NnodesV];
+
+	for(int fld=0;fld<fsrNrhs;++fld){
+	  
+	  dfloat P2 = y[id+p_DIM*NnodesV + fld*Ndof];
+	  
+	  res[fld] += wPid*P1*P2;
+	}
+      }
+
+      for(int fld=0;fld<fsrNrhs;++fld){
+	s_wxy[fld][t] = res;
+      }
+    }
+    
+    @barrier("local");
+#if p_blockSize>512
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<512)
+	for(int fld=0;fld<fsrNrhs;++fld)
+	  s_wxy[fld][t] += s_wxy[fld][t+512];
+    
+    @barrier("local");
+#endif
+#if p_blockSize>256
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<256)
+	for(int fld=0;fld<fsrNrhs;++fld)
+	  s_wxy[t] += s_wxy[t+256];
+
+    @barrier("local");
+#endif
+
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<128)
+	for(int fld=0;fld<fsrNrhs;++fld)
+	  s_wxy[t] += s_wxy[t+128];
+
+    @barrier("local");
+
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t< 64)
+	for(int fld=0;fld<fsrNrhs;++fld)
+	  s_wxy[t] += s_wxy[t+64];
+
+    @barrier("local");
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) for(int fld=0;fld<fsrNrhs;++fld) s_wxy[fld][t] += s_wxy[fld][t+32];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) for(int fld=0;fld<fsrNrhs;++fld) s_wxy[fld][t] += s_wxy[fld][t+16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) for(int fld=0;fld<fsrNrhs;++fld) s_wxy[fld][t] += s_wxy[fld][t+8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) for(int fld=0;fld<fsrNrhs;++fld) s_wxy[fld][t] += s_wxy[fld][t+4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) for(int fld=0;fld<fsrNrhs;++fld) s_wxy[fld][t] += s_wxy[fld][t+2];
+
+    @barrier("local");
+    // assumes fsrNrhs < p_blockSize
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      dlong Nblocks = (NnodesV+p_blockSize-1)/p_blockSize; // count number of blocks
+      int fld = t;
+      if(fld<fsrNrhs){
+	dfloat res = s_wxy[fld][0] + s_wxy[fld][1];
+	atomicAdd(wxy+fld, res); // note - assumes zerod accumulator
+      }
+      //      	wxy[b*p_Nrhs+fld] = s_wxy[fld][0] + s_wxy[fld][1]; // note - interleaved histories
+    }
+  }
+}
+

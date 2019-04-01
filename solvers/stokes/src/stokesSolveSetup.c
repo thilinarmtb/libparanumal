@@ -131,6 +131,24 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
   stokesSetupKernels(stokes, kernelInfoV, kernelInfoP);
   stokesPreconditionerSetup(stokes, lambda, kernelInfoV, kernelInfoP);
 
+  // set up stokes Fischer successive RHS
+  int Nrhs = 0;
+  stokes->options.getArgs("DIM FISCHER SUCCESSIVE RHS", Nrhs);
+
+  stokes->fsrNrhs = 0;
+  if(stokes->fsrNrhs){
+    size_t NrhsEntries = (stokes->meshV->dim*stokes->NtotalV+
+			  stokes->NtotalP)*stokes->fsrNrhs;
+
+    dfloat *stokesHistoryQ = (dfloat*) calloc(NrhsEntries,sizeof(dfloat)); // can try using float here ?
+    stokes->o_fsrHistoryQ = stokes->meshV->device.malloc(NrhsEntries*sizeof(dfloat),stokesHistoryQ);
+
+    // convenient array for zeroing accumulators prior to dot products
+    stokes->o_fsrZeroArray = stokes->meshV->device.malloc(stokes->fsrNrhs*sizeof(dfloat),stokesHistoryQ);
+    stokes->o_fsrAlphas = stokes->meshV->device.malloc(stokes->fsrNrhs*sizeof(dfloat),stokesHistoryQ);
+    
+  }
+
   return;
 }
 
