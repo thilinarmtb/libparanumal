@@ -155,8 +155,10 @@ typedef void (*stokesForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*,
 
 /* TODO:  The use of void* limits the ability of the compiler to help us. */
 typedef struct {
-  void *solFn;      /* Will be stokesSolutionFunction[23]D */
-  void *forcingFn;  /* Will be stokesForcingFunction[23]D */
+  stokesSolutionFunction2D solFn2D;
+  stokesSolutionFunction3D solFn3D;
+  stokesForcingFunction2D  forcingFn2D;
+  stokesForcingFunction3D  forcingFn3D;
 } stokesTestCase_t;
 
 stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);

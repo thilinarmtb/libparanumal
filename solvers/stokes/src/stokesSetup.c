@@ -29,12 +29,6 @@ SOFTWARE.
 static void stokesSetupRHS(stokes_t *stokes, dfloat lambda);
 static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda);
 
-static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
-static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
-static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
-static void stokesTestForcingFunctionLeakyCavityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
-static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *fx, dfloat *fy, dfloat *fz);
-
 stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
   int      velocityN, pressureN, dim, elementType;
@@ -205,13 +199,10 @@ static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
       y = stokes->meshV->y[ind];
       z = stokes->meshV->z[ind];
 
-      if (dim == 2) {
-        stokesForcingFunction2D forcingFn = (stokesForcingFunction2D)testCase.forcingFn;
-        forcingFn(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
-      } else if (dim == 3) {
-        stokesForcingFunction3D forcingFn = (stokesForcingFunction3D)testCase.forcingFn;
-        forcingFn(x, y, z, lambda, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
-      }
+      if (dim == 2)
+        testCase.forcingFn2D(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
+      else if (dim == 3)
+        testCase.forcingFn3D(x, y, z, lambda, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
 
       // NB:  We have to incorporate the Jacobian factor because meshApplyElementMatrix() assumes it.
       //
@@ -277,13 +268,10 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
 
       /* TODO:  Handle boundary data when we don't know the exact solution. */
       if (stokes->mapB[ind] == 1) {
-        if (stokes->meshV->dim == 2) {
-          stokesSolutionFunction2D solFn = (stokesSolutionFunction2D)testCase.solFn;
-          solFn(x, y, lambda, tmp.x + ind, tmp.y + ind, &p);
-        } else if (stokes->meshV->dim == 3) {
-          stokesSolutionFunction3D solFn = (stokesSolutionFunction3D)testCase.solFn;
-          solFn(x, y, z, lambda, tmp.x + ind, tmp.y + ind, tmp.z + ind, &p);
-        }
+        if (stokes->meshV->dim == 2)
+          testCase.solFn2D(x, y, lambda, tmp.x + ind, tmp.y + ind, &p);
+        else if (stokes->meshV->dim == 3)
+          testCase.solFn3D(x, y, z, lambda, tmp.x + ind, tmp.y + ind, tmp.z + ind, &p);
       }
     }
   }

@@ -26,11 +26,6 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesTestSolutionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy);
-static void stokesTestSolutionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy);
-static void stokesTestSolutionDirichletQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy);
-static void stokesTestSolutionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *ux, dfloat *uy, dfloat *uz);
-
 int main(int argc, char **argv)
 {
   dfloat           lambda;
@@ -75,8 +70,7 @@ int main(int argc, char **argv)
 
       /* TODO:  Handle the case where the true solution is not known. */
       if (stokes->meshV->dim == 2) {
-        stokesSolutionFunction2D solFn = (stokesSolutionFunction2D)testCase.solFn;
-        solFn(x, y, lambda, &ux_exact, &uy_exact, &p_exact);
+        testCase.solFn2D(x, y, lambda, &ux_exact, &uy_exact, &p_exact);
 
         /* Manually insert the boundary data.
          *
@@ -87,8 +81,7 @@ int main(int argc, char **argv)
           stokes->u.y[ind] = uy_exact;
         }
       } else if (stokes->meshV->dim == 3) {
-        stokesSolutionFunction3D solFn = (stokesSolutionFunction3D)testCase.solFn;
-        solFn(x, y, z, lambda, &ux_exact, &uy_exact, &uz_exact, &p_exact);
+        testCase.solFn3D(x, y, z, lambda, &ux_exact, &uy_exact, &uz_exact, &p_exact);
 
         /* Manually insert the boundary data.
          *

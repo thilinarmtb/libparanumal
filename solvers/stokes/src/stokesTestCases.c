@@ -43,11 +43,16 @@ void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
 
   stokes->options.getArgs("TEST CASE", name);
 
+  testCase->solFn2D = NULL;
+  testCase->solFn3D = NULL;
+  testCase->forcingFn2D = NULL;
+  testCase->forcingFn3D = NULL;
+
   /* TODO:  Check the dimension here to save ourselves from some stupid mistakes. */
   if (stokes->meshV->dim == 2) {
     if (name == "SimpleConstantViscosityDirichletQuad2D") {
-      testCase->solFn     = (void*)stokesTestSolutionSimpleConstantViscosityDirichletQuad2D;
-      testCase->forcingFn = (void*)stokesTestForcingFunctionSimpleConstantViscosityDirichletQuad2D;
+      testCase->solFn2D     = stokesTestSolutionSimpleConstantViscosityDirichletQuad2D;
+      testCase->forcingFn2D = stokesTestForcingFunctionSimpleConstantViscosityDirichletQuad2D;
     } else {
       printf("ERROR:  Invalid 2D test case %s.\n", name.c_str());
       MPI_Finalize();
@@ -55,8 +60,8 @@ void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
     }
   } else if (stokes->meshV->dim == 3) {
     if (name == "SimpleConstantViscosityDirichletHex3D") {
-      testCase->solFn     = (void*)stokesTestSolutionSimpleConstantViscosityDirichletHex3D;
-      testCase->forcingFn = (void*)stokesTestForcingFunctionSimpleConstantViscosityDirichletHex3D;
+      testCase->solFn3D     = stokesTestSolutionSimpleConstantViscosityDirichletHex3D;
+      testCase->forcingFn3D = stokesTestForcingFunctionSimpleConstantViscosityDirichletHex3D;
     } else {
       printf("ERROR:  Invalid 3D test case %s.\n", name.c_str());
       MPI_Finalize();
