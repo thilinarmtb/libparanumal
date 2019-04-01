@@ -124,6 +124,9 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
   ellipticOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
   ellipticOptions.setArgs("KRYLOV SOLVER", "PCG");
 
+  if (stokes->meshV->dim == 3)
+    ellipticOptions.setArgs("ELEMENT MAP", stokes->options.getArgs("ELEMENT MAP"));
+
   if (stokes->options.compareArgs("VELOCITY BLOCK PRECONDITIONER", "MULTIGRID")) {
     ellipticOptions.setArgs("PRECONDITIONER", "MULTIGRID");
     ellipticOptions.setArgs("MULTIGRID COARSENING",           stokes->options.getArgs("VELOCITY MULTIGRID COARSENING"));
@@ -206,6 +209,9 @@ static void stokesSchurComplementBlockDiagPreconditionerSetup(stokes_t *stokes, 
     ellipticOptionsP.setArgs("DEBUG ENABLE REDUCTIONS", "1");
     ellipticOptionsP.setArgs("KRYLOV SOLVER", "PCG");
     ellipticOptionsP.setArgs("PRECONDITIONER", "MULTIGRID");
+
+    if (stokes->meshP->dim == 3)
+      ellipticOptionsP.setArgs("ELEMENT MAP", stokes->options.getArgs("ELEMENT MAP"));
 
     ellipticOptionsP.setArgs("MULTIGRID COARSENING",           stokes->options.getArgs("PRESSURE MULTIGRID COARSENING"));
     ellipticOptionsP.setArgs("MULTIGRID SMOOTHER",             stokes->options.getArgs("PRESSURE MULTIGRID SMOOTHER"));
