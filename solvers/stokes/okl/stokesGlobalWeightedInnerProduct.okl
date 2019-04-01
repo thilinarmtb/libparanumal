@@ -44,7 +44,7 @@ SOFTWARE.
       dfloat res = 0;
       
       if(id<NnodesV){
-	const dfloat wV = wV[id];
+	const dfloat wVid = wV[id];
 	
 	dfloat Ux = x[id+0*NnodesV];
 	dfloat Uy = x[id+1*NnodesV];
@@ -65,16 +65,16 @@ SOFTWARE.
 	res += Uz*Vz; // fmad
 #endif
 	
-	res *= wV;
+	res *= wVid;
       }
       
       if(id<NnodesP){
-	const dfloat wP = wP[id];
+	const dfloat wPid = wP[id];
 	
 	dfloat P1 = x[id+p_DIM*NnodesV];
 	dfloat P2 = y[id+p_DIM*NnodesV];
 	
-	res *= wP*P1*P2;
+	res += wPid*P1*P2;
       }
 
       s_wxy[t] = res;

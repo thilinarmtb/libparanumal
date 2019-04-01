@@ -132,6 +132,7 @@ typedef struct {
   occa::kernel vecScaledAddKernel;
   occa::kernel vecZeroKernel;
   occa::kernel weightedInnerProductKernel;
+  occa::kernel globalWeightedInnerProductKernel;
   occa::kernel stokesOperatorKernel;
   
   /* Scratch variables */

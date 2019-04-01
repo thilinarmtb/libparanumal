@@ -106,6 +106,7 @@ void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloa
 {
   *c = 0.0;
 
+#if 1
   /* TODO:  Replace host loops with further kernel calls if we had too many
    * blocks.  (See, e.g., ellipticWeightedInnerProduct().)
    */
@@ -131,6 +132,15 @@ void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloa
   for (int i = 0; i < stokes->NblockP; i++)
     *c += stokes->workP[i];
 
+#else
+  stokes->globalWeightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree,
+					   stokes->NtotalP, stokes->meshP->ogs->o_invDegree,
+					   u.o_v, v.o_v, stokes->o_workV);
+  stokes->o_workV.copyTo(stokes->workV);
+  for (int i = 0; i < stokes->NblockV; i++)
+    *c += stokes->workV[i];
+#endif
+  
   /* TODO:  MPI. */
 
   return;
