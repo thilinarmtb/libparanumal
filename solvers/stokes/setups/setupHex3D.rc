@@ -6,7 +6,8 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/cubeHexM1.msh
+#../../meshes/cubeHexE04096.msh
+../../meshes/cubeHexM4.msh
 
 [DATA FILE]
 data/stokesDirichletTestHex3D.h
@@ -30,8 +31,8 @@ GLL
 
 [THREAD MODEL]
 #OpenCL
-#CUDA
-Serial
+CUDA
+#Serial
 
 [PLATFORM NUMBER]
 0
@@ -44,7 +45,7 @@ Serial
 ################################################
 
 [LAMBDA]
-0.0
+1.0e5
 
 [VELOCITY POLYNOMIAL DEGREE]
 6
@@ -77,9 +78,9 @@ MINRES
 ################################################
 
 [PRECONDITIONER]
-NONE
+#NONE
 #JACOBI
-#SCHURCOMPLEMENTBLOCKDIAG
+SCHURCOMPLEMENTBLOCKDIAG
 
 [JACOBI BOOST PARAMETER]
 1.0e-1

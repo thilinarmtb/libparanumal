@@ -33,7 +33,7 @@ static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y,
 static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
 static void stokesTestForcingFunctionLeakyCavityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy);
-static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *fx, dfloat *fy, dfloat *fz);
+static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *fx, dfloat *fy, dfloat *fz);
 
 stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
@@ -210,7 +210,7 @@ static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
         //stokesTestForcingFunctionVariableViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
         stokesTestForcingFunctionDirichletQuad2D(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
       } else if (dim == 3) {
-        stokesTestForcingFunctionConstantViscosityHex3D(x, y, z, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
+        stokesTestForcingFunctionConstantViscosityHex3D(x, y, z, lambda, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
       }
 
       // NB:  We have to incorporate the Jacobian factor because meshApplyElementMatrix() assumes it.
@@ -445,10 +445,10 @@ static void stokesTestForcingFunctionLeakyCavityQuad2D(dfloat x, dfloat y, dfloa
   return;
 }
 
-static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *fx, dfloat *fy, dfloat *fz)
+static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *fx, dfloat *fy, dfloat *fz)
 {
-  *fx = M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*z) + 48.0*z*z*z - 72.0*z*(1.0 - z*z);
-  *fy = M_PI*sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*z) + 48.0*x*x*x - 72.0*x*(1.0 - x*x);
-  *fz = M_PI*sin(M_PI*x)*sin(M_PI*y)*cos(M_PI*z) + 48.0*y*y*y - 72.0*y*(1.0 - y*y);
+  *fx = M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*z) + 48.0*z*z*z - 72.0*z*(1.0 - z*z) - lambda*6.0*z*pow(1.0 - z*z, 2.0);
+  *fy = M_PI*sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*z) + 48.0*x*x*x - 72.0*x*(1.0 - x*x) - lambda*6.0*x*pow(1.0 - x*x, 2.0);
+  *fz = M_PI*sin(M_PI*x)*sin(M_PI*y)*cos(M_PI*z) + 48.0*y*y*y - 72.0*y*(1.0 - y*y) - lambda*6.0*y*pow(1.0 - y*y, 2.0);
   return;
 }
