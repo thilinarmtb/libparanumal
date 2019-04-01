@@ -207,6 +207,7 @@ static void stokesSetupBCMask(stokes_t *stokes)
 static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, occa::properties& kernelInfoP)
 {
   kernelInfoV["defines/p_blockSize"] = STOKES_REDUCTION_BLOCK_SIZE;
+  kernelInfoV["defines/p_DIM"]   = stokes->meshV->dim;
   kernelInfoV["defines/p_NpV"]   = stokes->meshV->Np;
   kernelInfoV["defines/p_NqV"]   = stokes->meshV->Nq;
   kernelInfoV["defines/p_NpP"]   = stokes->meshP->Np;
@@ -219,6 +220,9 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   stokes->vecScaledAddKernel         = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecScaledAdd.okl", "stokesVecScaledAdd", kernelInfoV);
   stokes->vecZeroKernel              = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecZero.okl", "stokesVecZero", kernelInfoV);
   stokes->weightedInnerProductKernel = stokes->meshV->device.buildKernel(DHOLMES "/okl/weightedInnerProduct2.okl", "weightedInnerProduct2", kernelInfoV);
+
+  stokes->globalWeightedInnerProductKernel
+    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGlobalWeightedInnerProduct.okl", "stokesGlobalWeightedInnerProduct", kernelInfoV);
 
   /* TODO:  Replace this with parametrized filenames. */
   if ((stokes->meshV->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
