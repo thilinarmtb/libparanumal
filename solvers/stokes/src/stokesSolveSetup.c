@@ -231,6 +231,10 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   kernelInfoV["defines/p_NpP"]   = stokes->meshP->Np;
   kernelInfoV["defines/p_NqP"]   = stokes->meshP->Nq;
 
+  int fsrNrhs = 0;
+  stokes->options.getArgs("DIM FISCHER SUCCESSIVE RHS", fsrNrhs);
+  kernelInfoV["defines/p_fsrNrhs"] = fsrNrhs;
+  
   stokes->meshV->maskKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/mask.okl", "mask", kernelInfoV);
 
   stokes->dotMultiplyKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/dotMultiply.okl", "dotMultiply", kernelInfoV);
@@ -242,6 +246,18 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   stokes->globalWeightedInnerProductKernel
     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGlobalWeightedInnerProduct.okl", "stokesGlobalWeightedInnerProduct", kernelInfoV);
 
+
+  stokes->multipleGlobalWeightedInnerProductsKernel
+    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesMultipleGlobalWeightedInnerProducts.okl", "stokesMultipleGlobalWeightedInnerProducts", kernelInfoV);
+
+
+  stokes->fsrStartKernel
+    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesFSRStart.okl", "stokesFSRStart", kernelInfoV);
+
+
+  stokes->fsrUpdateKernel
+    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesFSRUpdate.okl", "stokesFSRUpdate", kernelInfoV);
+  
   /* TODO:  Replace this with parametrized filenames. */
   if ((stokes->meshV->dim == 2) && (stokes->elementType == QUADRILATERALS)) {
     stokes->lowerPressureKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesLowerPressureQuad2D.okl", "stokesLowerPressureQuad2D", kernelInfoV);
@@ -276,6 +292,6 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
       exit(-1);
     }
   }
-
+  
   return;
 }

@@ -58,7 +58,7 @@ SOFTWARE.
 
 	res *= invNormAlphas;
 	
-	historyQ[fsrNRHS*total+id] = res;
+	historyQ[fsrNrhs*Ntotal+id] = res;
       }
     }
   }
