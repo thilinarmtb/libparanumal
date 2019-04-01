@@ -255,31 +255,34 @@ static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
 // TODO:  Write a kernel for this.
 static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
 {
-  stokesVec_t tmp;
+  stokesVec_t      tmp;
+  stokesTestCase_t testCase;
 
   occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
   occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
 
   stokesVecAllocate(stokes, &tmp);
 
+  stokesGetTestCase(stokes, &testCase);
+
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
       int    ind;
-      dfloat x, y, z;
+      dfloat x, y, z, p;
 
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
       z = stokes->meshV->z[ind];
 
+      /* TODO:  Handle boundary data when we don't know the exact solution. */
       if (stokes->mapB[ind] == 1) {
         if (stokes->meshV->dim == 2) {
-          tmp.x[ind] = cos(y);
-          tmp.y[ind] = sin(x);
+          stokesSolutionFunction2D solFn = (stokesSolutionFunction2D)testCase.solFn;
+          solFn(x, y, lambda, tmp.x + ind, tmp.y + ind, &p);
         } else if (stokes->meshV->dim == 3) {
-          tmp.x[ind] = -6.0*z*pow(1.0 - z*z, 2.0);
-          tmp.y[ind] = -6.0*x*pow(1.0 - x*x, 2.0);
-          tmp.z[ind] = -6.0*y*pow(1.0 - y*y, 2.0);
+          stokesSolutionFunction3D solFn = (stokesSolutionFunction3D)testCase.solFn;
+          solFn(x, y, z, lambda, tmp.x + ind, tmp.y + ind, tmp.z + ind, &p);
         }
       }
     }
@@ -290,7 +293,7 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
   stokesVecZero(stokes, stokes->u);
 
   if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
-#if 1
+#if 0
     stokes->stiffnessKernel(stokes->meshV->Nelements,
                             stokes->meshV->o_ggeo,
                             stokes->meshV->o_Dmatrices,
@@ -411,24 +414,5 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
   stokesVecFree(stokes, &tmp);
   o_pRaised.free();
   o_interpRaise.free();
-  return;
-}
-
-
-/*****************************************************************************/
-
-
-static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy)
-{
-  *fx = 1.0 + (1.0 + lambda)*cos(y);
-  *fy = 1.0 + (1.0 + lambda)*sin(x);
-  return;
-}
-
-static void stokesTestForcingFunctionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *fx, dfloat *fy, dfloat *fz)
-{
-  *fx = M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*z) + 48.0*z*z*z - 72.0*z*(1.0 - z*z) - lambda*6.0*z*pow(1.0 - z*z, 2.0);
-  *fy = M_PI*sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*z) + 48.0*x*x*x - 72.0*x*(1.0 - x*x) - lambda*6.0*x*pow(1.0 - x*x, 2.0);
-  *fz = M_PI*sin(M_PI*x)*sin(M_PI*y)*cos(M_PI*z) + 48.0*y*y*y - 72.0*y*(1.0 - y*y) - lambda*6.0*y*pow(1.0 - y*y, 2.0);
   return;
 }

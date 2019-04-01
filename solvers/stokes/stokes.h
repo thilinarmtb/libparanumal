@@ -152,6 +152,7 @@ typedef void (*stokesForcingFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*
 typedef void (*stokesSolutionFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
 typedef void (*stokesForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
 
+/* TODO:  The use of void* limits the ability of the compiler to help us. */
 typedef struct {
   void *solFn;      /* Will be stokesSolutionFunction[23]D */
   void *forcingFn;  /* Will be stokesForcingFunction[23]D */

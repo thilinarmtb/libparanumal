@@ -87,7 +87,7 @@ int main(int argc, char **argv)
           stokes->u.y[ind] = uy_exact;
         }
       } else if (stokes->meshV->dim == 3) {
-        stokesSolutionFunction3D solFn = (stokesSolutionFunction3D)testCase.forcingFn;
+        stokesSolutionFunction3D solFn = (stokesSolutionFunction3D)testCase.solFn;
         solFn(x, y, z, lambda, &ux_exact, &uy_exact, &uz_exact, &p_exact);
 
         /* Manually insert the boundary data.
@@ -146,21 +146,4 @@ int main(int argc, char **argv)
   MPI_Finalize();
 
   return 0;
-}
-
-/*****************************************************************************/
-
-static void stokesTestSolutionDirichletQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy)
-{
-  *ux = cos(y);
-  *uy = sin(x);
-  return;
-}
-
-static void stokesTestSolutionConstantViscosityHex3D(dfloat x, dfloat y, dfloat z, dfloat *ux, dfloat *uy, dfloat *uz)
-{
-  *ux = -6.0*z*pow(1.0 - z*z, 2.0);
-  *uy = -6.0*x*pow(1.0 - x*x, 2.0);
-  *uz = -6.0*y*pow(1.0 - y*y, 2.0);
-  return;
 }
