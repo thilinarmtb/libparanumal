@@ -73,7 +73,7 @@ void stokesFSRUpdate(stokes_t *stokes,
     
     v.o_v.copyTo(stokes->o_fsrHistoryQ, stokes->Ndof*sizeof(dfloat), 0); // 0 offset
     
-    dfloat fac = 1./vdotAv;
+    dfloat fac = 1./sqrt(vdotAv);
     
     stokesVecScale(stokes, v, fac);
   }
@@ -100,7 +100,7 @@ void stokesFSRUpdate(stokes_t *stokes,
       normAlphas2 += pow(alphas[fld],2);
     }      
 
-    dfloat invNormAlphas = 1./sqrt(normAlphas2);
+    dfloat invNormAlphas = 1./sqrt(vdotAv - normAlphas2);
 
     stokes->fsrUpdateKernel(stokes->Ndof,
 			    stokesNFSR,
