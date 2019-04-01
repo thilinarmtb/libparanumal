@@ -35,6 +35,7 @@ int main(int argc, char **argv)
 {
   dfloat           lambda;
   stokes_t         *stokes;
+  stokesTestCase_t testCase;
   occa::properties kernelInfoV, kernelInfoP;
 
   // Start up MPI.
@@ -59,41 +60,44 @@ int main(int argc, char **argv)
   /* Compute error (if applicable.) */
   dfloat errxInf = 0.0, erryInf = 0.0, errzInf = 0.0;
   dfloat errxDL2 = 0.0, erryDL2 = 0.0, errzDL2 = 0.0;
+  stokesGetTestCase(stokes, &testCase);
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
       int    ind;
       dfloat x, y, z;
       dfloat errx, erry, errz;
-      dfloat ux_exact, uy_exact, uz_exact;
+      dfloat ux_exact, uy_exact, uz_exact, p_exact;
 
       ind = e*stokes->meshV->Np + i;
       x = stokes->meshV->x[ind];
       y = stokes->meshV->y[ind];
       z = stokes->meshV->z[ind];
 
+      /* TODO:  Handle the case where the true solution is not known. */
       if (stokes->meshV->dim == 2) {
-        //stokesTestSolutionConstantViscosityQuad2D(x, y, &ux_exact, &uy_exact);
-        //stokesTestSolutionVariableViscosityQuad2D(x, y, &ux_exact, &uy_exact);
-        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
-          stokes->u.x[ind] = cos(y);  // Manually insert the boundary data.
-          stokes->u.y[ind] = sin(x);
+        stokesSolutionFunction2D solFn = (stokesSolutionFunction2D)testCase.solFn;
+        solFn(x, y, lambda, &ux_exact, &uy_exact, &p_exact);
 
-          ux_exact = cos(y);
-          uy_exact = sin(x);
-        } else {
-          stokesTestSolutionDirichletQuad2D(x, y, &ux_exact, &uy_exact);
+        /* Manually insert the boundary data.
+         *
+         * TODO:  Surely this should have been done already elsewhere?
+         */
+        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+          stokes->u.x[ind] = ux_exact;
+          stokes->u.y[ind] = uy_exact;
         }
       } else if (stokes->meshV->dim == 3) {
-        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
-          stokes->u.x[ind] = -6.0*z*pow(1.0 - z*z, 2.0);  // Manually insert the boundary data.
-          stokes->u.y[ind] = -6.0*x*pow(1.0 - x*x, 2.0);
-          stokes->u.z[ind] = -6.0*y*pow(1.0 - y*y, 2.0);
+        stokesSolutionFunction3D solFn = (stokesSolutionFunction3D)testCase.forcingFn;
+        solFn(x, y, z, lambda, &ux_exact, &uy_exact, &uz_exact, &p_exact);
 
-          ux_exact = -6.0*z*pow(1.0 - z*z, 2.0);  // Manually insert the boundary data.
-          uy_exact = -6.0*x*pow(1.0 - x*x, 2.0);
-          uz_exact = -6.0*y*pow(1.0 - y*y, 2.0);
-        } else {
-          stokesTestSolutionConstantViscosityHex3D(x, y, z, &ux_exact, &uy_exact, &uz_exact);
+        /* Manually insert the boundary data.
+         *
+         * TODO:  Surely this should have been done already elsewhere?
+         */
+        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+          stokes->u.x[ind] = ux_exact;
+          stokes->u.y[ind] = uy_exact;
+          stokes->u.z[ind] = uz_exact;
         }
       }
 
@@ -134,29 +138,6 @@ int main(int argc, char **argv)
     printf("errzDL2 = % .15e\n", errzDL2);
 #endif
 
-#if 0
-  printf("-----\n");
-
-  printf("u = [");
-  stokesVecPrint(stokes, stokes->u);
-  printf("];\n");
-
-  printf("x = [");
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    printf("% .15e\n", stokes->meshV->x[i]);
-  }
-  printf("];\n");
-
-  printf("y = [");
-  for (int i = 0; i < stokes->NtotalV; i++) {
-    printf("% .15e\n", stokes->meshV->y[i]);
-  }
-  printf("];\n");
-
-  printf("NtotalV = %d\n", stokes->NtotalV);
-  printf("NtotalP = %d\n", stokes->NtotalP);
-#endif
-
   /* Export solution. */
 
   /* Report runtime statistics. */
@@ -168,20 +149,6 @@ int main(int argc, char **argv)
 }
 
 /*****************************************************************************/
-
-static void stokesTestSolutionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy)
-{
-  *ux = 6.0*pow(1.0 - x*x, 3.0)*pow(1.0 - y*y, 2.0)*y;
-  *uy = -6.0*pow(1.0 - y*y, 3.0)*pow(1.0 - x*x, 2.0)*x;
-  return;
-}
-
-static void stokesTestSolutionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy)
-{
-  *ux = 6.0*pow(1.0 - x*x, 3.0)*pow(1.0 - y*y, 2.0)*y;
-  *uy = -6.0*pow(1.0 - y*y, 3.0)*pow(1.0 - x*x, 2.0)*x;
-  return;
-}
 
 static void stokesTestSolutionDirichletQuad2D(dfloat x, dfloat y, dfloat *ux, dfloat *uy)
 {

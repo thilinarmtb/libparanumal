@@ -88,9 +88,6 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
     }
   } else if (dim == 3) {
     if (elementType == HEXAHEDRA) {
-      //      meshOccaSetup3D(stokes->meshV, options, kernelInfoV);
-      //      meshOccaSetup3D(stokes->meshP, options, kernelInfoP);
-
       meshOccaSetup3D(stokes->meshV, options, kernelInfoV);
       meshOccaSetup3D(stokes->meshP, stokes->meshV->device, options, kernelInfoP);
     } else {
@@ -104,7 +101,7 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
     exit(-1);
   }
 
-  /* TODO:  Think about where this should be set. */
+  /* TODO:  This needs to be specified by the test cases. */
   eta = (dfloat*)calloc(stokes->meshV->Nelements*stokes->meshV->Np, sizeof(dfloat));
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
@@ -190,9 +187,12 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
 
 static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
 {
-  int dim;
+  int              dim;
+  stokesTestCase_t testCase;
 
   stokes->options.getArgs("MESH DIMENSION", dim);
+
+  stokesGetTestCase(stokes, &testCase);
 
   // Initialize right-hand side with the forcing term.
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
@@ -206,11 +206,11 @@ static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
       z = stokes->meshV->z[ind];
 
       if (dim == 2) {
-        //stokesTestForcingFunctionConstantViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
-        //stokesTestForcingFunctionVariableViscosityQuad2D(x, y, stokes->f.x + ind, stokes->f.y + ind);
-        stokesTestForcingFunctionDirichletQuad2D(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
+        stokesForcingFunction2D forcingFn = (stokesForcingFunction2D)testCase.forcingFn;
+        forcingFn(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
       } else if (dim == 3) {
-        stokesTestForcingFunctionConstantViscosityHex3D(x, y, z, lambda, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
+        stokesForcingFunction3D forcingFn = (stokesForcingFunction3D)testCase.forcingFn;
+        forcingFn(x, y, z, lambda, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
       }
 
       // NB:  We have to incorporate the Jacobian factor because meshApplyElementMatrix() assumes it.
@@ -417,31 +417,11 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
 
 /*****************************************************************************/
 
-static void stokesTestForcingFunctionConstantViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
-{
-  *fx = cos(M_PI*x)*sin(M_PI*y)/M_PI - 24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) - 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0);
-  *fy = sin(M_PI*x)*cos(M_PI*y)/M_PI + 24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0);
-  return;
-}
-
-static void stokesTestForcingFunctionVariableViscosityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
-{
-  *fx = cos(M_PI*x)*sin(M_PI*y)/M_PI - (2.0 + sinh(x*y))*(24.0*y*pow(1.0 - x*x, 3.0)*(5.0*y*y - 3.0) + 36.0*y*(1.0 - x*x)*(5.0*x*x - 1.0)*pow(1.0 - y*y, 2.0)) + 36.0*x*pow(1.0 - x*x, 2.0)*pow(1.0 - y*y, 2.0)*y*y*cosh(x*y) - 6.0*pow(1.0 - x*x, 3.0)*(1.0 - 5.0*y*y)*(1.0 - y*y)*x*cosh(x*y);
-  *fy = sin(M_PI*x)*cos(M_PI*y)/M_PI + (2.0 + sinh(x*y))*(24.0*x*pow(1.0 - y*y, 3.0)*(5.0*x*x - 3.0) + 36.0*x*(1.0 - y*y)*(5.0*y*y - 1.0)*pow(1.0 - x*x, 2.0)) + 6.0*pow(1.0 - y*y, 3.0)*(1.0 - 5.0*x*x)*(1.0 - x*x)*y*cosh(x*y) - 36.0*y*pow(1.0 - y*y, 2.0)*pow(1.0 - x*x, 2.0)*x*x*cosh(x*y);
-  return;
-}
 
 static void stokesTestForcingFunctionDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy)
 {
   *fx = 1.0 + (1.0 + lambda)*cos(y);
   *fy = 1.0 + (1.0 + lambda)*sin(x);
-  return;
-}
-
-static void stokesTestForcingFunctionLeakyCavityQuad2D(dfloat x, dfloat y, dfloat *fx, dfloat *fy)
-{
-  *fx = 0.0;
-  *fy = 0.0;
   return;
 }
 

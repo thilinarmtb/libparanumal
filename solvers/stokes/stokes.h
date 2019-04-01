@@ -144,6 +144,19 @@ typedef struct {
   occa::memory o_workP;
 } stokes_t;
 
+/* 2D test case / problem setup information. */
+typedef void (*stokesSolutionFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesForcingFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*);
+
+/* 3D test case / problem setup information. */
+typedef void (*stokesSolutionFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
+
+typedef struct {
+  void *solFn;      /* Will be stokesSolutionFunction[23]D */
+  void *forcingFn;  /* Will be stokesForcingFunction[23]D */
+} stokesTestCase_t;
+
 stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
 void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
 void stokesSolve(stokes_t *stokes, dfloat lambda);
@@ -166,5 +179,7 @@ void stokesVecZero(stokes_t *stokes, stokesVec_t v);
 
 void stokesOperatorPrint(stokes_t *stokes, dfloat lambda);
 void stokesVecPrint(stokes_t *stokes, stokesVec_t v);
+
+void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase);
 
 #endif /* STOKES_H */

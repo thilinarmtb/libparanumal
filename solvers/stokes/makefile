@@ -55,6 +55,7 @@ src/stokesPreconditionerSetup.o \
 src/stokesSetup.o \
 src/stokesSolve.o \
 src/stokesSolveSetup.o \
+src/stokesTestCases.o \
 src/stokesVec.o \
 
 # library objects

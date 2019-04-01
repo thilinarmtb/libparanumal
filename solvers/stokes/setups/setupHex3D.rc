@@ -44,6 +44,9 @@ CUDA
 ################ PROBLEM SETUP #################
 ################################################
 
+[TEST CASE]
+SimpleConstantViscosityDirichletHex3D
+
 [LAMBDA]
 1.0e5
 

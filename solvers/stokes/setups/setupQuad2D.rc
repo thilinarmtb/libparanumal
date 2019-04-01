@@ -40,6 +40,9 @@ CUDA
 ################ PROBLEM SETUP #################
 ################################################
 
+[TEST CASE]
+SimpleConstantViscosityDirichletQuad2D
+
 [LAMBDA]
 1.0e6
 
