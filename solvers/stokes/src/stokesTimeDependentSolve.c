@@ -68,7 +68,7 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
     for (int e = 0; e < stokes->meshV->Nelements; e++) {
       for (int i = 0; i < stokes->meshV->Np; i++) {
         int    ind;
-        dfloat x, y, z, J;
+        dfloat x, y, z, JW;
 
         ind = e*stokes->meshV->Np + i;
         x = stokes->meshV->x[ind];
@@ -86,19 +86,13 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
           stokes->f.z[ind] += stokes->u.z[ind]/dt;
 
         /* Add the Jacobian factors (because meshApplyElementMatrix() demands it). */
-        J = stokes->meshV->vgeo[stokes->meshV->Np*(e*stokes->meshV->Nvgeo + JID) + i];
-        stokes->f.x[ind] *= J;
-        stokes->f.y[ind] *= J;
+        JW = stokes->meshV->vgeo[stokes->meshV->Np*(e*stokes->meshV->Nvgeo + JWID) + i];
+        stokes->f.x[ind] *= JW;
+        stokes->f.y[ind] *= JW;
         if (stokes->meshV->dim == 3)
-          stokes->f.z[ind] *= J;
+          stokes->f.z[ind] *= JW;
       }
     }
-
-    /* Multiply by the mass matrix to get the true RHS. */
-    meshApplyElementMatrix(stokes->meshV, stokes->meshV->MM, stokes->f.x, stokes->f.x);
-    meshApplyElementMatrix(stokes->meshV, stokes->meshV->MM, stokes->f.y, stokes->f.y);
-    if (stokes->meshV->dim == 3)
-      meshApplyElementMatrix(stokes->meshV, stokes->meshV->MM, stokes->f.z, stokes->f.z);
 
     stokesVecCopyHostToDevice(stokes->f);
 
