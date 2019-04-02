@@ -78,6 +78,31 @@ typedef struct {
   stokesVec_t invMM;     /* Boosted inverse of the pressure mass operator diagonal */
 } stokesPrecon_t;
 
+/* 2D test case / problem setup information. */
+typedef void (*stokesSolutionFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesForcingFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*);
+typedef void (*stokesTimeDependentSolutionFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesTimeDependentForcingFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*);
+
+/* 3D test case / problem setup information. */
+typedef void (*stokesSolutionFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesTimeDependentSolutionFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesTimeDependentForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
+
+/* Data structure for holding information about test cases / problem setups. */
+typedef struct {
+  int                                   isTimeDependent;
+  stokesSolutionFunction2D              solFn2D;
+  stokesSolutionFunction3D              solFn3D;
+  stokesForcingFunction2D               forcingFn2D;
+  stokesForcingFunction3D               forcingFn3D;
+  stokesTimeDependentSolutionFunction2D tdSolFn2D;
+  stokesTimeDependentSolutionFunction3D tdSolFn3D;
+  stokesTimeDependentForcingFunction2D  tdForcingFn2D;
+  stokesTimeDependentForcingFunction3D  tdForcingFn3D;
+} stokesTestCase_t;
+
 typedef struct {
   setupAide options;       /* Configuration information. */
 
@@ -88,6 +113,8 @@ typedef struct {
   int NtotalV;             /* Total number of points in the velocity mesh */
   int NtotalP;             /* Total number of points in the pressure mesh */
   int Ndof;                /* Total number of degrees of freedom */
+
+  stokesTestCase_t *testCase; /* Information/setup for the current test problem. */
 
   stokesVec_t u;           /* Solution */
   stokesVec_t f;           /* Right-hand side */
@@ -145,25 +172,10 @@ typedef struct {
   occa::memory o_workP;
 } stokes_t;
 
-/* 2D test case / problem setup information. */
-typedef void (*stokesSolutionFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
-typedef void (*stokesForcingFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*);
-
-/* 3D test case / problem setup information. */
-typedef void (*stokesSolutionFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
-typedef void (*stokesForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
-
-/* TODO:  The use of void* limits the ability of the compiler to help us. */
-typedef struct {
-  stokesSolutionFunction2D solFn2D;
-  stokesSolutionFunction3D solFn3D;
-  stokesForcingFunction2D  forcingFn2D;
-  stokesForcingFunction3D  forcingFn3D;
-} stokesTestCase_t;
-
-stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
+stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
 void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::properties &kernelInfoV, occa::properties &kernelInfoP);
 void stokesSolve(stokes_t *stokes, dfloat lambda);
+void stokesTimeDependentSolve(stokes_t *stokes, dfloat tfinal);
 void stokesOperator(stokes_t *stokes, dfloat lambda,  stokesVec_t v, stokesVec_t Av);
 void stokesPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv);
 void stokesPreconditionerSetup(stokes_t *stokes, dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP);

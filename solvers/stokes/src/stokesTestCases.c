@@ -28,6 +28,8 @@ SOFTWARE.
 
 static void stokesTestSolutionSimpleConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p);
 static void stokesTestForcingFunctionSimpleConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
+static void stokesTestSolutionSimpleTimeDependentConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p);
+static void stokesTestForcingFunctionSimpleTimeDependentConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
 static void stokesTestSolutionSimpleConstantViscosityDirichletHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *uz, dfloat *p);
 static void stokesTestForcingFunctionSimpleConstantViscosityDirichletHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *fx, dfloat *fy, dfloat *fz);
 
@@ -43,17 +45,26 @@ void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
 
   stokes->options.getArgs("TEST CASE", name);
 
-  testCase->solFn2D = NULL;
-  testCase->solFn3D = NULL;
-  testCase->forcingFn2D = NULL;
-  testCase->forcingFn3D = NULL;
+  testCase->isTimeDependent = 0;
+  testCase->solFn2D         = NULL;
+  testCase->solFn3D         = NULL;
+  testCase->forcingFn2D     = NULL;
+  testCase->forcingFn3D     = NULL;
+  testCase->tdSolFn2D       = NULL;
+  testCase->tdSolFn3D       = NULL;
+  testCase->tdForcingFn2D   = NULL;
+  testCase->tdForcingFn3D   = NULL;
 
   /* TODO:  Check the dimension here to save ourselves from some stupid mistakes. */
   if (stokes->meshV->dim == 2) {
     if (name == "SimpleConstantViscosityDirichletQuad2D") {
       testCase->solFn2D     = stokesTestSolutionSimpleConstantViscosityDirichletQuad2D;
       testCase->forcingFn2D = stokesTestForcingFunctionSimpleConstantViscosityDirichletQuad2D;
-    } else {
+    } else if (name == "SimpleTimeDependentConstantViscosityDirichletQuad2D") {
+      testCase->isTimeDependent = 1;
+      testCase->tdSolFn2D     = stokesTestSolutionSimpleTimeDependentConstantViscosityDirichletQuad2D;
+      testCase->tdForcingFn2D = stokesTestForcingFunctionSimpleTimeDependentConstantViscosityDirichletQuad2D;
+    }else {
       printf("ERROR:  Invalid 2D test case %s.\n", name.c_str());
       MPI_Finalize();
       exit(-1);
@@ -75,7 +86,7 @@ void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
 /* TODO:  Need to setup kernels for boundary conditions. */
 
 /*****************************************************************************/
-/* SimpleDirichletQuad2D
+/* SimpleConstantViscosityDirichletQuad2D
  *
  * Exact solution:  u_x = cos(y)
  *                  u_y = sin(x)
@@ -98,7 +109,30 @@ static void stokesTestForcingFunctionSimpleConstantViscosityDirichletQuad2D(dflo
 }
 
 /*****************************************************************************/
-/* SimpleDirichletHex3D
+/* SimpleTimeDependentConstantViscosityDirichletQuad2D
+ *
+ * Exact solution:  u_x = cos(y)cos(t)
+ *                  u_y = sin(x)sin(t)
+ *                  p   = x*cos(t) + y*sin(t)
+ */
+
+static void stokesTestSolutionSimpleTimeDependentConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat t, dfloat *ux, dfloat *uy, dfloat *p)
+{
+  *ux = cos(y)*cos(t);
+  *uy = sin(x)*sin(t);
+  *p  = x*cos(t) + y*sin(t);
+  return;
+}
+
+static void stokesTestForcingFunctionSimpleTimeDependentConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat t, dfloat *fx, dfloat *fy)
+{
+  *fx = cos(t) + (cos(t) - sin(t))*cos(y);
+  *fy = sin(t) + (cos(t) + sin(t))*sin(x);
+  return;
+}
+
+/*****************************************************************************/
+/* SimpleConstantViscosityDirichletHex3D
  *
  * Exact solution:  u_x = -6z(1 - z^2)^2
  *                  u_y = -6x(1 - x^2)^2

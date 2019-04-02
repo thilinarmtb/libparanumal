@@ -56,6 +56,7 @@ src/stokesSetup.o \
 src/stokesSolve.o \
 src/stokesSolveSetup.o \
 src/stokesTestCases.o \
+src/stokesTimeDependentSolve.o \
 src/stokesVec.o \
 
 # library objects

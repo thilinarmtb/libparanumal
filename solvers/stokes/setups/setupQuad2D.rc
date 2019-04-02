@@ -41,19 +41,25 @@ CUDA
 ################################################
 
 [TEST CASE]
-SimpleConstantViscosityDirichletQuad2D
+#SimpleConstantViscosityDirichletQuad2D
+SimpleTimeDependentConstantViscosityDirichletQuad2D
 
+# Only applies to steady-state test cases.
 [LAMBDA]
-1.0e6
+0.0
+
+# Only applies to time-dependent test cases.
+[FINAL TIME]
+1.0e-3
 
 [VELOCITY POLYNOMIAL DEGREE]
-2
+5
 
 [VELOCITY DISCRETIZATION]
 CONTINUOUS
 
 [PRESSURE POLYNOMIAL DEGREE]
-1
+4
 
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
@@ -141,6 +147,16 @@ DAMPEDJACOBI+CHEBYSHEV
 
 [PRESSURE MULTIGRID PARALMOND CHEBYSHEV DEGREE]
 1
+
+################################################
+############ TIME INTEGRATOR OPTIONS ###########
+################################################
+
+[TIME INTEGRATOR]
+BACKWARDEULER
+
+[TIME STEP]
+1.0e-3
 
 ################################################
 ################ OTHER OPTIONS #################

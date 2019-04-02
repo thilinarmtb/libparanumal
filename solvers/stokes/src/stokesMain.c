@@ -28,9 +28,8 @@ SOFTWARE.
 
 int main(int argc, char **argv)
 {
-  dfloat           lambda;
+  dfloat           lambda, tfinal;
   stokes_t         *stokes;
-  stokesTestCase_t testCase;
   occa::properties kernelInfoV, kernelInfoP;
 
   // Start up MPI.
@@ -44,18 +43,26 @@ int main(int argc, char **argv)
 
   setupAide options(argv[1]);
 
+  options.getArgs("FINAL TIME", tfinal);
   options.getArgs("LAMBDA", lambda);
 
-  stokes = stokesSetup(lambda, kernelInfoV, kernelInfoP, options);
-  stokesSolve(stokes, lambda);
+  stokes = stokesSetup(kernelInfoV, kernelInfoP, options);
+
+  if (stokes->testCase->isTimeDependent) {
+    stokesTimeDependentSolve(stokes, tfinal);
+  } else {
+    stokesSolve(stokes, lambda);
+  }
 
   stokesVecCopyDeviceToHost(stokes->u);
 
 #if 1
-  /* Compute error (if applicable.) */
+  /* Compute error (if applicable.)
+   *
+   * TODO:  This only works for steady-state Stokes.
+   */
   dfloat errxInf = 0.0, erryInf = 0.0, errzInf = 0.0;
   dfloat errxDL2 = 0.0, erryDL2 = 0.0, errzDL2 = 0.0;
-  stokesGetTestCase(stokes, &testCase);
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
       int    ind;
@@ -68,29 +75,48 @@ int main(int argc, char **argv)
       y = stokes->meshV->y[ind];
       z = stokes->meshV->z[ind];
 
-      /* TODO:  Handle the case where the true solution is not known. */
-      if (stokes->meshV->dim == 2) {
-        testCase.solFn2D(x, y, lambda, &ux_exact, &uy_exact, &p_exact);
+      if (stokes->testCase->isTimeDependent) {
+        if (stokes->meshV->dim == 2) {
+          stokes->testCase->tdSolFn2D(x, y, tfinal, &ux_exact, &uy_exact, &p_exact);
 
-        /* Manually insert the boundary data.
-         *
-         * TODO:  Surely this should have been done already elsewhere?
-         */
-        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
-          stokes->u.x[ind] = ux_exact;
-          stokes->u.y[ind] = uy_exact;
+          if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+            stokes->u.x[ind] = ux_exact;
+            stokes->u.y[ind] = uy_exact;
+          }
+        } else if (stokes->meshV->dim == 3) {
+          stokes->testCase->tdSolFn3D(x, y, z, tfinal, &ux_exact, &uy_exact, &uz_exact, &p_exact);
+
+          if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+            stokes->u.x[ind] = ux_exact;
+            stokes->u.y[ind] = uy_exact;
+            stokes->u.z[ind] = uz_exact;
+          }
         }
-      } else if (stokes->meshV->dim == 3) {
-        testCase.solFn3D(x, y, z, lambda, &ux_exact, &uy_exact, &uz_exact, &p_exact);
+      } else {
+        /* TODO:  Handle the case where the true solution is not known. */
+        if (stokes->meshV->dim == 2) {
+          stokes->testCase->solFn2D(x, y, lambda, &ux_exact, &uy_exact, &p_exact);
 
-        /* Manually insert the boundary data.
-         *
-         * TODO:  Surely this should have been done already elsewhere?
-         */
-        if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
-          stokes->u.x[ind] = ux_exact;
-          stokes->u.y[ind] = uy_exact;
-          stokes->u.z[ind] = uz_exact;
+          /* Manually insert the boundary data.
+           *
+           * TODO:  Surely this should have been done already elsewhere?
+           */
+          if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+            stokes->u.x[ind] = ux_exact;
+            stokes->u.y[ind] = uy_exact;
+          }
+        } else if (stokes->meshV->dim == 3) {
+          stokes->testCase->solFn3D(x, y, z, lambda, &ux_exact, &uy_exact, &uz_exact, &p_exact);
+
+          /* Manually insert the boundary data.
+           *
+           * TODO:  Surely this should have been done already elsewhere?
+           */
+          if (stokes->mapB[e*stokes->meshV->Np + i] == 1) {
+            stokes->u.x[ind] = ux_exact;
+            stokes->u.y[ind] = uy_exact;
+            stokes->u.z[ind] = uz_exact;
+          }
         }
       }
 

@@ -99,7 +99,7 @@ void stokesOperator(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t 
                                 Av.o_p);
 #else
 
-    printf("STOKES: USING MONOLITHIC STOKES KERNEL\n");
+    //printf("STOKES: USING MONOLITHIC STOKES KERNEL\n");
 
     stokes->raisePressureKernel(stokes->meshV->Nelements,
                                 o_interpRaise,

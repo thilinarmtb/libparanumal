@@ -29,13 +29,12 @@ SOFTWARE.
 static void stokesSetupRHS(stokes_t *stokes, dfloat lambda);
 static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda);
 
-stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
+stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
   int      velocityN, pressureN, dim, elementType;
-  int      velocityNtotal, pressureNtotal;
   string   fileName, bcHeaderFileName;
   stokes_t *stokes;
-  dfloat   *eta;
+  dfloat   lambda, *eta;
 
   stokes = new stokes_t();
 
@@ -53,8 +52,6 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
   // Setup meshes.
   //
   // TODO:  Is two separate meshes the right approach?
-  //
-  // TODO:  This results in duplicate device objects and instruction streams.
   stokes->meshV = meshSetup((char*)fileName.c_str(), velocityN, options);
   stokes->meshP = meshSetup((char*)fileName.c_str(), pressureN, options);
 
@@ -95,85 +92,69 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
     exit(-1);
   }
 
-  /* TODO:  This needs to be specified by the test cases. */
-  eta = (dfloat*)calloc(stokes->meshV->Nelements*stokes->meshV->Np, sizeof(dfloat));
-  for (int e = 0; e < stokes->meshV->Nelements; e++) {
-    for (int i = 0; i < stokes->meshV->Np; i++) {
-      int    ind;
-      dfloat x, y, z;
-
-      ind = e*stokes->meshV->Np + i;
-      x = stokes->meshV->x[ind];
-      y = stokes->meshV->y[ind];
-      z = stokes->meshV->z[ind];
-
-      if (dim == 2) {
-        eta[ind] = 1.0;
-        //eta[ind] = 2.0 + sinh(x*y);
-      } else if (dim == 3) {
-        eta[ind] = 1.0;
-      }
-    }
-  }
-
   // Set up the physical-to-mathematial BC map.
   int BCType[3] = {0, 1, 2};
   stokes->BCType = (int*)calloc(3, sizeof(int));
   memcpy(stokes->BCType, BCType, 3*sizeof(int));
 
-  stokesSolveSetup(stokes, lambda, eta, kernelInfoV, kernelInfoP);
-  stokesSetupRHS(stokes, lambda);
+  stokes->testCase = new stokesTestCase_t();
+  stokesGetTestCase(stokes, stokes->testCase);
 
-#if 0
-  /* Load initial guess. */
-  const dfloat NOISE_SIZE = 1.0e-8;
-  srand48(67714070);
+  /* Set the viscosity.
+   *
+   * TODO:  This needs to be specified by the test cases.
+   */
+  eta = (dfloat*)calloc(stokes->meshV->Nelements*stokes->meshV->Np, sizeof(dfloat));
+  for (int e = 0; e < stokes->meshV->Nelements; e++)
+    for (int i = 0; i < stokes->meshV->Np; i++)
+      eta[e*stokes->meshV->Np + i] = 1.0;
 
-  for (int e = 0; e < stokes->meshV->Nelements; e++) {
-    for (int i = 0; i < stokes->meshV->Np; i++) {
-      int    ind;
-      dfloat x, y, z;
+  if (stokes->testCase->isTimeDependent) {
+    stokes->options.getArgs("TIME STEP", lambda);
+    lambda = 1.0/lambda;
+    stokesSolveSetup(stokes, lambda, eta, kernelInfoV, kernelInfoP);
 
-      ind = e*stokes->meshV->Np + i;
-      x = stokes->meshV->x[ind];
-      y = stokes->meshV->y[ind];
-      z = stokes->meshV->z[ind];
+    /* Set the initial condition. */
+    for (int e = 0; e < stokes->meshV->Nelements; e++) {
+      for (int i = 0; i < stokes->meshV->Np; i++) {
+        int ind;
+        dfloat x, y, z, p;
 
-      stokes->u.x[ind] = cos(y)*(1.0 + NOISE_SIZE*drand48());
-      stokes->u.y[ind] = sin(x)*(1.0 + NOISE_SIZE*drand48());
+        ind = e*stokes->meshV->Np + i;
+        x = stokes->meshV->x[ind];
+        y = stokes->meshV->y[ind];
+        z = stokes->meshV->z[ind];
+
+        if (stokes->meshV->dim == 2)
+          stokes->testCase->tdSolFn2D(x, y, 0.0, stokes->u.x + ind, stokes->u.y + ind, &p);
+        else if (stokes->meshV->dim == 3)
+          stokes->testCase->tdSolFn3D(x, y, z, 0.0, stokes->u.x + ind, stokes->u.y + ind, stokes->u.z + ind, &p);
+      }
+
+      for (int i = 0; i < stokes->meshP->Np; i++) {
+        int ind;
+        dfloat x, y, z, ux, uy, uz;
+
+        ind = e*stokes->meshP->Np + i;
+        x = stokes->meshP->x[ind];
+        y = stokes->meshP->y[ind];
+        z = stokes->meshP->z[ind];
+
+        if (stokes->meshV->dim == 2)
+          stokes->testCase->tdSolFn2D(x, y, 0.0, &ux, &uy, stokes->u.p + ind);
+        else if (stokes->meshV->dim == 3)
+          stokes->testCase->tdSolFn3D(x, y, z, 0.0, &ux, &uy, &uz, stokes->u.p + ind);
+      }
     }
+
+    stokesVecCopyHostToDevice(stokes->u);
+
+    /* TODO:  Do we need to mask and/or gather-scatter here? */
+  } else {
+    stokes->options.getArgs("LAMBDA", lambda);
+    stokesSolveSetup(stokes, lambda, eta, kernelInfoV, kernelInfoP);
+    stokesSetupRHS(stokes, lambda);
   }
-
-  for (int e = 0; e < stokes->meshP->Nelements; e++) {
-    for (int i = 0; i < stokes->meshP->Np; i++) {
-      int    ind;
-      dfloat x, y, z;
-
-      ind = e*stokes->meshP->Np + i;
-      x = stokes->meshP->x[ind];
-      y = stokes->meshP->y[ind];
-      z = stokes->meshP->z[ind];
-
-      stokes->u.p[ind] = (x + y)*(1.0 + NOISE_SIZE*drand48());
-    }
-  }
-
-  //stokesVecCopyHostToDevice(stokes->u);
-
-  //stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, stokes->u.o_x, stokes->u.o_x);
-  //stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, stokes->u.o_y, stokes->u.o_y);
-  //if (stokes->meshV->dim == 3)
-  //  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->meshV->ogs->o_invDegree, stokes->u.o_z, stokes->u.o_z);
-  //stokes->dotMultiplyKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, stokes->u.o_p, stokes->u.o_p);
-
-  //stokesVecUnmaskedGatherScatter(stokes, stokes->u);
-  //if (stokes->Nmasked) {
-  //  stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_x);
-  //  stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_y);
-  //  if (stokes->meshV->dim == 3)
-  //    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_z);
-  //}
-#endif
 
   free(eta);
   return stokes;
@@ -181,12 +162,9 @@ stokes_t *stokesSetup(dfloat lambda, occa::properties &kernelInfoV, occa::proper
 
 static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
 {
-  int              dim;
-  stokesTestCase_t testCase;
+  int dim;
 
   stokes->options.getArgs("MESH DIMENSION", dim);
-
-  stokesGetTestCase(stokes, &testCase);
 
   // Initialize right-hand side with the forcing term.
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
@@ -200,9 +178,9 @@ static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
       z = stokes->meshV->z[ind];
 
       if (dim == 2)
-        testCase.forcingFn2D(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
+        stokes->testCase->forcingFn2D(x, y, lambda, stokes->f.x + ind, stokes->f.y + ind);
       else if (dim == 3)
-        testCase.forcingFn3D(x, y, z, lambda, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
+        stokes->testCase->forcingFn3D(x, y, z, lambda, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
 
       // NB:  We have to incorporate the Jacobian factor because meshApplyElementMatrix() assumes it.
       //
@@ -246,15 +224,12 @@ static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
 // TODO:  Write a kernel for this.
 static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
 {
-  stokesVec_t      tmp;
-  stokesTestCase_t testCase;
+  stokesVec_t tmp;
 
   occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
   occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
 
   stokesVecAllocate(stokes, &tmp);
-
-  stokesGetTestCase(stokes, &testCase);
 
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
@@ -269,9 +244,9 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
       /* TODO:  Handle boundary data when we don't know the exact solution. */
       if (stokes->mapB[ind] == 1) {
         if (stokes->meshV->dim == 2)
-          testCase.solFn2D(x, y, lambda, tmp.x + ind, tmp.y + ind, &p);
+          stokes->testCase->solFn2D(x, y, lambda, tmp.x + ind, tmp.y + ind, &p);
         else if (stokes->meshV->dim == 3)
-          testCase.solFn3D(x, y, z, lambda, tmp.x + ind, tmp.y + ind, tmp.z + ind, &p);
+          stokes->testCase->solFn3D(x, y, z, lambda, tmp.x + ind, tmp.y + ind, tmp.z + ind, &p);
       }
     }
   }
