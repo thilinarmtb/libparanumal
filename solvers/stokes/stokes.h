@@ -209,4 +209,6 @@ void stokesVecPrint(stokes_t *stokes, stokesVec_t v);
 
 void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase);
 
+void stokesPlotVTU(stokes_t *stokes, char *fileName);
+
 #endif /* STOKES_H */

@@ -31,7 +31,7 @@ void stokesPlotVTU(stokes_t *stokes, char *fileName){
 
   mesh_t *mesh = stokes->meshV;
 
-  stokesVecCopyDeviceToHost(stokes->u);
+  //  stokesVecCopyDeviceToHost(stokes->u);
   
   dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
