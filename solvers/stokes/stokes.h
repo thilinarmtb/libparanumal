@@ -148,6 +148,16 @@ typedef struct {
   int* mapB;               /* Node-wise BC type codes */
   occa::memory o_mapB;
 
+  /* infrastructure for Fischer successive RHS */
+  int fsrNrhs;
+
+  occa::memory o_fsrHistoryQ;
+  occa::memory o_fsrZeroArray; // do not set entries of this
+  occa::memory o_fsrAlphas;
+
+  occa::kernel fsrStartKernel;
+  occa::kernel fsrUpdateKernel;
+  
   /* OCCA kernels */
   occa::kernel divergenceKernel;
   occa::kernel dotMultiplyKernel;
@@ -161,6 +171,7 @@ typedef struct {
   occa::kernel weightedInnerProductKernel;
   occa::kernel globalWeightedInnerProductKernel;
   occa::kernel stokesOperatorKernel;
+  occa::kernel multipleGlobalWeightedInnerProductsKernel;
   
   /* Scratch variables */
   dlong NblockV;          /* Used for reductions over the velocity DOFs. */

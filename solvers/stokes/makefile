@@ -49,6 +49,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS = \
+src/stokesFSR.o \
 src/stokesOperator.o \
 src/stokesPreconditioner.o \
 src/stokesPreconditionerSetup.o \
