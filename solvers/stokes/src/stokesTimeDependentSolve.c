@@ -234,5 +234,12 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
       stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_z);
   }
 
+  if (stokes->Nmasked) {
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_x);
+    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_y);
+    if (stokes->meshV->dim == 3)
+      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->u.o_z);
+  }
+
   return;
 }
