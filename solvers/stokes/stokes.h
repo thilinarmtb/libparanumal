@@ -80,12 +80,14 @@ typedef struct {
 
 /* 2D test case / problem setup information. */
 typedef void (*stokesSolutionFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesInitialGuessFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
 typedef void (*stokesForcingFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*);
 typedef void (*stokesTimeDependentSolutionFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
 typedef void (*stokesTimeDependentForcingFunction2D)(dfloat, dfloat, dfloat, dfloat*, dfloat*);
 
 /* 3D test case / problem setup information. */
 typedef void (*stokesSolutionFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
+typedef void (*stokesInitialGuessFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
 typedef void (*stokesForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
 typedef void (*stokesTimeDependentSolutionFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*, dfloat*);
 typedef void (*stokesTimeDependentForcingFunction3D)(dfloat, dfloat, dfloat, dfloat, dfloat*, dfloat*, dfloat*);
@@ -95,6 +97,8 @@ typedef struct {
   int                                   isTimeDependent;
   stokesSolutionFunction2D              solFn2D;
   stokesSolutionFunction3D              solFn3D;
+  stokesInitialGuessFunction2D          initGuessFn2D;
+  stokesInitialGuessFunction3D          initGuessFn3D;
   stokesForcingFunction2D               forcingFn2D;
   stokesForcingFunction3D               forcingFn3D;
   stokesTimeDependentSolutionFunction2D tdSolFn2D;

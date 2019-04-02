@@ -26,18 +26,24 @@ SOFTWARE.
 
 #include "stokes.h"
 
+static void stokesTestInitialGuessZero2D(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p);
+
+static void stokesTestSolutionDebug(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p);
+static void stokesTestInitialGuessDebug(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p);
+static void stokesTestForcingFunctionDebug(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
+
 static void stokesTestSolutionSimpleConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p);
 static void stokesTestForcingFunctionSimpleConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
+
 static void stokesTestSolutionSimpleTimeDependentConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p);
 static void stokesTestForcingFunctionSimpleTimeDependentConstantViscosityDirichletQuad2D(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy);
+
 static void stokesTestSolutionSimpleConstantViscosityDirichletHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *uz, dfloat *p);
 static void stokesTestForcingFunctionSimpleConstantViscosityDirichletHex3D(dfloat x, dfloat y, dfloat z, dfloat lambda, dfloat *fx, dfloat *fy, dfloat *fz);
 
 /* TODO: Accommodate pressure forcing?  (Changes to the RHS code needed.) */
 
 /* TODO:  Support variable viscosity. */
-
-/* TODO:  Support initial guesses? */
 
 void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
 {
@@ -48,6 +54,8 @@ void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
   testCase->isTimeDependent = 0;
   testCase->solFn2D         = NULL;
   testCase->solFn3D         = NULL;
+  testCase->initGuessFn2D   = NULL;
+  testCase->initGuessFn3D   = NULL;
   testCase->forcingFn2D     = NULL;
   testCase->forcingFn3D     = NULL;
   testCase->tdSolFn2D       = NULL;
@@ -57,14 +65,19 @@ void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
 
   /* TODO:  Check the dimension here to save ourselves from some stupid mistakes. */
   if (stokes->meshV->dim == 2) {
-    if (name == "SimpleConstantViscosityDirichletQuad2D") {
+    if (name == "Debug") {
+      testCase->solFn2D       = stokesTestSolutionDebug;
+      testCase->initGuessFn2D = stokesTestInitialGuessDebug;
+      //testCase->initGuessFn2D = stokesTestInitialGuessZero2D;
+      testCase->forcingFn2D   = stokesTestForcingFunctionDebug;
+    } else if (name == "SimpleConstantViscosityDirichletQuad2D") {
       testCase->solFn2D     = stokesTestSolutionSimpleConstantViscosityDirichletQuad2D;
       testCase->forcingFn2D = stokesTestForcingFunctionSimpleConstantViscosityDirichletQuad2D;
     } else if (name == "SimpleTimeDependentConstantViscosityDirichletQuad2D") {
       testCase->isTimeDependent = 1;
       testCase->tdSolFn2D     = stokesTestSolutionSimpleTimeDependentConstantViscosityDirichletQuad2D;
       testCase->tdForcingFn2D = stokesTestForcingFunctionSimpleTimeDependentConstantViscosityDirichletQuad2D;
-    }else {
+    } else {
       printf("ERROR:  Invalid 2D test case %s.\n", name.c_str());
       MPI_Finalize();
       exit(-1);
@@ -83,7 +96,46 @@ void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase)
   return;
 }
 
+static void stokesTestInitialGuessZero2D(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p)
+{
+  *ux = 0.0;
+  *uy = 0.0;
+  *p = 0.0;
+  return;
+}
+
 /* TODO:  Need to setup kernels for boundary conditions. */
+
+/*****************************************************************************/
+/* Debug
+ *
+ * Scratch test case for debugging.
+ */
+
+static void stokesTestSolutionDebug(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p)
+{
+  const dfloat t = 1.0e-1;
+  *ux = cos(y)*cos(t);
+  *uy = sin(x)*sin(t);
+  *p  = x*cos(t) + y*sin(t);
+  return;
+}
+
+static void stokesTestInitialGuessDebug(dfloat x, dfloat y, dfloat lambda, dfloat *ux, dfloat *uy, dfloat *p)
+{
+  *ux = cos(y);
+  *uy = 0.0;
+  *p = x;
+  return;
+}
+
+static void stokesTestForcingFunctionDebug(dfloat x, dfloat y, dfloat lambda, dfloat *fx, dfloat *fy)
+{
+  const dfloat t = 1.0e-1;
+  *fx = cos(y)/1.0e-1 + cos(t) + (cos(t) - sin(t))*cos(y);
+  *fy = 0.0           + sin(t) + (cos(t) + sin(t))*sin(x);
+  return;
+}
 
 /*****************************************************************************/
 /* SimpleConstantViscosityDirichletQuad2D

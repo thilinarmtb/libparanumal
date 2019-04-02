@@ -1,3 +1,8 @@
+#!/bin/bash
+
+setupFile()
+{
+	cat <<EOF
 [FORMAT]
 1.0
 
@@ -40,18 +45,8 @@ CUDA
 ################ PROBLEM SETUP #################
 ################################################
 
-[TEST CASE]
-Debug
-#SimpleConstantViscosityDirichletQuad2D
-#SimpleTimeDependentConstantViscosityDirichletQuad2D
-
-# Only applies to steady-state test cases.
 [LAMBDA]
-1.0e1
-
-# Only applies to time-dependent test cases.
-[FINAL TIME]
-1.0e-3
+${1}
 
 [VELOCITY POLYNOMIAL DEGREE]
 5
@@ -92,8 +87,8 @@ SCHURCOMPLEMENTBLOCKDIAG
 1.0e-1
 
 [VELOCITY BLOCK PRECONDITIONER]
-MULTIGRID
-#JACOBI
+#MULTIGRID
+JACOBI
 
 [PRESSURE BLOCK PRECONDITIONER]
 #MASSMATRIX
@@ -150,21 +145,23 @@ DAMPEDJACOBI+CHEBYSHEV
 1
 
 ################################################
-############ TIME INTEGRATOR OPTIONS ###########
-################################################
-
-[TIME INTEGRATOR]
-BACKWARDEULER
-
-[TIME STEP]
-1.0e-3
-
-################################################
 ################ OTHER OPTIONS #################
 ################################################
 
 [VERBOSE]
 TRUE
+EOF
+}
 
-[DIM FISCHER SUCCESSIVE RHS]
-1
+echo "LAMBDA      Iterations   Error"
+echo "--------------------------------"
+for LAMBDA in "0.0" "1.0e8" "1.0e7" "1.0e6" "1.0e5" "1.0e4" "1.0e3" "1.0e2" "1.0e1" "1.0e0" ; do
+#for LAMBDA in "0.0" "1.0e8"  ; do
+	setupFile "${LAMBDA}" > setup.rc
+	./stokesMain setup.rc > output.log
+
+	ITERS="$(grep iterations output.log | cut -d ' ' -f 4)"
+	ERROR="$(printf "%.1e\n" "$(grep errxInf output.log | cut -d '=' -f 2)")"
+
+	printf "%6.1e     %3d          %6.1e\n" "${LAMBDA}" "${ITERS}" "${ERROR}"
+done

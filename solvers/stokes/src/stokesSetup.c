@@ -28,6 +28,7 @@ SOFTWARE.
 
 static void stokesSetupRHS(stokes_t *stokes, dfloat lambda);
 static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda);
+static void stokesSetInitialGuess(stokes_t *stokes, dfloat lambda);
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options)
 {
@@ -154,6 +155,7 @@ stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInf
     stokes->options.getArgs("LAMBDA", lambda);
     stokesSolveSetup(stokes, lambda, eta, kernelInfoV, kernelInfoP);
     stokesSetupRHS(stokes, lambda);
+    stokesSetInitialGuess(stokes, lambda);
   }
 
   free(eta);
@@ -378,4 +380,41 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat lambda)
   o_pRaised.free();
   o_interpRaise.free();
   return;
+}
+
+static void stokesSetInitialGuess(stokes_t *stokes, dfloat lambda)
+{
+  if ((stokes->meshV->dim == 2) && (stokes->testCase->initGuessFn2D != NULL)) {
+    for (int e = 0; e < stokes->meshV->Nelements; e++) {
+      for (int i = 0; i < stokes->meshV->Np; i++) {
+        int    ind;
+        dfloat x, y, p;
+
+        ind = e*stokes->meshV->Np + i;
+        x = stokes->meshV->x[ind];
+        y = stokes->meshV->y[ind];
+
+        stokes->testCase->initGuessFn2D(x, y, lambda, stokes->u.x + ind, stokes->u.y + ind, &p);
+      }
+
+      for (int i = 0; i < stokes->meshP->Np; i++) {
+        int    ind;
+        dfloat x, y, ux, uy;
+
+        ind = e*stokes->meshP->Np + i;
+        x = stokes->meshP->x[ind];
+        y = stokes->meshP->y[ind];
+
+        stokes->testCase->initGuessFn2D(x, y, lambda, &ux, &uy, stokes->u.p + ind);
+      }
+    }
+
+    stokesVecCopyHostToDevice(stokes->u);
+  } else if ((stokes->meshV->dim == 3) && (stokes->testCase->initGuessFn2D != NULL)) {
+    printf("ERROR:  Not implemented.\n");
+    MPI_Finalize();
+    exit(-1);
+  } else {
+    stokesVecZero(stokes, stokes->u);
+  }
 }
