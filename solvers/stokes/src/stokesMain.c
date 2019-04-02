@@ -54,6 +54,8 @@ int main(int argc, char **argv)
     stokesSolve(stokes, lambda);
   }
 
+  stokesPlotVTU(stokes, "foo.vtu");
+  
   stokesVecCopyDeviceToHost(stokes->u);
 
 #if 1
