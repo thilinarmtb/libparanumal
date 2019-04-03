@@ -184,7 +184,9 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda, occa::memory &f,
   occa::memory res= stokes->o_solveWorkspace[8];
   occa::memory Ax = stokes->o_solveWorkspace[9];
 
+  stokes->vecZeroKernel(stokes->Ndof, e);
   stokes->vecZeroKernel(stokes->Ndof, w);
+
   
   stokesOperator(stokes, lambda, u, v2);                  /* v2 = f - A*u0    (initial residual) */
   stokesVecScaledAdd(stokes, 1.0, f, -1.0, v2);
