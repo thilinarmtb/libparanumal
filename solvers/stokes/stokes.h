@@ -197,6 +197,9 @@ typedef struct {
 
   int NpreconWorkspace;
   occa::memory *o_preconWorkspace; // 
+
+  // pressure degree raising matrix
+  occa::memory o_interpRaise;
   
 } stokes_t;
 

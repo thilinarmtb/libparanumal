@@ -102,6 +102,8 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
     fclose(fp);
   }
 
+  stokes->o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
+  
   stokes->cubInterpV = stokes->meshV->cubInterp;
 
   stokes->o_cubInterpV = stokes->meshV->device.malloc(stokes->meshV->Nq*stokes->meshV->cubNq*sizeof(dfloat), stokes->cubInterpV);

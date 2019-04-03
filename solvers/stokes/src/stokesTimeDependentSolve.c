@@ -95,7 +95,6 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
   
   stokesVec_t tmp, tmp2;
 
-  occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
   occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
 
   stokesVecAllocate(stokes, &tmp);
@@ -103,33 +102,9 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
 
   stokes->userBoundaryConditionsKernel(meshV->Nelements, stokes->NtotalV, t, stokes->o_mapB, meshV->o_x, meshV->o_y, meshV->o_z, tmp.o_v);
   
-#if 0
-  for (int e = 0; e < stokes->meshV->Nelements; e++) {
-    for (int i = 0; i < stokes->meshV->Np; i++) {
-      int    ind;
-      dfloat x, y, z, p;
-
-      ind = e*stokes->meshV->Np + i;
-      x = stokes->meshV->x[ind];
-      y = stokes->meshV->y[ind];
-      z = stokes->meshV->z[ind];
-
-      /* TODO:  Handle boundary data when we don't know the exact solution. */
-      if (stokes->mapB[ind] == 1) {
-        if (stokes->meshV->dim == 2)
-          stokes->testCase->tdSolFn2D(x, y, t, tmp.x + ind, tmp.y + ind, &p);
-        else if (stokes->meshV->dim == 3)
-          stokes->testCase->tdSolFn3D(x, y, z, t, tmp.x + ind, tmp.y + ind, tmp.z + ind, &p);
-      }
-    }
-  }
-
-  stokesVecCopyHostToDevice(tmp);
-#endif
-  
   if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
     stokes->raisePressureKernel(stokes->meshV->Nelements,
-                                o_interpRaise,
+                                stokes->o_interpRaise,
                                 tmp.o_p,
                                 o_pRaised);
 
@@ -144,7 +119,7 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
                                  tmp2.o_v);
 
     stokes->lowerPressureKernel(stokes->meshV->Nelements,
-                                o_interpRaise,
+                                stokes->o_interpRaise,
                                 o_pRaised,
                                 tmp2.o_p);
   } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
@@ -198,7 +173,6 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
   stokesVecFree(stokes, &tmp);
   stokesVecFree(stokes, &tmp2);
   o_pRaised.free();
-  o_interpRaise.free();
 
   // Gather-scatter for C0 FEM.
   stokesVecUnmaskedGatherScatter(stokes, stokes->f);
