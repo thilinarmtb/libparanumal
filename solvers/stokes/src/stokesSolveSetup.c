@@ -312,6 +312,10 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   
   stokes->prepareRhsKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesPrepareRhs.okl", "stokesPrepareRhs", kernelInfoV);
   
+  stokes->updateMinresKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesUpdateMinres.okl",
+								 "stokesUpdateMinres", kernelInfoV);
+
+  
   // user supplied kernels
   string userName = stokes->options.getArgs("STOKES USER KERNEL FILE");
 

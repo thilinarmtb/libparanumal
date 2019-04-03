@@ -115,15 +115,20 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda, occa::memory &f, 
     a0 = c*del - cp*s*gam;
     a2 = s*del + cp*c*gam;
     a3 = sp*gam;
-    stokesVecScaledAdd(stokes, -a2, w, 1.0, z);                /* z = z - a2*w - a3*wold  */
-    stokesVecScaledAdd(stokes, -a3, wold, 1.0, z);
-    stokesVecCopy(stokes, w, wold);                            /* wold = w                */
-    stokesVecCopy(stokes, z, w);                               /* w = z                    */
-    stokesVecCopy(stokes, r, z);                               /* z = r                    */
-    stokesVecScaledAdd(stokes, 1.0, p, -(del/gam), r);         /* r = p - (del/gam)*r      */
-    if (i > 0)
-      stokesVecScaledAdd(stokes, -(gam/gamp), rold, 1.0, r);  /* r = r - (gam/gamp)*rold */
-    stokesVecCopy(stokes, z, rold);                           /* rold = z                */
+
+    /* z = z - a2*w - a3*wold  */
+    /* wold = w                */
+    /* w = z                    */
+    /* z = r                    */
+    /* r = p - (del/gam)*r      */
+    /* r = r - (gam/gamp)*rold */
+    /* rold = z                */
+    dfloat alpha =  -(del/gam);
+    dfloat beta  = (i==0) ? 0: -(gam/gamp);
+    
+    stokes->updateMinresKernel(stokes->Ndof, -a2, -a3, alpha, beta,
+			       z, wold, w, rold, r, p);
+    
     stokesPreconditioner(stokes, lambda, r, z);                /* z = M\r                  */
     gamp = gam;
     stokesVecInnerProduct(stokes, z, r, &gam);                 /* gam = sqrt(r'*z)         */

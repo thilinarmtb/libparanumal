@@ -178,6 +178,8 @@ typedef struct {
   occa::kernel multipleGlobalWeightedInnerProductsKernel;
 
   occa::kernel velocityMaskKernel;
+
+  occa::kernel updateMinresKernel;
   
   occa::kernel prepareRhsKernel;  
   occa::kernel userForcingKernel;
