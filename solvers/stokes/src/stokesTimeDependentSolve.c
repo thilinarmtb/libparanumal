@@ -73,43 +73,6 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
 			     meshV->o_x, meshV->o_y, meshV->o_z,
 			     meshV->o_vgeo, stokes->u.o_v, stokes->f.o_v);
     
-#if 0
-    stokesVecZero(stokes, stokes->f);
-
-    stokesVecCopyDeviceToHost(stokes->f);
-    stokesVecCopyDeviceToHost(stokes->u);
-
-    for (int e = 0; e < meshV->Nelements; e++) {
-      for (int i = 0; i < meshV->Np; i++) {
-        int    ind;
-        dfloat x, y, z, JW;
-
-        ind = e*meshV->Np + i;
-        x = meshV->x[ind];
-        y = meshV->y[ind];
-        z = meshV->z[ind];
-
-        if (meshV->dim == 2)
-          stokes->testCase->tdForcingFn2D(x, y, t, stokes->f.x + ind, stokes->f.y + ind);
-        else if (meshV->dim == 3)
-          stokes->testCase->tdForcingFn3D(x, y, z, t, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
-
-        stokes->f.x[ind] += stokes->u.x[ind]/dt;
-        stokes->f.y[ind] += stokes->u.y[ind]/dt;
-        if (meshV->dim == 3)
-          stokes->f.z[ind] += stokes->u.z[ind]/dt;
-
-        /* Add the Jacobian factors (because meshApplyElementMatrix() demands it). */
-        JW = meshV->vgeo[meshV->Np*(e*meshV->Nvgeo + JWID) + i];
-        stokes->f.x[ind] *= JW;
-        stokes->f.y[ind] *= JW;
-        if (meshV->dim == 3)
-          stokes->f.z[ind] *= JW;
-      }
-    }
-
-    stokesVecCopyHostToDevice(stokes->f);
-#endif
     
     /* Apply the boundary conditions. */
     stokesRHSAddBC(stokes, t, 1.0/dt);
@@ -127,6 +90,9 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
 // TODO:  This was copied from stokesSetup.c; need to put this into a kernel.
 static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
 {
+
+  mesh_t *meshV = stokes->meshV;
+  
   stokesVec_t tmp, tmp2;
 
   occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
@@ -135,6 +101,9 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
   stokesVecAllocate(stokes, &tmp);
   stokesVecAllocate(stokes, &tmp2);
 
+  stokes->userBoundaryConditionsKernel(meshV->Nelements, stokes->NtotalV, t, stokes->o_mapB, meshV->o_x, meshV->o_y, meshV->o_z, tmp.o_v);
+  
+#if 0
   for (int e = 0; e < stokes->meshV->Nelements; e++) {
     for (int i = 0; i < stokes->meshV->Np; i++) {
       int    ind;
@@ -156,7 +125,8 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
   }
 
   stokesVecCopyHostToDevice(tmp);
-
+#endif
+  
   if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
     stokes->raisePressureKernel(stokes->meshV->Nelements,
                                 o_interpRaise,

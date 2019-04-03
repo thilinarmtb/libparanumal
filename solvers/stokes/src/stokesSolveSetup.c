@@ -313,6 +313,7 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
 
   stokes->userForcingKernel = stokes->meshV->device.buildKernel(userName.c_str(), "stokesUserForcing", kernelInfoV);
   stokes->userSolutionKernel = stokes->meshV->device.buildKernel(userName.c_str(), "stokesUserSolution", kernelInfoV);
+  stokes->userBoundaryConditionsKernel = stokes->meshV->device.buildKernel(userName.c_str(), "stokesUserBoundaryConditions", kernelInfoV);
   
   return;
 }

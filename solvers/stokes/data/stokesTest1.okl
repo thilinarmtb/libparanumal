@@ -55,15 +55,52 @@ SOFTWARE.
 }
 
 
-@kernel void stokesUserForcing(const dlong Nelements,
-			   const dlong offset,
-			   const dfloat time,
-			   @restrict const dfloat *x,
-			   @restrict const dfloat *y,
-			   @restrict const dfloat *z,
-			   @restrict dfloat *f){
+@kernel void stokesUserBoundaryConditions(const dlong Nelements,
+					  const dlong offset,
+					  const dfloat time,
+					  @restrict const int *mapB,
+					  @restrict const dfloat *x,
+					  @restrict const dfloat *y,
+					  @restrict const dfloat *z,
+					  @restrict dfloat *q){
   
 
+  for (dlong e = 0; e < Nelements; e++; @outer(0)) {
+    for (int n = 0; n < p_Np; ++n; @inner(0)) {
+      dlong  m = e*p_Np + n;
+      
+      int bc = mapB[m];
+      dfloat ux = 0, uy = 0, pr = 0;
+      
+      if(bc==1){
+	
+	dfloat xm = x[m];
+	dfloat ym = y[m];
+	
+	dfloat cost = cos(time);
+	dfloat sint = sin(time);
+	
+	ux = cos(ym)*cost;
+	uy = sin(xm)*sint;
+	//	pr = xm*cost + ym*sint;
+      }
+      
+      q[m+0*offset] = ux;
+      q[m+1*offset] = uy;
+      //      q[m+2*offset] = pr;
+      
+    }
+  }
+}
+
+@kernel void stokesUserForcing(const dlong Nelements,
+			       const dlong offset,
+			       const dfloat time,
+			       @restrict const dfloat *x,
+			       @restrict const dfloat *y,
+			       @restrict const dfloat *z,
+			       @restrict dfloat *f){
+  
   for (dlong e = 0; e < Nelements; e++; @outer(0)) {
     for (int n = 0; n < p_Np; ++n; @inner(0)) {
       dlong  i = e*p_Np + n;

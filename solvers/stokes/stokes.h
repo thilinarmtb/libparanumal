@@ -180,6 +180,7 @@ typedef struct {
   occa::kernel prepareRhsKernel;
   occa::kernel userForcingKernel;
   occa::kernel userSolutionKernel;
+  occa::kernel userBoundaryConditionsKernel;
   
   /* Scratch variables */
   dlong NblockV;          /* Used for reductions over the velocity DOFs. */
