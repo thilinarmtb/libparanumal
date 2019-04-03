@@ -100,7 +100,7 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
     stokesRHSAddBC(stokes, t, 1.0/dt);
     
     /* Solve Stokes system for new solution. */
-    stokesSolve(stokes, 1.0/dt);
+    stokesSolve(stokes, 1.0/dt, stokes->f.o_v, stokes->u.o_v);
 
     printf("t = % .15e done\n", t);
   }

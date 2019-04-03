@@ -26,15 +26,16 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda);
-static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda);
+static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u);
 
-void stokesSolve(stokes_t *stokes, dfloat lambda)
+static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u);
+
+void stokesSolve(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u)
 {
   if (stokes->options.compareArgs("KRYLOV SOLVER", "MINRES")) {
-    stokesSolveMINRES(stokes, lambda);
+    stokesSolveMINRES(stokes, lambda, f, u);
   } else if (stokes->options.compareArgs("KRYLOV SOLVER", "DQGMRES")) {
-    stokesSolveDQGMRES(stokes, lambda);
+    stokesSolveDQGMRES(stokes, lambda, f, u);
   }else {
     printf("ERROR:  Invalid value %s for [KRYLOV SOLVER] option.",
            stokes->options.getArgs("KRYLOV SOLVER").c_str());
@@ -42,9 +43,8 @@ void stokesSolve(stokes_t *stokes, dfloat lambda)
   }
 }
 
-static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda)
+static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u)
 {
-  stokesVec_t u, p, z, r, r_old, w, w_old;
   dfloat      a0, a1, a2, a3, del, gam, gamp, c, cp, s, sp, eta, Au;
   dfloat      maxiter, tol;
   int         verbose;
@@ -56,27 +56,30 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda)
   if (stokes->options.compareArgs("VERBOSE", "TRUE"))
     verbose = 1;
 
-  u = stokes->u;
+  occa::memory &p = stokes->o_solveWorkspace[0];
+  occa::memory &z = stokes->o_solveWorkspace[1];
+  occa::memory &r = stokes->o_solveWorkspace[2];
+  occa::memory &w = stokes->o_solveWorkspace[3];
 
-  /* Allocate work vectors.
-   *
-   * TODO:  These vectors reside entirely on the device---no need to waste
-   * memory for their host counterparts.
-   *
-   * TODO:  Also:  should these be owned by the stokes_t so we don't have to
-   * re-allocate every time we want to solve?
-   */
+  occa::memory &rold = stokes->o_solveWorkspace[4];
+  occa::memory &wold = stokes->o_solveWorkspace[5];
 
-  stokesVecAllocate(stokes, &p);
-  stokesVecAllocate(stokes, &z);
-  stokesVecAllocate(stokes, &r);
-  stokesVecAllocate(stokes, &r_old);
-  stokesVecAllocate(stokes, &w);
-  stokesVecAllocate(stokes, &w_old);
+  //  stokes->vecZeroKernel(stokes->Ndof, p);
+  //  stokes->vecZeroKernel(stokes->Ndof, z);
+  //  stokes->vecZeroKernel(stokes->Ndof, r);
 
+  //  stokes->vecZeroKernel(stokes->Ndof, rold);
+  //  stokes->vecZeroKernel(stokes->Ndof, wold);
+
+  // TW: THIS NEEDS TO BE ZEROED
+  stokes->vecZeroKernel(stokes->Ndof, w);
+  
   stokesOperator(stokes, lambda, u, r);                        /* r = f - Au               */
-  stokesVecScaledAdd(stokes, 1.0, stokes->f, -1.0, r);
+
+  stokesVecScaledAdd(stokes, 1.0, f, -1.0, r);   
+
   stokesPreconditioner(stokes, lambda, r, z);                  /* z = M\r                  */
+
   stokesVecInnerProduct(stokes, z, r, &gam);                   /* gam = sqrt(r'*z)         */
   gamp = 0.0;
   if (gam < 0) {
@@ -105,21 +108,22 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda)
       break;
     }
 
-    stokesVecScale(stokes, z, 1.0/gam);                        /* z = z/gam                */
+    stokesVecScale(stokes, z, (1./gam)); /* z = z/gam                */
+
     stokesOperator(stokes, lambda, z, p);                      /* p = Az                   */
     stokesVecInnerProduct(stokes, p, z, &del);                 /* del = z'*p               */
     a0 = c*del - cp*s*gam;
     a2 = s*del + cp*c*gam;
     a3 = sp*gam;
-    stokesVecScaledAdd(stokes, -a2, w, 1.0, z);                /* z = z - a2*w - a3*w_old  */
-    stokesVecScaledAdd(stokes, -a3, w_old, 1.0, z);
-    stokesVecCopy(stokes, w, w_old);                           /* w_old = w                */
+    stokesVecScaledAdd(stokes, -a2, w, 1.0, z);                /* z = z - a2*w - a3*wold  */
+    stokesVecScaledAdd(stokes, -a3, wold, 1.0, z);
+    stokesVecCopy(stokes, w, wold);                            /* wold = w                */
     stokesVecCopy(stokes, z, w);                               /* w = z                    */
     stokesVecCopy(stokes, r, z);                               /* z = r                    */
     stokesVecScaledAdd(stokes, 1.0, p, -(del/gam), r);         /* r = p - (del/gam)*r      */
     if (i > 0)
-      stokesVecScaledAdd(stokes, -(gam/gamp), r_old, 1.0, r);  /* r = r - (gam/gamp)*r_old */
-    stokesVecCopy(stokes, z, r_old);                           /* r_old = z                */
+      stokesVecScaledAdd(stokes, -(gam/gamp), rold, 1.0, r);  /* r = r - (gam/gamp)*rold */
+    stokesVecCopy(stokes, z, rold);                           /* rold = z                */
     stokesPreconditioner(stokes, lambda, r, z);                /* z = M\r                  */
     gamp = gam;
     stokesVecInnerProduct(stokes, z, r, &gam);                 /* gam = sqrt(r'*z)         */
@@ -134,20 +138,11 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda)
     eta = -s*eta;
   }
 
-  /* Free work vectors. */
-  stokesVecFree(stokes, &p);
-  stokesVecFree(stokes, &z);
-  stokesVecFree(stokes, &r);
-  stokesVecFree(stokes, &r_old);
-  stokesVecFree(stokes, &w);
-  stokesVecFree(stokes, &w_old);
-
   return;
 }
 
-static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
+static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u)
 {
-  stokesVec_t u, f, e, w, p1, p2, p3, v1, v2, v3, tmp, res, Ax;
   dfloat      g1, g2, c1, s1, c2, s2, c3, s3, h0, h1, h2, h3, a;
   dfloat      resnormest, maxiter, tol;
   int         verbose;
@@ -174,30 +169,21 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
   h3 = -999999999999999999.0;
   a  = -999999999999999999.0;
 
-  u = stokes->u;
-  f = stokes->f;
-
   /* Allocate work vectors.
-   *
-   * TODO:  These vectors reside entirely on the device---no need to waste
-   * memory for their host counterparts.
-   *
-   * TODO:  Put these in the stokes_t so we don't re-allocate them every time
-   * we want to solve.
    *
    * TODO:  Can we eliminate two of these so that we use the same storage as MINRES?
    */
-  stokesVecAllocate(stokes, &e);
-  stokesVecAllocate(stokes, &w);
-  stokesVecAllocate(stokes, &v1);
-  stokesVecAllocate(stokes, &v2);
-  stokesVecAllocate(stokes, &v3);
-  stokesVecAllocate(stokes, &p1);
-  stokesVecAllocate(stokes, &p2);
-  stokesVecAllocate(stokes, &p3);
-  stokesVecAllocate(stokes, &res);
-  stokesVecAllocate(stokes, &Ax);
-  
+  occa::memory &e  = stokes->o_solveWorkspace[0];
+  occa::memory &w  = stokes->o_solveWorkspace[1];
+  occa::memory &v1 = stokes->o_solveWorkspace[2];
+  occa::memory &v2 = stokes->o_solveWorkspace[3];
+  occa::memory &v3 = stokes->o_solveWorkspace[4];
+  occa::memory &p1 = stokes->o_solveWorkspace[5];
+  occa::memory &p2 = stokes->o_solveWorkspace[6];
+  occa::memory &p3 = stokes->o_solveWorkspace[7];
+  occa::memory &res= stokes->o_solveWorkspace[8];
+  occa::memory &Ax = stokes->o_solveWorkspace[9];
+
   stokesOperator(stokes, lambda, u, v2);                  /* v2 = f - A*u0    (initial residual) */
   stokesVecScaledAdd(stokes, 1.0, f, -1.0, v2);
   stokesVecInnerProduct(stokes, v2, v2, &g1);             /* g1 = norm(v2)                       */
@@ -213,7 +199,7 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
   /* DQGMRES iteration loop. */
   for (int i = 0; i < maxiter; i++) {
     
-    e.o_v.copyTo(res.o_v);
+    e.copyTo(res);
     stokesVecScaledAdd(stokes, 1.0, u, 1.0, res);
     stokesOperator(stokes, lambda, res, Ax);              /* v2 = f - A*u0    (initial residual) */
     stokesVecScaledAdd(stokes, -1.0, f, 1.0, Ax);
@@ -227,16 +213,7 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
     }
 
     
-#if 0
-    if (fabs(g1) < tol) {
-#endif
-#if 0
-      if (fabs(resnormest) < tol) {
-#endif
-#if 1
-	if (sqrt(fabs(normr)) < tol) {
-#endif
-	
+    if (sqrt(fabs(normr)) < tol) {
       if (verbose)
         printf("DQGMRES converged in %d iterations (gamma = % .15e, res. norm est. = % .15e , ||r|| = %.15e, g2=%g, s3=%g, c3=%g).\n",
 	       i, g1, resnormest, sqrt(fabs(normr)), g2, s3, c3);
@@ -315,6 +292,8 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
      *
      * NB:  Vector assignments copy *pointers*, not values.
      */
+#if 0
+    // TW: turn this off for a mo 
     tmp = v1;
     v1 = v2;
     v2 = v3;
@@ -324,7 +303,8 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
     p1 = p2;
     p2 = p3;
     p3 = tmp;
-
+#endif
+    
     c1 = c2;
     s1 = s2;
 
@@ -336,16 +316,6 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda)
 
   /* Undo the right preconditioning. */
   stokesVecScaledAdd(stokes, 1.0, e, 1.0, u);
-
-  /* Free work vectors. */
-  stokesVecFree(stokes, &e);
-  stokesVecFree(stokes, &w);
-  stokesVecFree(stokes, &v1);
-  stokesVecFree(stokes, &v2);
-  stokesVecFree(stokes, &v3);
-  stokesVecFree(stokes, &p1);
-  stokesVecFree(stokes, &p2);
-  stokesVecFree(stokes, &p3);
 
   return;
 }

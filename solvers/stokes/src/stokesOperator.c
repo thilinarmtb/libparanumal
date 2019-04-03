@@ -49,58 +49,6 @@ void stokesOperator(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t 
 
   if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
 
-#if 0
-    printf("STOKES: USING GLL\n");
-    stokes->stiffnessKernel(stokes->meshV->Nelements,
-                            stokes->meshV->o_ggeo,
-                            stokes->meshV->o_Dmatrices,
-                            stokes->o_eta,
-                            v.o_x,
-                            Av.o_x);
-
-    stokes->stiffnessKernel(stokes->meshV->Nelements,
-                            stokes->meshV->o_ggeo,
-                            stokes->meshV->o_Dmatrices,
-                            stokes->o_eta,
-                            v.o_y,
-                            Av.o_y);
-
-    if (stokes->meshV->dim == 3) {
-      stokes->stiffnessKernel(stokes->meshV->Nelements,
-                              stokes->meshV->o_ggeo,
-                              stokes->meshV->o_Dmatrices,
-                              stokes->o_eta,
-                              v.o_z,
-                              Av.o_z);
-    }
-
-    stokes->raisePressureKernel(stokes->meshV->Nelements,
-                                o_interpRaise,
-                                v.o_p,
-                                o_pRaised);
-
-    stokes->gradientKernel(stokes->meshV->Nelements,
-                           stokes->NtotalV,
-                           stokes->meshV->o_Dmatrices,
-                           stokes->meshV->o_vgeo,
-                           o_pRaised,
-                           Av.o_v);
-
-    stokes->divergenceKernel(stokes->meshV->Nelements,
-                             stokes->NtotalV,
-                             stokes->meshV->o_Dmatrices,
-                             stokes->meshV->o_vgeo,
-                             v.o_v,
-                             o_pRaised);
-
-    stokes->lowerPressureKernel(stokes->meshV->Nelements,
-                                o_interpRaise,
-                                o_pRaised,
-                                Av.o_p);
-#else
-
-    //printf("STOKES: USING MONOLITHIC STOKES KERNEL\n");
-
     stokes->raisePressureKernel(stokes->meshV->Nelements,
                                 o_interpRaise,
                                 v.o_p,
@@ -121,8 +69,6 @@ void stokesOperator(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t 
                                 o_pRaised,
                                 Av.o_p);
 
-    
-#endif
   } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
     printf("STOKES: USING CUBATURE\n");
     stokes->stiffnessKernel(stokes->meshV->Nelements,
@@ -227,6 +173,142 @@ void stokesOperator(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t 
   o_interpRaise.free();
   return;
 }
+
+void stokesOperator(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memory &Av)
+{
+  /* TODO:  We re-allocate these scratch variables every time we call the
+   * operator, but they're going to go away eventually, so we don't care.  keep
+   * re-allocating them.
+   */
+  occa::memory o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
+  occa::memory o_pRaised = stokes->meshV->device.malloc(stokes->NtotalV*sizeof(dfloat));
+
+  stokes->vecZeroKernel(stokes->Ndof, Av);// should try and avoid this
+
+  /* NB:  These kernels MUST be called in this order, as they modify Av incrementally.
+   *
+   * TODO:  Fuse these into one big Stokes Ax kernel?
+   */
+
+  int dim = stokes->meshV->dim;
+  
+  if (stokes->options.compareArgs("INTEGRATION TYPE", "GLL")) {
+
+    stokes->raisePressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                v+dim*stokes->NtotalV*sizeof(dfloat),
+                                o_pRaised);
+
+    stokes->stokesOperatorKernel(stokes->meshV->Nelements,
+				 stokes->NtotalV, // offset
+				 stokes->meshV->o_vgeo, // note use of vgeo
+				 stokes->meshV->o_Dmatrices,
+				 lambda,
+				 stokes->o_eta,
+				 v,
+				 o_pRaised, // input & output
+				 Av); 
+    
+    stokes->lowerPressureKernel(stokes->meshV->Nelements,
+                                o_interpRaise,
+                                o_pRaised,
+                                Av+dim*stokes->NtotalV*sizeof(dfloat));
+
+  } else if (stokes->options.compareArgs("INTEGRATION TYPE", "CUBATURE")) {
+
+    printf("STOKES: USING CUBATURE\n");
+    for(int d=0;d<stokes->meshV->dim;++d){
+      stokes->stiffnessKernel(stokes->meshV->Nelements,
+			      stokes->meshV->o_cubggeo,
+			      stokes->o_cubD,
+			      stokes->o_cubInterpV,
+			      stokes->o_cubEta,
+			      v+d*stokes->NtotalV*sizeof(dfloat),
+			      Av+d*stokes->NtotalV*sizeof(dfloat));
+    }
+
+    stokes->gradientKernel(stokes->meshV->Nelements,
+			   stokes->NtotalV,
+			   stokes->meshV->o_cubvgeo,
+			   stokes->o_cubD,
+			   stokes->o_cubInterpV,
+			   stokes->o_cubInterpP,
+			   v,
+			   Av);
+    
+    stokes->divergenceKernel(stokes->meshV->Nelements,
+			     stokes->NtotalV,
+			     stokes->meshV->o_cubvgeo,
+			     stokes->o_cubD,
+			     stokes->o_cubInterpV,
+			     stokes->o_cubInterpP,
+			      v+dim*stokes->NtotalV*sizeof(dfloat),
+			     Av+dim*stokes->NtotalV*sizeof(dfloat));
+  }
+
+#if 0
+  /* Rank-boost for all-Neumann problem.
+   *
+   * TODO:  Need to make this conditional on an "allNeumann" flag like in the
+   * elliptic solver.
+   *
+   * TODO:  Do this on-device.
+   *
+   * TODO:  There may be a better way to do this using projections---see the
+   * experimental branch.
+   *
+   */
+
+  stokesVecCopyDeviceToHost(v);
+  stokesVecCopyDeviceToHost(Av);
+
+  dfloat sx = 0.0, sy = 0.0, sz = 0.0;
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    sx += v.x[i];
+    sy += v.y[i];
+    if (stokes->meshV->dim == 3)
+      sz += v.z[i];
+  }
+
+  sx /= stokes->NtotalV;
+  sy /= stokes->NtotalV;
+  if (stokes->meshV->dim == 3)
+    sz /= stokes->NtotalV;
+
+  for (int i = 0; i < stokes->NtotalV; i++) {
+    Av.x[i] += sx;
+    Av.y[i] += sy;
+    if (stokes->meshV->dim == 3)
+      Av.z[i] += sz;
+  }
+
+  stokesVecCopyHostToDevice(Av);
+#endif
+
+  /* Gather-scatter for C0 FEM. */
+  if (stokes->options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")){
+    // need to combine somehow
+    for(int d=0;d<stokes->meshV->dim;++d){
+      ogsGatherScatter(Av+d*stokes->NtotalV*sizeof(dfloat), ogsDfloat, ogsAdd, stokes->ogs);
+    }
+    ogsGatherScatter(Av+dim*stokes->NtotalV*sizeof(dfloat), ogsDfloat, ogsAdd, stokes->meshP->ogs);
+  }
+  
+  // TODO:  Make a function for this.
+  //
+  // TODO:  We only need to do this for C0 FEM.
+  if (stokes->Nmasked) {
+    for(int d=0;d<stokes->meshV->dim;++d){
+      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av+d*stokes->NtotalV*sizeof(dfloat));
+    }
+  }
+
+  o_pRaised.free();
+  o_interpRaise.free();
+  return;
+}
+
+
 
 /*****************************************************************************/
 

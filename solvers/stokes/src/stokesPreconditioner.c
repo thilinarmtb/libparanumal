@@ -26,10 +26,11 @@ SOFTWARE.
 
 #include "stokes.h"
 
-static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv);
-static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv);
+static void stokesJacobiPreconditioner(stokes_t *stokes, occa::memory &v, occa::memory &Mv);
+static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memory &Mv);
 
-void stokesPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv)
+void stokesPreconditioner(stokes_t *stokes, dfloat lambda,
+			  occa::memory &v, occa::memory &Mv)
 {
   if (stokes->options.compareArgs("PRECONDITIONER", "NONE")) {
     stokesVecCopy(stokes, v, Mv);
@@ -45,63 +46,43 @@ void stokesPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokes
   return;
 }
 
-static void stokesJacobiPreconditioner(stokes_t *stokes, stokesVec_t v, stokesVec_t Mv)
+static void stokesJacobiPreconditioner(stokes_t *stokes, occa::memory &v, occa::memory &Mv)
 {
   stokes->dotMultiplyKernel(stokes->Ndof,
-                            v.o_v,
+                            v,
                             stokes->precon->invDiagA.o_v,
-                            Mv.o_v);
+                            Mv);
   return;
 }
 
-static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t Mv)
+static void stokesSchurComplementBlockDiagPreconditioner(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memory &Mv)
 {
-  stokesVec_t tmp, tmp2, tmp3;
+  occa::memory &tmp  = stokes->o_preconWorkspace[0];
+  occa::memory &tmp2 = stokes->o_preconWorkspace[1];
+  occa::memory &tmp3 = stokes->o_preconWorkspace[2];
 
-  stokesVecAllocate(stokes, &tmp);
-  stokesVecAllocate(stokes, &tmp2);
-  stokesVecAllocate(stokes, &tmp3);
+  int dim = stokes->meshV->dim;
 
-  ellipticPreconditioner(stokes->precon->ellipticV, lambda, v.o_x, Mv.o_x);
-  ellipticPreconditioner(stokes->precon->ellipticV, lambda, v.o_y, Mv.o_y);
-  if (stokes->meshV->dim == 3)
-    ellipticPreconditioner(stokes->precon->ellipticV, lambda, v.o_z, Mv.o_z);
-
+  int offset = stokes->NtotalV*sizeof(dfloat);
+  
+  for(int d=0;d<dim;++d){
+    occa::memory  vd =  v+d*offset;
+    occa::memory Mvd = Mv+d*offset;
+    ellipticPreconditioner(stokes->precon->ellipticV, lambda, vd, Mvd);
+  }
+  
   if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MASSMATRIX")) {
-    stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
+    stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v+dim*offset, Mv+dim*offset);
   } else if (stokes->options.compareArgs("PRESSURE BLOCK PRECONDITIONER", "MULTIGRID")) {
-    stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, v.o_p, Mv.o_p);
-    ellipticPreconditioner(stokes->precon->ellipticP, 0.0, v.o_p, tmp.o_p);
-    stokes->vecScaledAddKernel(stokes->NtotalP, lambda, tmp.o_p, 1.0, Mv.o_p);
+
+    occa::memory  p =  v+dim*offset;
+    occa::memory Mp = Mv+dim*offset;
+    occa::memory tmpp = tmp+dim*offset;
+    
+    stokes->dotMultiplyKernel(stokes->NtotalP, stokes->precon->invMM.o_p, p, Mp);
+    ellipticPreconditioner(stokes->precon->ellipticP, 0.0, p, tmpp);
+    stokes->vecScaledAddKernel(stokes->NtotalP, lambda, tmpp, 1.0, Mp);
   }
-
-#if 0
-  /* TODO:  These lines appear to be unnecessary? */
-
-  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_x, Mv.o_x);
-  stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_y, Mv.o_y);
-  if (stokes->meshV->dim == 3)
-    stokes->dotMultiplyKernel(stokes->NtotalV, stokes->ogs->o_invDegree, Mv.o_z, Mv.o_z);
-  stokes->dotMultiplyKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, Mv.o_p, Mv.o_p);
-
-  ogsGatherScatter(Mv.o_x, ogsDfloat, ogsAdd, stokes->ogs);
-  ogsGatherScatter(Mv.o_y, ogsDfloat, ogsAdd, stokes->ogs);
-  if (stokes->meshV->dim == 3)
-    ogsGatherScatter(Mv.o_z, ogsDfloat, ogsAdd, stokes->ogs);
-  ogsGatherScatter(Mv.o_p, ogsDfloat, ogsAdd, stokes->meshP->ogs);
-
-  if (stokes->Nmasked) {
-    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_x);
-    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_y);
-    if (stokes->meshV->dim == 3)
-      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Mv.o_z);
-  }
-#endif
-
-
-  stokesVecFree(stokes, &tmp);
-  stokesVecFree(stokes, &tmp2);
-  stokesVecFree(stokes, &tmp3);
 
   return;
 }

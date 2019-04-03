@@ -51,7 +51,7 @@ int main(int argc, char **argv)
   if (stokes->testCase->isTimeDependent) {
     stokesTimeDependentSolve(stokes, tfinal);
   } else {
-    stokesSolve(stokes, lambda);
+    stokesSolve(stokes, lambda, stokes->f.o_v, stokes->u.o_v);
   }
 
   stokesPlotVTU(stokes, "foo.vtu");

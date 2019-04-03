@@ -93,6 +93,12 @@ void stokesVecCopy(stokes_t *stokes, stokesVec_t u, stokesVec_t v)
   return;
 }
 
+void stokesVecCopy(stokes_t *stokes, occa::memory &u, occa::memory &v)
+{
+  v.copyFrom(u);
+  return;
+}
+
 /* TODO:  The inverse degree weighting is only applicable for C0 FEM.
  *
  * TODO:  Might it be better to store the inverse degree weights in one big
@@ -106,7 +112,7 @@ void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloa
 {
   *c = 0.0;
 
-#if 1
+#if 0
   /* TODO:  Replace host loops with further kernel calls if we had too many
    * blocks.  (See, e.g., ellipticWeightedInnerProduct().)
    */
@@ -145,6 +151,25 @@ void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloa
 
   return;
 }
+
+void stokesVecInnerProduct(stokes_t *stokes, occa::memory &u, occa::memory &v, dfloat *c)
+{
+  *c = 0.0;
+
+  stokes->globalWeightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree,
+					   stokes->NtotalP, stokes->meshP->ogs->o_invDegree,
+					   u, v, stokes->o_workV);
+  stokes->o_workV.copyTo(stokes->workV);
+  for (int i = 0; i < stokes->NblockV; i++)
+    *c += stokes->workV[i];
+  
+  /* TODO:  MPI. */
+
+  return;
+}
+
+
+
 
 /* Performs a gather-scatter operation. */
 void stokesVecGatherScatter(stokes_t *stokes, stokesVec_t v)
@@ -187,10 +212,25 @@ void stokesVecScale(stokes_t *stokes, stokesVec_t v, dfloat c)
   return;
 }
 
+void stokesVecScale(stokes_t *stokes, occa::memory &v, dfloat c)
+{
+  stokes->vecScaleKernel(stokes->Ndof, c, v);
+  return;
+}
+
+
 /* Computes v <-- au + bv for vectors u, v and scalars a, b. */
 void stokesVecScaledAdd(stokes_t *stokes, dfloat a, stokesVec_t u, dfloat b, stokesVec_t v)
 {
   stokes->vecScaledAddKernel(stokes->Ndof, a, u.o_v, b, v.o_v);
+  return;
+}
+
+void stokesVecScaledAdd(stokes_t *stokes,
+			dfloat a, occa::memory &u,
+			dfloat b, occa::memory &v)
+{
+  stokes->vecScaledAddKernel(stokes->Ndof, a, u, b, v);
   return;
 }
 

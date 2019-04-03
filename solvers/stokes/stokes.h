@@ -185,6 +185,14 @@ typedef struct {
   dlong NblockP;          /* Used for reductions over the pressure DOFs. */
   dfloat *workP;
   occa::memory o_workP;
+
+  // workspace for stokes solve
+  int NsolveWorkspace;
+  occa::memory *o_solveWorkspace; //
+
+  int NpreconWorkspace;
+  occa::memory *o_preconWorkspace; // 
+  
 } stokes_t;
 
 stokes_t *stokesSetup(occa::properties &kernelInfoV, occa::properties &kernelInfoP, setupAide options);
@@ -214,5 +222,21 @@ void stokesVecPrint(stokes_t *stokes, stokesVec_t v);
 void stokesGetTestCase(stokes_t *stokes, stokesTestCase_t *testCase);
 
 void stokesPlotVTU(stokes_t *stokes, char *fileName);
+
+// occa memory versions
+
+void stokesOperator(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memory &Av);
+void stokesVecInnerProduct(stokes_t *stokes, occa::memory &u, occa::memory &v, dfloat *c);
+void stokesVecCopy(stokes_t *stokes, occa::memory &u, occa::memory &v);
+
+void stokesVecScaledAdd(stokes_t *stokes,
+			dfloat a, occa::memory &u,
+			dfloat b, occa::memory &v);
+
+void stokesVecScale(stokes_t *stokes, occa::memory &v, dfloat c);
+
+void stokesPreconditioner(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memory &Mv);
+
+void stokesSolve(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u);
 
 #endif /* STOKES_H */
