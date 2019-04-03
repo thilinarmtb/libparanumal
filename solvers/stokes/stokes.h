@@ -177,7 +177,9 @@ typedef struct {
   occa::kernel stokesOperatorKernel;
   occa::kernel multipleGlobalWeightedInnerProductsKernel;
 
-  occa::kernel prepareRhsKernel;
+  occa::kernel velocityMaskKernel;
+  
+  occa::kernel prepareRhsKernel;  
   occa::kernel userForcingKernel;
   occa::kernel userSolutionKernel;
   occa::kernel userBoundaryConditionsKernel;

@@ -103,7 +103,7 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
   }
 
   stokes->o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
-  
+
   stokes->cubInterpV = stokes->meshV->cubInterp;
 
   stokes->o_cubInterpV = stokes->meshV->device.malloc(stokes->meshV->Nq*stokes->meshV->cubNq*sizeof(dfloat), stokes->cubInterpV);
@@ -252,6 +252,8 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   
   stokes->meshV->maskKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/mask.okl", "mask", kernelInfoV);
 
+  stokes->velocityMaskKernel         = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVelocityMask.okl", "stokesVelocityMask", kernelInfoV);
+  
   stokes->dotMultiplyKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/dotMultiply.okl", "dotMultiply", kernelInfoV);
   stokes->vecScaleKernel             = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecScale.okl", "stokesVecScale", kernelInfoV);
   stokes->vecScaledAddKernel         = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesVecScaledAdd.okl", "stokesVecScaledAdd", kernelInfoV);
