@@ -50,13 +50,13 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
   stokesVecAllocate(stokes, &stokes->f);
 
   // set up work space
-  stokes->NsolveWorkspace = 8; // need to check
+  stokes->NsolveWorkspace = 10; // need to check
   stokes->o_solveWorkspace = new occa::memory[stokes->NsolveWorkspace];
   for(int n=0;n<stokes->NsolveWorkspace;++n){
     stokes->o_solveWorkspace[n] = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat));
   }
 
-  stokes->NpreconWorkspace = 8; // need to check
+  stokes->NpreconWorkspace = 4; // need to check
   stokes->o_preconWorkspace = new occa::memory[stokes->NpreconWorkspace];
   for(int n=0;n<stokes->NpreconWorkspace;++n){
     stokes->o_preconWorkspace[n] = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat));

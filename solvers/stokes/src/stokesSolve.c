@@ -173,17 +173,19 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda, occa::memory &f,
    *
    * TODO:  Can we eliminate two of these so that we use the same storage as MINRES?
    */
-  occa::memory &e  = stokes->o_solveWorkspace[0];
-  occa::memory &w  = stokes->o_solveWorkspace[1];
-  occa::memory &v1 = stokes->o_solveWorkspace[2];
-  occa::memory &v2 = stokes->o_solveWorkspace[3];
-  occa::memory &v3 = stokes->o_solveWorkspace[4];
-  occa::memory &p1 = stokes->o_solveWorkspace[5];
-  occa::memory &p2 = stokes->o_solveWorkspace[6];
-  occa::memory &p3 = stokes->o_solveWorkspace[7];
-  occa::memory &res= stokes->o_solveWorkspace[8];
-  occa::memory &Ax = stokes->o_solveWorkspace[9];
+  occa::memory e  = stokes->o_solveWorkspace[0];
+  occa::memory w  = stokes->o_solveWorkspace[1];
+  occa::memory v1 = stokes->o_solveWorkspace[2];
+  occa::memory v2 = stokes->o_solveWorkspace[3];
+  occa::memory v3 = stokes->o_solveWorkspace[4];
+  occa::memory p1 = stokes->o_solveWorkspace[5];
+  occa::memory p2 = stokes->o_solveWorkspace[6];
+  occa::memory p3 = stokes->o_solveWorkspace[7];
+  occa::memory res= stokes->o_solveWorkspace[8];
+  occa::memory Ax = stokes->o_solveWorkspace[9];
 
+  stokes->vecZeroKernel(stokes->Ndof, w);
+  
   stokesOperator(stokes, lambda, u, v2);                  /* v2 = f - A*u0    (initial residual) */
   stokesVecScaledAdd(stokes, 1.0, f, -1.0, v2);
   stokesVecInnerProduct(stokes, v2, v2, &g1);             /* g1 = norm(v2)                       */
@@ -292,9 +294,8 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda, occa::memory &f,
      *
      * NB:  Vector assignments copy *pointers*, not values.
      */
-#if 0
-    // TW: turn this off for a mo 
-    tmp = v1;
+
+    occa::memory tmp = v1;
     v1 = v2;
     v2 = v3;
     v3 = tmp;
@@ -303,7 +304,6 @@ static void stokesSolveDQGMRES(stokes_t *stokes, dfloat lambda, occa::memory &f,
     p1 = p2;
     p2 = p3;
     p3 = tmp;
-#endif
     
     c1 = c2;
     s1 = s2;
