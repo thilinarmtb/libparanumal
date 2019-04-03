@@ -68,6 +68,7 @@ LOBJS = \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshConnectFaceNodes3D.o \
+../../src/meshConnectPeriodicFaceNodes2D.o \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshGeometricFactorsTri2D.o \
@@ -109,6 +110,7 @@ LOBJS = \
 ../../src/meshSetup.o \
 ../../src/meshSetupTri2D.o \
 ../../src/meshSetupQuad2D.o \
+../../src/meshSetupBoxQuad2D.o \
 ../../src/meshSetupQuad3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \

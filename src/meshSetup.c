@@ -40,7 +40,14 @@ mesh_t *meshSetup(char *filename, int N, setupAide &options){
     mesh = meshSetupTri2D(filename, N); break;
   case QUADRILATERALS:{
     if(dim==2){
-      mesh = meshSetupQuad2D(filename, N);
+      string foo;
+      if(options.getArgs("MESH FILE", foo)){
+	mesh = meshSetupQuad2D(filename, N);
+      }
+      else if(options.compareArgs("BOX DOMAIN", "TRUE")){
+        mesh = meshSetupBoxQuad2D(N, options);
+      }
+	
     }
     else{
       dfloat radius = 1;

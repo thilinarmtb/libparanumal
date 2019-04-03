@@ -98,6 +98,8 @@ void occaOptimizeGradientQuad2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *d
 // serial face-node to face-node connection
 void meshConnectFaceNodes2D(mesh2D *mesh);
 
+void meshConnectPeriodicFaceNodes2D(mesh2D *mesh, dfloat xper, dfloat yper);
+
 // serial face-mode to face-mode connection
 void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V);
 
@@ -129,6 +131,7 @@ void meshBuildFaceNodesQuad2D(mesh2D *mesh);
 
 mesh2D *meshSetupTri2D(char *filename, int N);
 mesh2D *meshSetupQuad2D(char *filename, int N);
+mesh_t *meshSetupBoxQuad2D(int N, setupAide &options);
 
 // set up OCCA device and copy generic element info to device
 void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kernelInfo);

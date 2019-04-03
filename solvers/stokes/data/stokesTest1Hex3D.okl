@@ -1,0 +1,118 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void stokesUserSolution(const dlong Nelements,
+				const dlong offset,
+				const dfloat time,
+				@restrict const dfloat *x,
+				@restrict const dfloat *y,
+				@restrict const dfloat *z,
+				@restrict dfloat *q){
+  
+
+  for (dlong e = 0; e < Nelements; e++; @outer(0)) {
+    for (int n = 0; n < p_Np; ++n; @inner(0)) {
+      dlong  m = e*p_Np + n;
+      
+      dfloat xm = x[m];
+      dfloat ym = y[m];
+      dfloat zm = z[m];
+
+      q[m+0*offset] = -6.0*zm*pow(1.0 - zm*zm, 2.0);
+      q[m+1*offset] = -6.0*xm*pow(1.0 - xm*xm, 2.0);
+      q[m+2*offset] = -6.0*ym*pow(1.0 - ym*ym, 2.0);
+      q[m+3*offset] = sin(M_PI*xm)*sin(M_PI*ym)*sin(M_PI*zm);
+    }
+  }
+}
+
+
+@kernel void stokesUserBoundaryConditions(const dlong Nelements,
+					  const dlong offset,
+					  const dfloat time,
+					  @restrict const int *mapB,
+					  @restrict const dfloat *x,
+					  @restrict const dfloat *y,
+					  @restrict const dfloat *z,
+					  @restrict dfloat *q){
+  
+
+  for (dlong e = 0; e < Nelements; e++; @outer(0)) {
+    for (int n = 0; n < p_Np; ++n; @inner(0)) {
+      dlong  m = e*p_Np + n;
+      
+      int bc = mapB[m];
+      dfloat ux = 0, uy = 0, uz = 0, pr = 0;
+      
+      if(bc==1){
+
+	dfloat xm = x[m];
+	dfloat ym = y[m];
+	dfloat zm = z[m];
+	
+	ux = -6.0*zm*pow(1.0 - zm*zm, 2.0);
+	uy = -6.0*xm*pow(1.0 - xm*xm, 2.0);
+	uz = -6.0*ym*pow(1.0 - ym*ym, 2.0);
+	pr = sin(M_PI*xm)*sin(M_PI*ym)*sin(M_PI*zm);
+      }
+      
+      q[m+0*offset] = ux;
+      q[m+1*offset] = uy;
+      q[m+2*offset] = uz;
+
+      
+    }
+  }
+}
+
+@kernel void stokesUserForcing(const dlong Nelements,
+			       const dlong offset,
+			       const dfloat time,
+			       const dfloat lambda,
+			       @restrict const dfloat *x,
+			       @restrict const dfloat *y,
+			       @restrict const dfloat *z,
+			       @restrict dfloat *f){
+  
+  for (dlong e = 0; e < Nelements; e++; @outer(0)) {
+    for (int n = 0; n < p_Np; ++n; @inner(0)) {
+      dlong m = e*p_Np + n;
+      
+      dfloat xm = x[m];
+      dfloat ym = y[m];
+      dfloat zm = z[m];
+      
+      dfloat fx = M_PI*cos(M_PI*xm)*sin(M_PI*ym)*sin(M_PI*zm) + 48.0*zm*zm*zm - 72.0*zm*(1.0 - zm*zm) - lambda*6.0*zm*pow(1.0 - zm*zm, 2.0);
+      dfloat fy = M_PI*sin(M_PI*xm)*cos(M_PI*ym)*sin(M_PI*zm) + 48.0*xm*xm*xm - 72.0*xm*(1.0 - xm*xm) - lambda*6.0*xm*pow(1.0 - xm*xm, 2.0);
+      dfloat fz = M_PI*sin(M_PI*xm)*sin(M_PI*ym)*cos(M_PI*zm) + 48.0*ym*ym*ym - 72.0*ym*(1.0 - ym*ym) - lambda*6.0*ym*pow(1.0 - ym*ym, 2.0);
+      
+      f[m+0*offset] = fx;
+      f[m+1*offset] = fy;
+      f[m+2*offset] = fz;
+    }
+  }
+}
+
