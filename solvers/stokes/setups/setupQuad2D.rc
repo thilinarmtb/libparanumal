@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-6.msh
+../../meshes/unitSquareQuad2D-5.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -174,7 +174,7 @@ BACKWARDEULER
 TRUE
 
 [DIM FISCHER SUCCESSIVE RHS]
-1
+10
 
 [STOKES USER KERNEL FILE]
-data/stokesTest1.okl
+data/stokesTest1Quad2D.okl

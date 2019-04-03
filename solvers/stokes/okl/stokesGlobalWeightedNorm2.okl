@@ -66,7 +66,7 @@ SOFTWARE.
 	
 	dfloat P1 = x[m+p_DIM*NnodesV];
 	
-	res *= wPm*P1*P1;
+	res += wPm*P1*P1;
       }
       
       s_wx2[t] = res;

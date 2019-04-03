@@ -26,11 +26,11 @@ SOFTWARE.
 
 @kernel void stokesFsrReconstruct(const dlong Ndof,
 				  const dlong fsrNrhs, // how many inner products
-				  @restrict        dfloat * b,
+				        dfloat * b,
 				  const dfloat beta,				  
 				  @restrict const  dfloat * alphas, 
 				  @restrict const  dfloat * Btilde, 
-				  @restrict        dfloat * btilde){ 
+				        dfloat * btilde){ 
   
   
   for(dlong blk=0;blk<(Ndof+p_blockSize-1)/p_blockSize;++blk;@outer(0)){

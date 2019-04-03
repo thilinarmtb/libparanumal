@@ -80,7 +80,7 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
     /* Apply the boundary conditions. */
     stokesRHSAddBC(stokes, t, 1.0/dt);
 
-#if 0
+#if 1
     /* Apply Fischer Successive RHS (FSR) */
     stokesFSRStart(stokes, stokesNFSR, stokes->f.o_v, stokes->o_fsrbtilde);
 
