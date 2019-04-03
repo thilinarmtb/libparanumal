@@ -48,6 +48,8 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
   dfloat t,   dt;
   stokesVec_t tmp;
 
+  mesh_t *meshV = stokes->meshV;
+  
   stokesVecAllocate(stokes, &tmp);
 
   stokes->options.getArgs("TIME STEP", dt);
@@ -60,42 +62,55 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
     /* Set current RHS from current solution scaled by dt plus the forcing
      * function.
      */
+
+    stokes->userForcingKernel(meshV->Nelements, stokes->NtotalV, t, 
+			      meshV->o_x, meshV->o_y, meshV->o_z,
+			      stokes->f.o_v);
+    
+
+    dfloat dtinv = 1./dt;
+    stokes->prepareRhsKernel(meshV->Nelements, stokes->NtotalV, t, dtinv,
+			     meshV->o_x, meshV->o_y, meshV->o_z,
+			     meshV->o_vgeo, stokes->u.o_v, stokes->f.o_v);
+    
+#if 0
     stokesVecZero(stokes, stokes->f);
 
     stokesVecCopyDeviceToHost(stokes->f);
     stokesVecCopyDeviceToHost(stokes->u);
 
-    for (int e = 0; e < stokes->meshV->Nelements; e++) {
-      for (int i = 0; i < stokes->meshV->Np; i++) {
+    for (int e = 0; e < meshV->Nelements; e++) {
+      for (int i = 0; i < meshV->Np; i++) {
         int    ind;
         dfloat x, y, z, JW;
 
-        ind = e*stokes->meshV->Np + i;
-        x = stokes->meshV->x[ind];
-        y = stokes->meshV->y[ind];
-        z = stokes->meshV->z[ind];
+        ind = e*meshV->Np + i;
+        x = meshV->x[ind];
+        y = meshV->y[ind];
+        z = meshV->z[ind];
 
-        if (stokes->meshV->dim == 2)
+        if (meshV->dim == 2)
           stokes->testCase->tdForcingFn2D(x, y, t, stokes->f.x + ind, stokes->f.y + ind);
-        else if (stokes->meshV->dim == 3)
+        else if (meshV->dim == 3)
           stokes->testCase->tdForcingFn3D(x, y, z, t, stokes->f.x + ind, stokes->f.y + ind, stokes->f.z + ind);
 
         stokes->f.x[ind] += stokes->u.x[ind]/dt;
         stokes->f.y[ind] += stokes->u.y[ind]/dt;
-        if (stokes->meshV->dim == 3)
+        if (meshV->dim == 3)
           stokes->f.z[ind] += stokes->u.z[ind]/dt;
 
         /* Add the Jacobian factors (because meshApplyElementMatrix() demands it). */
-        JW = stokes->meshV->vgeo[stokes->meshV->Np*(e*stokes->meshV->Nvgeo + JWID) + i];
+        JW = meshV->vgeo[meshV->Np*(e*meshV->Nvgeo + JWID) + i];
         stokes->f.x[ind] *= JW;
         stokes->f.y[ind] *= JW;
-        if (stokes->meshV->dim == 3)
+        if (meshV->dim == 3)
           stokes->f.z[ind] *= JW;
       }
     }
 
     stokesVecCopyHostToDevice(stokes->f);
-
+#endif
+    
     /* Apply the boundary conditions. */
     stokesRHSAddBC(stokes, t, 1.0/dt);
     

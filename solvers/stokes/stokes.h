@@ -176,6 +176,10 @@ typedef struct {
   occa::kernel globalWeightedInnerProductKernel;
   occa::kernel stokesOperatorKernel;
   occa::kernel multipleGlobalWeightedInnerProductsKernel;
+
+  occa::kernel prepareRhsKernel;
+  occa::kernel userForcingKernel;
+  occa::kernel userSolutionKernel;
   
   /* Scratch variables */
   dlong NblockV;          /* Used for reductions over the velocity DOFs. */

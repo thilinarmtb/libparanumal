@@ -306,5 +306,13 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
     }
   }
   
+  stokes->prepareRhsKernel = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesPrepareRhs.okl", "stokesPrepareRhs", kernelInfoV);
+  
+  // user supplied kernels
+  string userName = stokes->options.getArgs("STOKES USER KERNEL FILE");
+
+  stokes->userForcingKernel = stokes->meshV->device.buildKernel(userName.c_str(), "stokesUserForcing", kernelInfoV);
+  stokes->userSolutionKernel = stokes->meshV->device.buildKernel(userName.c_str(), "stokesUserSolution", kernelInfoV);
+  
   return;
 }
