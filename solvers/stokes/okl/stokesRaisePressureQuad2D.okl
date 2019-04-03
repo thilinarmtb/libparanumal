@@ -38,13 +38,14 @@ SOFTWARE.
     for (int i = 0; i < p_NqV; i++; @inner(1)) {
       for (int j = 0; j < p_NqV; j++; @inner(0)) {
         const dlong ind = e*p_NpV + i*p_NqV + j;
-        pRaised[ind] = 0.0;
-        for (int k = 0; k < p_NqP; k++) {
-          dfloat c = 0.0;
-          for (int n = 0; n < p_NqP; n++)
-            c += interpRaise[j*p_NqP + n]*p[e*p_NpP + k*p_NqP + n];
-          pRaised[ind] += c*interpRaise[i*p_NqP + k];
-        }
+
+	pRaised[ind] = 0.0;
+	for (int k = 0; k < p_NqP; k++) {
+	  dfloat c = 0.0;
+	  for (int n = 0; n < p_NqP; n++)
+	    c += interpRaise[j*p_NqP + n]*p[e*p_NpP + k*p_NqP + n];
+	  pRaised[ind] += c*interpRaise[i*p_NqP + k];
+	}
       }
     }
   }

@@ -73,6 +73,7 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda, occa::memory &f, 
 
   // TW: THIS NEEDS TO BE ZEROED
   stokes->vecZeroKernel(stokes->Ndof, w);
+  stokes->vecZeroKernel(stokes->Ndof, u);
   
   stokesOperator(stokes, lambda, u, r);                        /* r = f - Au               */
 
@@ -96,12 +97,12 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda, occa::memory &f, 
   /* Adjust the tolerance to account for small initial residual norms. */
   tol = mymax(tol*fabs(eta), tol);
   if (verbose)
-    printf("MINRES:  initial eta = % .15e, target %.15e\n", eta, tol);
+    printf("MINRES:  initial eta = % .15e, gamma = %.15e target %.15e\n", eta, gam, tol);
 
   /* MINRES iteration loop. */
   for (int i = 0; i < maxiter; i++) {
     if (verbose)
-      printf("MINRES:  it % 3d  eta = % .15e\n", i, eta);
+      printf("MINRES:  it % 3d  eta = % .15e, gamma = %.15e \n", i, eta, gam);
     if (fabs(eta) < tol) {
       if (verbose)
         printf("MINRES converged in %d iterations (eta = % .15e).\n", i, eta);

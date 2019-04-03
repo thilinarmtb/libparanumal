@@ -28,58 +28,21 @@ SOFTWARE.
 #include <limits.h>
 #include "stokes.h"
 
+// Adapted from Method 1 (eqns 4 & 5) of
+// Comput. Methods Appl. Mech. Engrg. 163 (1998) 193-204
+// Projection techniques for iterative solution of Ax =b with
+// successive right-hand sides
+// Paul F. Fischer
+
 void stokesFSRStart(stokes_t *stokes,
 		    int &stokesNFSR, // active number of FSR rhs
-		    const stokesVec_t &b,
-		    stokesVec_t &u){
-  
+		    occa::memory &b,
+		    occa::memory &btilde){
+
   // zero accumulators
   stokes->o_fsrAlphas.copyFrom(stokes->o_fsrZeroArray);
   
-  // compute Q.historyQ for all history state records
-  stokes->multipleGlobalWeightedInnerProductsKernel(stokes->NtotalV,
-						    stokes->ogs->o_invDegree,
-						    stokes->NtotalP,
-						    stokes->meshP->ogs->o_invDegree,
-						    stokesNFSR,
-						    b.o_v,  
-						    stokes->o_fsrHistoryQ,
-						    stokes->o_fsrAlphas);
-
-  // new intial guess is in u
-  stokes->fsrStartKernel(stokes->Ndof,
-			 stokesNFSR,
-			 stokes->o_fsrAlphas,
-			 stokes->o_fsrHistoryQ,
-			 u.o_v);
-  
-}
-
-
-void stokesFSRUpdate(stokes_t *stokes,
-		     int &stokesNFSR, // active number of FSR rhs
-		     dfloat lambda,
-		     stokesVec_t &v,
-		     stokesVec_t &Av
-		     ){
-
-  // apply stokes Operator
-  stokesOperator(stokes, lambda, v, Av);
-
-  dfloat vdotAv = 0;
-  stokesVecInnerProduct(stokes, v, Av, &vdotAv);
-  
-  if(stokesNFSR==stokes->fsrNrhs-1){
-    
-    v.o_v.copyTo(stokes->o_fsrHistoryQ, stokes->Ndof*sizeof(dfloat), 0); // 0 offset
-    
-    dfloat fac = 1./sqrt(vdotAv);
-    
-    stokesVecScale(stokes, v, fac);
-  }
-  else{
-    // zero accumulators
-    stokes->o_fsrAlphas.copyFrom(stokes->o_fsrZeroArray);
+  if(stokesNFSR>0){
     
     // compute Q.historyQ for all history state records
     stokes->multipleGlobalWeightedInnerProductsKernel(stokes->NtotalV,
@@ -87,28 +50,114 @@ void stokesFSRUpdate(stokes_t *stokes,
 						      stokes->NtotalP,
 						      stokes->meshP->ogs->o_invDegree,
 						      stokesNFSR,
-						      Av.o_v,  
-						      stokes->o_fsrHistoryQ,
+						      b,  
+						      stokes->o_fsrBtilde,
+						      stokes->o_fsrAlphas);
+  }
+  
+  // projected RHS is btilde = b - alpha_k*btilde_k
+  printf("stokesNFSR=%d\n", stokesNFSR);
+  stokes->fsrReconstructKernel(stokes->Ndof,
+			       stokesNFSR,
+			       b,
+			       (dfloat) -1.0,
+			       stokes->o_fsrAlphas,
+			       stokes->o_fsrBtilde,
+			       btilde);
+
+
+  dfloat *alphas = (dfloat*) calloc(stokes->fsrNrhs, sizeof(dfloat));
+  stokes->o_fsrAlphas.copyTo(alphas);
+  printf("alphas = [ "); 
+  for(int n=0;n<stokesNFSR;++n){
+    printf("%lg ", alphas[n]);
+  }
+  printf("];\n");
+  free(alphas);
+}
+
+
+void stokesFSRUpdate(stokes_t *stokes,
+		     int &stokesNFSR, // active number of FSR rhs
+		     dfloat lambda,
+		     occa::memory &xtilde,
+		     occa::memory &x,
+		     occa::memory &btilde){
+
+  // x = xtilde + alpha_k*xtilde_k
+  stokes->fsrReconstructKernel(stokes->Ndof,
+			       stokesNFSR,
+			       xtilde,
+			       (dfloat) +1.0,
+			       stokes->o_fsrAlphas,
+			       stokes->o_fsrXtilde,
+			       x);
+  
+  if(stokesNFSR==stokes->fsrNrhs){
+    
+    stokesOperator(stokes, lambda, x, btilde);
+    
+    dfloat normbtilde2 = 0;
+    stokesVecNorm2(stokes, btilde, &normbtilde2);
+    dfloat invNormbtilde = 1./sqrt(normbtilde2);
+    
+    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde, btilde, 0, stokes->o_fsrBtilde);
+    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde,      x, 0, stokes->o_fsrXtilde);
+
+    stokesNFSR = 1;
+  }
+  else{
+
+    occa::memory bhat = btilde;
+    
+    stokesOperator(stokes, lambda, xtilde, bhat);
+    
+    // zero accumulators
+    stokes->o_fsrAlphas.copyFrom(stokes->o_fsrZeroArray);
+    
+    // compute Axtilde.Btilde for all history state records
+    stokes->multipleGlobalWeightedInnerProductsKernel(stokes->NtotalV,
+						      stokes->ogs->o_invDegree,
+						      stokes->NtotalP,
+						      stokes->meshP->ogs->o_invDegree,
+						      stokesNFSR,
+						      bhat,  
+						      stokes->o_fsrBtilde,
 						      stokes->o_fsrAlphas);
 
+
+    // bhat  - alpha_k*Btilde_k
+    stokes->fsrReconstructKernel(stokes->Ndof,
+				 stokesNFSR,
+				 bhat,
+				 (dfloat) -1.0,
+				 stokes->o_fsrAlphas,
+				 stokes->o_fsrBtilde,
+				 btilde);
+
     
-    dfloat *alphas = (dfloat*) calloc(stokesNFSR, sizeof(dfloat));
-    stokes->o_fsrAlphas.copyTo(alphas, stokesNFSR*sizeof(dfloat));
+    // x  - alpha_k*Xtilde_k
+    stokes->fsrReconstructKernel(stokes->Ndof,
+				 stokesNFSR,
+				 xtilde,
+				 (dfloat) -1.0,
+				 stokes->o_fsrAlphas,
+				 stokes->o_fsrXtilde,
+				 xtilde);
 
-    dfloat normAlphas2 = 0;
-    for(int fld=0;fld<stokesNFSR;++fld){
-      normAlphas2 += pow(alphas[fld],2);
-    }      
+    // ||Ax  - alpha_k*Btilde_k||
 
-    dfloat invNormAlphas = 1./sqrt(vdotAv - normAlphas2);
-
-    stokes->fsrUpdateKernel(stokes->Ndof,
-			    stokesNFSR,
-			    invNormAlphas,
-			    stokes->o_fsrAlphas,
-			    v.o_v,
-			    stokes->o_fsrHistoryQ);
+    dfloat normbtilde2 = 0;
+    stokesVecNorm2(stokes, btilde, &normbtilde2);
+    dfloat invNormbtilde = 1./sqrt(normbtilde2);
+    
+    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde, btilde, 0,
+			       stokes->o_fsrBtilde + stokesNFSR*stokes->Ndof*sizeof(dfloat));
+    
+    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde, xtilde, 0,
+			       stokes->o_fsrXtilde + stokesNFSR*stokes->Ndof*sizeof(dfloat));
     
     ++stokesNFSR;
+
   }
 }

@@ -155,11 +155,15 @@ typedef struct {
   /* infrastructure for Fischer successive RHS */
   int fsrNrhs;
 
-  occa::memory o_fsrHistoryQ;
+  occa::memory o_fsrxtilde;
+  occa::memory o_fsrbtilde;
+  
+  occa::memory o_fsrXtilde;
+  occa::memory o_fsrBtilde;
   occa::memory o_fsrZeroArray; // do not set entries of this
   occa::memory o_fsrAlphas;
 
-  occa::kernel fsrStartKernel;
+  occa::kernel fsrReconstructKernel;
   occa::kernel fsrUpdateKernel;
   
   /* OCCA kernels */
@@ -174,6 +178,7 @@ typedef struct {
   occa::kernel vecZeroKernel;
   occa::kernel weightedInnerProductKernel;
   occa::kernel globalWeightedInnerProductKernel;
+  occa::kernel globalWeightedNorm2Kernel;
   occa::kernel stokesOperatorKernel;
   occa::kernel multipleGlobalWeightedInnerProductsKernel;
 
@@ -247,8 +252,24 @@ void stokesVecScaledAdd(stokes_t *stokes,
 
 void stokesVecScale(stokes_t *stokes, occa::memory &v, dfloat c);
 
+void stokesVecNorm2(stokes_t *stokes, occa::memory &u, dfloat *c);
+
 void stokesPreconditioner(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memory &Mv);
 
 void stokesSolve(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u);
+
+void stokesFSRStart(stokes_t *stokes,
+		    int &stokesNFSR, // active number of FSR rhs
+		    occa::memory &b,
+		    occa::memory &btilde);
+
+void stokesFSRUpdate(stokes_t *stokes,
+		     int &stokesNFSR, // active number of FSR rhs
+		     dfloat lambda,
+		     occa::memory &xtilde,
+		     occa::memory &x,
+		     occa::memory &Ax);
+
+
 
 #endif /* STOKES_H */

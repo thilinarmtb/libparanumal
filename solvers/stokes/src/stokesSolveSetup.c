@@ -102,7 +102,9 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
     fclose(fp);
   }
 
-  stokes->o_interpRaise = stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat), stokes->meshP->interpRaise);
+  stokes->o_interpRaise =
+    stokes->meshV->device.malloc(stokes->meshP->Nq*stokes->meshV->Nq*sizeof(dfloat),
+				 stokes->meshP->interpRaise);
 
   stokes->cubInterpV = stokes->meshV->cubInterp;
 
@@ -150,18 +152,23 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
   int Nrhs = 0;
   stokes->options.getArgs("DIM FISCHER SUCCESSIVE RHS", Nrhs);
 
-  stokes->fsrNrhs = 0;
+  stokes->fsrNrhs = Nrhs;
   if(stokes->fsrNrhs){
-    size_t NrhsEntries = (stokes->meshV->dim*stokes->NtotalV+
-			  stokes->NtotalP)*stokes->fsrNrhs;
+    size_t NrhsEntries = (stokes->Ndof)*stokes->fsrNrhs;
 
-    dfloat *stokesHistoryQ = (dfloat*) calloc(NrhsEntries,sizeof(dfloat)); // can try using float here ?
-    stokes->o_fsrHistoryQ = stokes->meshV->device.malloc(NrhsEntries*sizeof(dfloat),stokesHistoryQ);
+    dfloat *stokesXtilde = (dfloat*) calloc(NrhsEntries,sizeof(dfloat)); // can try using float here ?
+
+    stokes->o_fsrXtilde = stokes->meshV->device.malloc(NrhsEntries*sizeof(dfloat),stokesXtilde);
+    stokes->o_fsrBtilde = stokes->meshV->device.malloc(NrhsEntries*sizeof(dfloat),stokesXtilde);
+
+    stokes->o_fsrbtilde = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat),stokesXtilde);
+    stokes->o_fsrxtilde = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat),stokesXtilde);
 
     // convenient array for zeroing accumulators prior to dot products
-    stokes->o_fsrZeroArray = stokes->meshV->device.malloc(stokes->fsrNrhs*sizeof(dfloat),stokesHistoryQ);
-    stokes->o_fsrAlphas = stokes->meshV->device.malloc(stokes->fsrNrhs*sizeof(dfloat),stokesHistoryQ);
-    
+    stokes->o_fsrZeroArray = stokes->meshV->device.malloc(stokes->fsrNrhs*sizeof(dfloat),stokesXtilde);
+    stokes->o_fsrAlphas = stokes->meshV->device.malloc(stokes->fsrNrhs*sizeof(dfloat),stokesXtilde);
+
+    free(stokesXtilde);
   }
 
   return;
@@ -264,12 +271,17 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGlobalWeightedInnerProduct.okl", "stokesGlobalWeightedInnerProduct", kernelInfoV);
 
 
+  stokes->globalWeightedNorm2Kernel
+    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesGlobalWeightedNorm2.okl",
+					"stokesGlobalWeightedNorm2", kernelInfoV);
+    
+
   stokes->multipleGlobalWeightedInnerProductsKernel
     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesMultipleGlobalWeightedInnerProducts.okl", "stokesMultipleGlobalWeightedInnerProducts", kernelInfoV);
 
 
-  stokes->fsrStartKernel
-    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesFSRStart.okl", "stokesFSRStart", kernelInfoV);
+  stokes->fsrReconstructKernel
+    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesFsrReconstruct.okl", "stokesFsrReconstruct", kernelInfoV);
 
 
   stokes->fsrUpdateKernel

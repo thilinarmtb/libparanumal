@@ -111,41 +111,12 @@ void stokesVecCopy(stokes_t *stokes, occa::memory &u, occa::memory &v)
 void stokesVecInnerProduct(stokes_t *stokes, stokesVec_t u, stokesVec_t v, dfloat *c)
 {
   *c = 0.0;
-
-#if 0
-  /* TODO:  Replace host loops with further kernel calls if we had too many
-   * blocks.  (See, e.g., ellipticWeightedInnerProduct().)
-   */
-  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_x, v.o_x, stokes->o_workV);
-  stokes->o_workV.copyTo(stokes->workV);
-  for (int i = 0; i < stokes->NblockV; i++)
-    *c += stokes->workV[i];
-
-  stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_y, v.o_y, stokes->o_workV);
-  stokes->o_workV.copyTo(stokes->workV);
-  for (int i = 0; i < stokes->NblockV; i++)
-    *c += stokes->workV[i];
-
-  if (stokes->meshV->dim == 3) {
-    stokes->weightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree, u.o_z, v.o_z, stokes->o_workV);
-    stokes->o_workV.copyTo(stokes->workV);
-    for (int i = 0; i < stokes->NblockV; i++)
-      *c += stokes->workV[i];
-  }
-
-  stokes->weightedInnerProductKernel(stokes->NtotalP, stokes->meshP->ogs->o_invDegree, u.o_p, v.o_p, stokes->o_workP);
-  stokes->o_workP.copyTo(stokes->workP);
-  for (int i = 0; i < stokes->NblockP; i++)
-    *c += stokes->workP[i];
-
-#else
   stokes->globalWeightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree,
 					   stokes->NtotalP, stokes->meshP->ogs->o_invDegree,
 					   u.o_v, v.o_v, stokes->o_workV);
   stokes->o_workV.copyTo(stokes->workV);
   for (int i = 0; i < stokes->NblockV; i++)
     *c += stokes->workV[i];
-#endif
   
   /* TODO:  MPI. */
 
@@ -159,6 +130,23 @@ void stokesVecInnerProduct(stokes_t *stokes, occa::memory &u, occa::memory &v, d
   stokes->globalWeightedInnerProductKernel(stokes->NtotalV, stokes->ogs->o_invDegree,
 					   stokes->NtotalP, stokes->meshP->ogs->o_invDegree,
 					   u, v, stokes->o_workV);
+  stokes->o_workV.copyTo(stokes->workV);
+  for (int i = 0; i < stokes->NblockV; i++)
+    *c += stokes->workV[i];
+  
+  /* TODO:  MPI. */
+
+  return;
+}
+
+
+void stokesVecNorm2(stokes_t *stokes, occa::memory &u, dfloat *c)
+{
+  *c = 0.0;
+
+  stokes->globalWeightedNorm2Kernel(stokes->NtotalV, stokes->ogs->o_invDegree,
+				    stokes->NtotalP, stokes->meshP->ogs->o_invDegree,
+				    u, stokes->o_workV);
   stokes->o_workV.copyTo(stokes->workV);
   for (int i = 0; i < stokes->NblockV; i++)
     *c += stokes->workV[i];

@@ -54,6 +54,8 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
 
   stokes->options.getArgs("TIME STEP", dt);
 
+  int stokesNFSR = 0; // current dimension of FSR space
+  
   t = 0.0;
   while (t < tfinal) {
     /* Update the time. */
@@ -64,7 +66,6 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
      */
 
     dfloat dtinv = 1./dt;
-
     
     stokes->userForcingKernel(meshV->Nelements, stokes->NtotalV, t, dtinv,
 			      meshV->o_x, meshV->o_y, meshV->o_z,
@@ -78,10 +79,22 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
     
     /* Apply the boundary conditions. */
     stokesRHSAddBC(stokes, t, 1.0/dt);
-    
+
+#if 0
+    /* Apply Fischer Successive RHS (FSR) */
+    stokesFSRStart(stokes, stokesNFSR, stokes->f.o_v, stokes->o_fsrbtilde);
+
+    /* Solve Stokes system for new solution. */
+    stokesSolve(stokes, 1.0/dt, stokes->o_fsrbtilde, stokes->o_fsrxtilde);
+
+    /* Update the FSR basis */
+    stokesFSRUpdate(stokes, stokesNFSR, 1./dt, stokes->o_fsrxtilde, stokes->u.o_v, stokes->o_fsrbtilde);
+#else
     /* Solve Stokes system for new solution. */
     stokesSolve(stokes, 1.0/dt, stokes->f.o_v, stokes->u.o_v);
 
+#endif
+    
     printf("t = % .15e done\n", t);
   }
 

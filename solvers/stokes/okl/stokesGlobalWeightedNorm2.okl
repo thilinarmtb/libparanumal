@@ -38,17 +38,17 @@ SOFTWARE.
 
     for(int t=0;t<p_blockSize;++t;@inner(0)){
       
-      const dlong id = t + p_blockSize*b;
+      const dlong m = t + p_blockSize*b;
       
       dfloat res = 0;
       
-      if(id<NnodesV){
-	const dfloat wV = wV[id];
+      if(m<NnodesV){
+	const dfloat wVm = wV[m];
 	
-	dfloat Ux = x[id+0*NnodesV];
-	dfloat Uy = x[id+1*NnodesV];
+	dfloat Ux = x[m+0*NnodesV];
+	dfloat Uy = x[m+1*NnodesV];
 #if p_DIM==3
-	dfloat Uz = x[id+2*NnodesV];
+	dfloat Uz = x[m+2*NnodesV];
 #endif
 	
 	res += Ux*Ux; // fmad
@@ -58,15 +58,15 @@ SOFTWARE.
 	res += Uz*Uz; // fmad
 #endif
 	
-	res *= wV;
+	res *= wVm;
       }
       
-      if(id<NnodesP){
-	const dfloat wP = wP[id];
+      if(m<NnodesP){
+	const dfloat wPm = wP[m];
 	
-	dfloat P1 = x[id+p_DIM*NnodesV];
+	dfloat P1 = x[m+p_DIM*NnodesV];
 	
-	res *= wP*P1*P1;
+	res *= wPm*P1*P1;
       }
       
       s_wx2[t] = res;

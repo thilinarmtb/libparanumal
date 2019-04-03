@@ -44,7 +44,7 @@ SOFTWARE.
       
       dfloat res[p_fsrNrhs];
 
-      for(int fld=0;fld<fsrNrhs;++fld){
+      for(int fld=0;fld<p_fsrNrhs;++fld){
 	res[fld] = 0;
       }
 
