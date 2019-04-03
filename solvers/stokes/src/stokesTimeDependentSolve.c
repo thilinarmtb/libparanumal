@@ -63,12 +63,14 @@ static void stokesTimeDependentSolveBackwardEuler(stokes_t *stokes, dfloat tfina
      * function.
      */
 
-    stokes->userForcingKernel(meshV->Nelements, stokes->NtotalV, t, 
+    dfloat dtinv = 1./dt;
+
+    
+    stokes->userForcingKernel(meshV->Nelements, stokes->NtotalV, t, dtinv,
 			      meshV->o_x, meshV->o_y, meshV->o_z,
 			      stokes->f.o_v);
     
 
-    dfloat dtinv = 1./dt;
     stokes->prepareRhsKernel(meshV->Nelements, stokes->NtotalV, t, dtinv,
 			     meshV->o_x, meshV->o_y, meshV->o_z,
 			     meshV->o_vgeo, stokes->u.o_v, stokes->f.o_v);
