@@ -177,14 +177,9 @@ static void stokesRHSAddBC(stokes_t *stokes, dfloat t, dfloat lambda)
   // Gather-scatter for C0 FEM.
   stokesVecUnmaskedGatherScatter(stokes, stokes->f);
 
-  // TODO:  Make a function for this.
-  //
   // TODO:  We only need to do this for C0 FEM.
   if (stokes->Nmasked) {
     stokes->velocityMaskKernel(stokes->Nmasked, stokes->NtotalV, stokes->o_maskIds, stokes->f.o_v);
-  }
-
-  if (stokes->Nmasked) {
     stokes->velocityMaskKernel(stokes->Nmasked, stokes->NtotalV, stokes->o_maskIds, stokes->u.o_v);
   }
 

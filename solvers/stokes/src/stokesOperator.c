@@ -163,10 +163,7 @@ void stokesOperator(stokes_t *stokes, dfloat lambda, stokesVec_t v, stokesVec_t 
   //
   // TODO:  We only need to do this for C0 FEM.
   if (stokes->Nmasked) {
-    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av.o_x);
-    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av.o_y);
-    if (stokes->meshV->dim == 3)
-      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av.o_z);
+    stokes->velocityMaskKernel(stokes->Nmasked, stokes->NtotalV, stokes->o_maskIds, Av.o_v);
   }
 
   o_pRaised.free();
@@ -298,9 +295,7 @@ void stokesOperator(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memo
   //
   // TODO:  We only need to do this for C0 FEM.
   if (stokes->Nmasked) {
-    for(int d=0;d<stokes->meshV->dim;++d){
-      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, Av+d*stokes->NtotalV*sizeof(dfloat));
-    }
+    stokes->velocityMaskKernel(stokes->Nmasked, stokes->NtotalV, stokes->o_maskIds, Av);
   }
 
   o_pRaised.free();

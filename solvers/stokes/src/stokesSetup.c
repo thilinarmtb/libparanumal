@@ -214,10 +214,7 @@ static void stokesSetupRHS(stokes_t *stokes, dfloat lambda)
   //
   // TODO:  We only need to do this for C0 FEM.
   if (stokes->Nmasked) {
-    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_x);
-    stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_y);
-    if (stokes->meshV->dim == 3)
-      stokes->meshV->maskKernel(stokes->Nmasked, stokes->o_maskIds, stokes->f.o_z);
+    stokes->velocityMaskKernel(stokes->Nmasked, stokes->NtotalV, stokes->o_maskIds, stokes->f.o_v);
   }
 
   return;
