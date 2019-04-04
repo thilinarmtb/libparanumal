@@ -64,12 +64,12 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda, occa::memory &f, 
   occa::memory &rold = stokes->o_solveWorkspace[4];
   occa::memory &wold = stokes->o_solveWorkspace[5];
 
-  //  stokes->vecZeroKernel(stokes->Ndof, p);
-  //  stokes->vecZeroKernel(stokes->Ndof, z);
-  //  stokes->vecZeroKernel(stokes->Ndof, r);
+  stokes->vecZeroKernel(stokes->Ndof, p);
+  stokes->vecZeroKernel(stokes->Ndof, z);
+  stokes->vecZeroKernel(stokes->Ndof, r);
 
-  //  stokes->vecZeroKernel(stokes->Ndof, rold);
-  //  stokes->vecZeroKernel(stokes->Ndof, wold);
+  stokes->vecZeroKernel(stokes->Ndof, rold);
+  stokes->vecZeroKernel(stokes->Ndof, wold);
 
   // TW: THIS NEEDS TO BE ZEROED
   stokes->vecZeroKernel(stokes->Ndof, w);
@@ -103,7 +103,7 @@ static void stokesSolveMINRES(stokes_t *stokes, dfloat lambda, occa::memory &f, 
   for (int i = 0; i < maxiter; i++) {
     if (verbose)
       printf("MINRES:  it % 3d  eta = % .15e, gamma = %.15e \n", i, eta, gam);
-    if (fabs(eta) < tol) {
+    if (fabs(eta) < tol && i>0) {
       if (verbose)
         printf("MINRES converged in %d iterations (eta = % .15e).\n", i, eta);
       break;

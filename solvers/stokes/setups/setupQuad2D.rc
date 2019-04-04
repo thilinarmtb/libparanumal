@@ -6,7 +6,7 @@
 ##############################################
 
 [MESH FILE]
-../../meshes/unitSquareQuad2D-5.msh
+../../meshes/unitSquareQuad2D-6.msh
 
 [DATA FILE]
 data/stokesDirichletTestQuad2D.h
@@ -51,7 +51,7 @@ SimpleTimeDependentConstantViscosityDirichletQuad2D
 
 # Only applies to time-dependent test cases.
 [FINAL TIME]
-1.e-2
+1
 
 [VELOCITY POLYNOMIAL DEGREE]
 7
@@ -174,7 +174,7 @@ BACKWARDEULER
 TRUE
 
 [DIM FISCHER SUCCESSIVE RHS]
-10
+20
 
 [STOKES USER KERNEL FILE]
 data/stokesTest1Quad2D.okl
