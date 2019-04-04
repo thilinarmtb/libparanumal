@@ -29,7 +29,7 @@ SOFTWARE.
 				        dfloat * b,
 				  const dfloat beta,				  
 				  @restrict const  dfloat * alphas, 
-				  @restrict const  dfloat * Btilde, 
+				  @restrict const  fsrFloat * Btilde, 
 				        dfloat * btilde){ 
   
   

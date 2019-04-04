@@ -30,7 +30,7 @@ SOFTWARE.
 						       @restrict const  dfloat *  wP,
 						       const dlong fsrNrhs, // how many inner products
 						       @restrict const  dfloat *  x, // one x
-						       @restrict const  dfloat *  y, // multiple y
+						       @restrict const  fsrFloat *  y, // multiple y
 						       @restrict        dfloat *  wxy){
   
   
@@ -65,8 +65,6 @@ SOFTWARE.
 	r_P1 = x[id+p_DIM*NnodesV];
       }
     }
-
-    
     
     for(int fld=0;fld<fsrNrhs;++fld){
 
@@ -175,7 +173,7 @@ SOFTWARE.
 }
 
 
-
+#if 0
 @kernel void stokesMultipleGlobalWeightedInnerProducts_v00(const dlong NnodesV,
 						       @restrict const  dfloat *  wV,
 						       const dlong NnodesP,
@@ -304,3 +302,4 @@ SOFTWARE.
   }
 }
 
+#endif

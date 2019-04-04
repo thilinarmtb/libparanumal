@@ -101,8 +101,8 @@ void stokesFSRUpdate(stokes_t *stokes,
     stokesVecNorm2(stokes, btilde, &normbtilde2);
     dfloat invNormbtilde = 1./sqrt(normbtilde2);
     
-    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde, btilde, 0, stokes->o_fsrBtilde);
-    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde,      x, 0, stokes->o_fsrXtilde);
+    stokes->fsrScaleKernel(stokes->Ndof, invNormbtilde, btilde, stokes->o_fsrBtilde);
+    stokes->fsrScaleKernel(stokes->Ndof, invNormbtilde,      x, stokes->o_fsrXtilde);
 
     stokesNFSR = 1;
   }
@@ -151,11 +151,11 @@ void stokesFSRUpdate(stokes_t *stokes,
     stokesVecNorm2(stokes, btilde, &normbtilde2);
     dfloat invNormbtilde = 1./sqrt(normbtilde2);
     
-    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde, btilde, 0,
-			       stokes->o_fsrBtilde + stokesNFSR*stokes->Ndof*sizeof(dfloat));
+    stokes->fsrScaleKernel(stokes->Ndof, invNormbtilde, btilde, 
+			   stokes->o_fsrBtilde + stokesNFSR*stokes->Ndof*sizeof(fsrFloat));
     
-    stokes->vecScaledAddKernel(stokes->Ndof, invNormbtilde, xtilde, 0,
-			       stokes->o_fsrXtilde + stokesNFSR*stokes->Ndof*sizeof(dfloat));
+    stokes->fsrScaleKernel(stokes->Ndof, invNormbtilde, xtilde, 
+			   stokes->o_fsrXtilde + stokesNFSR*stokes->Ndof*sizeof(fsrFloat));
     
     ++stokesNFSR;
 

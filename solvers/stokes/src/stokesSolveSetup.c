@@ -154,12 +154,12 @@ void stokesSolveSetup(stokes_t *stokes, dfloat lambda, dfloat *eta, occa::proper
 
   stokes->fsrNrhs = Nrhs;
   if(stokes->fsrNrhs){
-    size_t NrhsEntries = (stokes->Ndof)*stokes->fsrNrhs;
+    hlong NrhsEntries = (stokes->Ndof)*stokes->fsrNrhs;
 
-    dfloat *stokesXtilde = (dfloat*) calloc(NrhsEntries,sizeof(dfloat)); // can try using float here ?
+    fsrFloat *stokesXtilde = (fsrFloat*) calloc(NrhsEntries,sizeof(fsrFloat)); // can try using float here ?
 
-    stokes->o_fsrXtilde = stokes->meshV->device.malloc(NrhsEntries*sizeof(dfloat),stokesXtilde);
-    stokes->o_fsrBtilde = stokes->meshV->device.malloc(NrhsEntries*sizeof(dfloat),stokesXtilde);
+    stokes->o_fsrXtilde = stokes->meshV->device.malloc(NrhsEntries*sizeof(fsrFloat),stokesXtilde);
+    stokes->o_fsrBtilde = stokes->meshV->device.malloc(NrhsEntries*sizeof(fsrFloat),stokesXtilde);
 
     stokes->o_fsrbtilde = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat),stokesXtilde);
     stokes->o_fsrxtilde = stokes->meshV->device.malloc(stokes->Ndof*sizeof(dfloat),stokesXtilde);
@@ -256,6 +256,7 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
   int fsrNrhs = 0;
   stokes->options.getArgs("DIM FISCHER SUCCESSIVE RHS", fsrNrhs);
   kernelInfoV["defines/p_fsrNrhs"] = fsrNrhs;
+  kernelInfoV["defines/fsrFloat"] = fsrFloatString;
   
   stokes->meshV->maskKernel          = stokes->meshV->device.buildKernel(DHOLMES "/okl/mask.okl", "mask", kernelInfoV);
 
@@ -282,6 +283,10 @@ static void stokesSetupKernels(stokes_t *stokes, occa::properties &kernelInfoV, 
 
   stokes->fsrReconstructKernel
     = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesFsrReconstruct.okl", "stokesFsrReconstruct", kernelInfoV);
+
+
+  stokes->fsrScaleKernel
+    = stokes->meshV->device.buildKernel(DSTOKES "/okl/stokesFsrScale.okl", "stokesFsrScale", kernelInfoV);
 
 
   stokes->fsrUpdateKernel

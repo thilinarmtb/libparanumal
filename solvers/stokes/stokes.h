@@ -40,6 +40,7 @@ SOFTWARE.
 /* Block size for reductions. */
 #define STOKES_REDUCTION_BLOCK_SIZE 256
 
+
 /* This data structure represents a vector used with the Stokes solver.  The
  * data is allocated in one big long block partitioned as
  *
@@ -165,6 +166,7 @@ typedef struct {
 
   occa::kernel fsrReconstructKernel;
   occa::kernel fsrUpdateKernel;
+  occa::kernel fsrScaleKernel;
   
   /* OCCA kernels */
   occa::kernel divergenceKernel;
@@ -257,6 +259,11 @@ void stokesVecNorm2(stokes_t *stokes, occa::memory &u, dfloat *c);
 void stokesPreconditioner(stokes_t *stokes, dfloat lambda, occa::memory &v, occa::memory &Mv);
 
 void stokesSolve(stokes_t *stokes, dfloat lambda, occa::memory &f, occa::memory &u);
+
+/* type used for FSR histories */
+#define fsrFloat double
+#define fsrFloatString "double"
+
 
 void stokesFSRStart(stokes_t *stokes,
 		    int &stokesNFSR, // active number of FSR rhs

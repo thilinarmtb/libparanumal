@@ -24,40 +24,17 @@ SOFTWARE.
 
 */
 
-@kernel void stokesFSRStart(const dlong Ntotal,
-			    const dlong fsrNrhs, // how many inner products
-			    @restrict const  dfloat * alphas, 
-			    @restrict const  fsrFloat * historyB, 
-			    @restrict        dfloat * b){ // initial guess for q
-  
-  
-  for(dlong blk=0;blk<(Ntotal+p_blockSize-1)/p_blockSize;++blk;@outer(0)){
-    
-    @shared dfloat s_alphas[p_fsrNrhs];
+#define blockSize 256
 
-    for(int t=0;t<p_blockSize;++t;@inner(0)){
-
-      if(t<fsrNrhs)
-	s_alphas[t] = alphas[t];
-    }
-
-    @barrier("local");
-
-    
-    for(int t=0;t<p_blockSize;++t;@inner(0)){
-
-      const dlong id = t + p_blockSize*blk;
-
-      if(id<Ntotal){
-	dfloat res = -b[id];
-
-	// rigged for fmad
-	for(int fld=0;fld<fsrNrhs;++fld){
- 	  res += s_alphas[fld]*historyB[fld*Ntotal + id];
-	}
-	
-	b[id] = -res; // b - sum alpha_{fld}B_fld	
-      }
+@kernel void stokesFsrScale(const dlong N,              /* Length of vectors */
+			    const dfloat a,             /* First scalar */
+			    @restrict const dfloat *u,  /* First vector */
+			    @restrict fsrFloat *v)        /* Second vector (stores result) */
+{
+  for (dlong n = 0; n < N; n += blockSize; @outer(0)) {
+    for (dlong i = n; i < (n + blockSize); i++; @inner(0)) {
+      if (i < N)
+        v[i] = a*u[i];
     }
   }
 }
