@@ -9,7 +9,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
   dfloat * test_qw = (dfloat *) calloc(mesh->NgridElements*solver->Nfields*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
-  dfloat alpha = 0;//alpha_scale;
+  dfloat alpha = alpha_scale;
 
   iint Nboundary = mesh->NgridElements - mesh->Nelements;
 
@@ -42,49 +42,24 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	  iint curr_pos = e*mesh->Np*solver->Nfields + f*mesh->Np + n;
 	  solver->q[curr_pos] = 1.;
 	  solver->o_qpre.copyFrom(solver->q);
-
-	  solver->o_qpre.copyTo(solver->o_qw);
-	  /*solver->filterWeakKernelH(mesh->Nelements,
-			      solver->o_dualTransMatrix,
-			      solver->o_cubeFaceNumber,
-			      solver->o_gridToE,
-			      solver->o_cubeDistance,
-			      solver->o_vgeo,
-			      solver->o_qpre,
-			      solver->o_qFilterw);
-		
-		  solver->filterWeakKernelV(mesh->Nelements,
-			      alpha,
-			      solver->o_dualTransMatrix,
-			      solver->o_cubeFaceNumber,
-			      solver->o_gridToE,
-			      solver->o_x,
-			      solver->o_y,
-			      solver->o_z,
-			      solver->o_cubeDistance,
-			      solver->o_vgeo,
-			      solver->o_qpre,
-			      solver->o_qFilterw,
-			      solver->o_qw);
-	  */
-		  
+	
 	// compute volume contribution to DG advection RHS
 	solver->volumeKernel(mesh->Nelements,
 			     solver->o_vgeo,
+			     solver->o_D,
 			     solver->o_weakD,
 			     solver->o_x,
 			     solver->o_y,
 			     solver->o_z,
-			       solver->o_mass,
+			     solver->o_mass,
 			     solver->o_qpre,
-			     solver->o_qw,
 			     solver->o_rhsqs,
 			     solver->o_rhsqw
 			     );
-	  
+	
 	solver->surfaceKernel(mesh->Nelements,
-			      solver->o_sgeo,
 			      solver->o_vgeo,
+			      solver->o_sgeo,
 			      solver->o_LIFTT,
 			      solver->o_vmapM,
 			      solver->o_vmapP,
@@ -93,31 +68,9 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_y,
 			      solver->o_z,
 			      solver->o_qpre,
-			      solver->o_qw,
 			      solver->o_rhsqs,
 			      solver->o_rhsqw
 			      );
-	
-	/*	  	solver->volumeKernel(mesh->Nelements,
-			     solver->o_vgeo,
-			     solver->o_D,
-			     solver->o_x,
-			     solver->o_y,
-			     solver->o_z,
-			     solver->o_qpre,
-			     solver->o_rhsqs);
-	
-	solver->surfaceKernel(mesh->Nelements,
-			       solver->o_sgeo,
-			       solver->o_LIFTT,
-			       solver->o_vmapM,
-			       solver->o_vmapP,
-			       t,
-			       solver->o_x,
-			       solver->o_y,
-			       solver->o_z,
-			       solver->o_qpre,
-			       solver->o_rhsqs);*/
 	/*solver->loadFilterGridKernel(Nboundary,
 				     mesh->Nelements,
 				     solver->o_rlocal,
@@ -127,17 +80,17 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 				     solver->o_eInterp,
 				     solver->o_overlapDirection,
 				     solver->o_rhsq);
-	*/
-	/*
+	*/	
 	solver->filterKernelH(mesh->Nelements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_gridToE,
-			      solver->o_cubeDistance,
 			      solver->o_vgeo,
+			      solver->o_cubeDistance,
 			      solver->o_rhsqs,
-			      solver->o_qFilters);
-	
+			      //solver->o_rhsqw,
+			      solver->o_qFilter);
+		
 	solver->filterKernelV(mesh->Nelements,
 			      alpha,
 			      solver->o_dualProjMatrix,
@@ -146,13 +99,14 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_x,
 			      solver->o_y,
 			      solver->o_z,
-			      solver->o_cubeDistance,
 			      solver->o_vgeo,
+			      solver->o_cubeDistance,
 			      solver->o_rhsqs,
-			      solver->o_qFilters,
-			      solver->o_qs);
+			      //solver->o_rhsqw,
+			      solver->o_qFilter,
+			      solver->o_q);
 	
-	*/
+	
 	/*	solver->massMatrixKernel(mesh->Nelements,
 				 solver->o_invmass,
 				 solver->o_vgeo,
@@ -163,14 +117,14 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	/*	solver->o_rhsqs.copyTo(test_qs);
 		solver->o_rhsqw.copyTo(test_qw);*/
 
-	solver->o_rhsqs.copyTo(test_qs);
-	solver->o_rhsqw.copyTo(test_qw);
-
+	solver->o_q.copyTo(test_qs);
+	//solver->o_rhsqw.copyTo(test_qw);
 	
 	for (iint es = 0; es < mesh->Nelements; ++es) {
 	  for (iint fs = 0; fs < 2; ++fs) {
 	    for (iint ns = 0; ns < mesh->Np; ++ns) {
-		fprintf(matrix,"%17.15g ",0.5*(test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]+test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]));
+		//fprintf(matrix,"%17.15g ",test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns] + test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]);
+		fprintf(matrix,"%17.15g ",(test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]/*+test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]*/)/*/mesh->vgeo[es*mesh->Np*mesh->Nvgeo + 10*mesh->Np + ns]*//*mesh->vgeo[es*mesh->Np*mesh->Nvgeo + 9*mesh->Np + ns]*/);
 	    }
 	  }
 	}
