@@ -203,25 +203,20 @@ SOFTWARE.
             dfloat rhsVn;
 
             if (p_SUBCYCLING) {
-              // //NU holds \hat{U} after subcycling
-              // const dfloat NUm = NU[id+0*fieldOffset];
-              // const dfloat NVm = NU[id+1*fieldOffset];
-
-              // rhsUn = JW*inu*idt*NUm;
-              // rhsVn = JW*inu*idt*NVm;
+              rhsUn = -JW*inu*GP[id+0*fieldOffset];
+              rhsVn = -JW*inu*GP[id+1*fieldOffset];
+              // 
+              rhsUn += JW*inu*(idt*NU[id+0*fieldOffset]);
+              rhsVn += JW*inu*(idt*NU[id+1*fieldOffset]);
 
               // for (int s=0;s<p_Nstages;s++) {
-              //   // GP
-              //   const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              //   const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-              //   //
+              //   // FU
               //   const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
               //   const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
 
-              //   rhsUn -= JW*inu*(extbdfC[s]*GPx + extbdfA[s]*FUx);
-              //   rhsVn -= JW*inu*(extbdfC[s]*GPy + extbdfA[s]*FUy);
-
-              //}
+              //   rhsUn += JW*inu*(- extbdfA[s]*FUx);
+              //   rhsVn += JW*inu*(- extbdfA[s]*FUy);
+              // }
             } else {
               rhsUn = -JW*inu*GP[id+0*fieldOffset];
               rhsVn = -JW*inu*GP[id+1*fieldOffset];

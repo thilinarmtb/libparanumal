@@ -80,25 +80,24 @@ SOFTWARE.
             dfloat rhsVn;
 
             if (p_SUBCYCLING) { // Not modfied yet
-              // //NU holds \hat{U} after subcycling
-              // const dfloat NUm = NU[id+0*fieldOffset];
-              // const dfloat NVm = NU[id+1*fieldOffset];
+              //NU holds \hat{U} after subcycling
+              const dfloat NUm = NU[id+0*fieldOffset];
+              const dfloat NVm = NU[id+1*fieldOffset];
 
-              // rhsUn = JW*inu*idt*NUm;
-              // rhsVn = JW*inu*idt*NVm;
+              rhsUn = idt*NUm;
+              rhsVn = idt*NVm;
 
-              // for (int s=0;s<p_Nstages;s++) {
-              //   // GP
-              //   const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              //   const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-              //   //
-              //   const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              //   const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+              for (int s=0;s<p_Nstages;s++) {
+                // GP
+                const dfloat NCx  = NC[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+                const dfloat NCy  = NC[id+1*fieldOffset+s*p_NVfields*fieldOffset];               
+                // FU
+                const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+                const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
 
-              //   rhsUn -= JW*inu*(extbdfC[s]*GPx + extbdfA[s]*FUx);
-              //   rhsVn -= JW*inu*(extbdfC[s]*GPy + extbdfA[s]*FUy);
-
-             // }
+                rhsUn -= extbdfA[s]*(FUx + nu*NCx);
+                rhsVn -= extbdfA[s]*(FUy + nu*NCy);
+             }
             } else {
               rhsUn = 0.f;
               rhsVn = 0.f;
@@ -117,8 +116,8 @@ SOFTWARE.
                 const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
                 const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
 
-                rhsUn += 1.f*idt*extbdfB[s]*Um - extbdfA[s]*(1.f*NUm + 1.f*FUx + 1.f*nu*NCx);
-                rhsVn += 1.f*idt*extbdfB[s]*Vm - extbdfA[s]*(1.f*NVm + 1.f*FUy + 1.f*nu*NCy);
+                rhsUn += idt*extbdfB[s]*Um - extbdfA[s]*(1.f*NUm + 1.f*FUx + 1.f*nu*NCx);
+                rhsVn += idt*extbdfB[s]*Vm - extbdfA[s]*(1.f*NVm + 1.f*FUy + 1.f*nu*NCy);
               }
             }
 
