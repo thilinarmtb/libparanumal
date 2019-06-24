@@ -1,0 +1,47 @@
+#!/bin/bash
+set -xe
+
+VER=2.16.0
+
+if [ "$1" == "clean" ]; then
+  rm -rf hypre lib obj include *.tar.gz *.o 2>/dev/null
+  exit 0
+fi
+
+if [ ! -f ./lib/libHYPRE.a ]; then
+  rm -rf hypre 2>/dev/null
+
+#  wget --no-check-certificate -O v$VER.tar.gz https://github.com/hypre-space/hypre/archive/v$VER.tar.gz 
+#  mkdir hypre
+#  tar -zxvf v$VER.tar.gz -C ./hypre --strip-components=1
+
+  git clone --depth 1 https://github.com/hypre-space/hypre.git
+
+  cd hypre
+  mkdir -p build
+  cd build
+
+  set -x
+  cmake \
+  -DHYPRE_MIXEDINT=ON \
+  -DHYPRE_SINGLE=OFF \
+  -DHYPRE_INSTALL_PREFIX=`pwd`/../.. \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DHYPRE_USING_HYPRE_BLAS=OFF \
+  -DHYPRE_USING_HYPRE_LAPACK=OFF \
+  -DHYPRE_USING_OPENMP=OFF \
+  -DMPI_C_COMPILER=`which $CC` \
+  -DHYPRE_USING_FEI=OFF \
+  ../src
+  set +x
+  cd ../..
+
+fi
+
+cd hypre/build
+make -j4 install
+
+cd ../../
+mkdir -p obj
+cd obj
+ar -x ../lib/libHYPRE.a
