@@ -359,8 +359,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  occa::properties& kernelInfoV  = kernelInfo;
-  occa::properties& kernelInfoP  = kernelInfo;
+  occa::properties kernelInfoV  = kernelInfo;
+  occa::properties kernelInfoP  = kernelInfo;
 
   // ADD-DEFINES
   kernelInfo["defines/" "p_pbar"]= ins->pbar;
@@ -373,7 +373,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_NVfields"]= ins->NVfields;
   kernelInfo["defines/" "p_NfacesNfp"]=  mesh->Nfaces*mesh->Nfp;
   kernelInfo["defines/" "p_Nstages"]=  ins->Nstages;
-  kernelInfo["defines/" "p_SUBCYCLING"]=  ins->Nsubsteps;
+  if(ins->Nsubsteps)
+    kernelInfo["defines/" "p_SUBCYCLING"]=  1;
+  else
+    kernelInfo["defines/" "p_SUBCYCLING"]=  0;
 
   if(ins->elementType==QUADRILATERALS && mesh->dim==3){
     kernelInfo["defines/" "p_fainv"] = (dfloat) 0.0;
@@ -496,7 +499,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // Maximum Velocity
   umax = sqrt(umax);
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
-  printf("magVel = %lf\n", magVel);
+  //printf("magVel = %lf\n", magVel);
   
   options.getArgs("CFL", ins->cfl);
   dfloat dt     = ins->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
