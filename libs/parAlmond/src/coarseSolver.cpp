@@ -269,7 +269,7 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
       o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
   }
 
-  if(options.compareArgs("AMG SOLVER", "HYPRE")){
+  if(options.compareArgs("PARALMOND SMOOTH COARSEST", "HYPRE")){
     hypre_solve(xLocal, crsh, rhsLocal);
   } else {
     //gather the full vector

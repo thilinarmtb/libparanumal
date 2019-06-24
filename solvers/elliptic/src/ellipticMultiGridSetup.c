@@ -254,7 +254,6 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   free(meshLevels);
 
   //report top levels
-  if (options.compareArgs("VERBOSE","TRUE")) {
     if (mesh->rank==0) { //report the upper multigrid levels
       printf("------------------Multigrid Report----------------------------------------\n");
       printf("--------------------------------------------------------------------------\n");
@@ -270,7 +269,6 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
     if (mesh->rank==0)
       printf("--------------------------------------------------------------------------\n");
-  }
 }
 
 

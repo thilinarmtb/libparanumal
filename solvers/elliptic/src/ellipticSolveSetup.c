@@ -224,8 +224,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->allNeumann = (gallNeumann>0) ? false: true;
 
   // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, mesh->comm);
-  //  if (mesh->rank==0&& options.compareArgs("VERBOSE","TRUE"))
-    printf("allNeumann = %d \n", elliptic->allNeumann);
+    if (mesh->rank==0&& options.compareArgs("VERBOSE","TRUE"))
+      printf("allNeumann = %d \n", elliptic->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
   mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));

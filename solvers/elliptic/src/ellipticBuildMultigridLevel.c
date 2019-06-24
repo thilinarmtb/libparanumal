@@ -886,7 +886,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       floatKernelInfo["defines/" "pfloat"]= "float";
       dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
 
-      printf("rank = %d, size = %d\n", mesh->rank, mesh->size);
+      //printf("rank = %d, size = %d\n", mesh->rank, mesh->size);
       //      std::cout << dfloatKernelInfo << std::endl;
       
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);

@@ -137,7 +137,7 @@ void MGLevel::setupSmoother() {
       dfloat rho = this->maxEigSmoothAx();
 
       lambda1 = rho;
-      lambda0 = rho/10.;
+      lambda0 = rho/20.;
     } else {
       stype = RICHARDSON;
 
@@ -172,7 +172,7 @@ void MGLevel::setupSmoother() {
       dfloat rho = this->maxEigSmoothAx();
 
       lambda1 = rho;
-      lambda0 = rho/10.;
+      lambda0 = rho/20.;
     } else {
       stype = RICHARDSON;
 
