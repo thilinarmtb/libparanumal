@@ -11,6 +11,7 @@ include ${OCCA_DIR}/scripts/Makefile
 HDRDIR = ../../
 OGSDIR  = ../gatherScatter
 GSDIR  = ../../3rdParty/gslib
+HYPREDIR = ./hypre
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -19,14 +20,14 @@ CXX	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(OGSDIR) -D DPARALMOND='"${CURDIR}"' $(LIBP_OPT_FLAGS)
+CFLAGS = -I. -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(OGSDIR) -I$(GSDIR)/src -D DPARALMOND='"${CURDIR}"' $(LIBP_OPT_FLAGS)
 
 # link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) 
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
-						$(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(HYPREDIR)/lib -lHYPRE \
+	$(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 INCLUDES = $(includes)
 DEPS = $(INCLUDES) \
@@ -35,10 +36,6 @@ $(HDRDIR)/include/types.h
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c .cpp
-
-# rule for .c files
-.cpp.o: $(DEPS)
-	$(CXX) $(CFLAGS) -o $*.o -c $*.cpp $(paths)
 
 # list of objects to be compiled
 OBJS = \
@@ -62,12 +59,27 @@ OBJS = \
 ./src/agmgSetup/galerkinProd.o \
 ./src/agmgSetup/strongGraph.o \
 ./src/agmgSetup/transpose.o \
+$(HYPREDIR)/hypre.o
 
+# rule for .c files
+.c.o: $(DEPS) 
+	$(CC) $(CFLAGS) -I$(HYPREDIR) -I$(HYPREDIR)/include -o $*.o -c $*.c $(paths)
+
+.cpp.o: $(DEPS) 
+	$(CXX) $(CFLAGS) -I$(HYPREDIR) -I$(HYPREDIR)/include -o $*.o -c $*.cpp $(paths)
+
+.PHONY: all clean hypre
 
 all: lib
 
-lib: $(OBJS) $(DEPS)
-	ar -cr libparAlmond.a $(OBJS)
+hypre:
+	cd hypre && env CC="$(CC)" ./install
+
+lib: hypre
+	@$(MAKE) --no-print-directory libParAlmond
+
+libParAlmond:  $(OBJS)
+	ar -cr libparAlmond.a $(OBJS) $(HYPREDIR)/obj/*.o 
 
 clean:
 	rm -f libparAlmond.a

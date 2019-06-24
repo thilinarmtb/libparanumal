@@ -75,7 +75,7 @@ void solver_t::AMGSetup(parCSR *A){
 
     if(n==numLevels-1){
       chebyIts =ChebyshevIterations;
-      printf("setting: chebyshev iterations\n");
+      //printf("setting: chebyshev iterations\n");
       if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
 	options.getArgs("PARALMOND SMOOTH COARSEST DEGREE", chebyIts);
     }
