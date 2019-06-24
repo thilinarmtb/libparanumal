@@ -263,6 +263,7 @@ typedef struct {
 
   occa::memory o_Uex, o_Pex; 
 
+  occa::properties *kernelInfo;
 
 }ins_t;
 

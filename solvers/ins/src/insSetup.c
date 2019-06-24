@@ -35,6 +35,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   
   ins->mesh = mesh;
   ins->options = options;
+  ins->kernelInfo = new occa::properties();
 
   options.getArgs("MESH DIMENSION", ins->dim);
   options.getArgs("ELEMENT TYPE", ins->elementType);
@@ -343,7 +344,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   //Reynolds number
   ins->Re = ins->ubar/ins->nu;
 
-  occa::properties kernelInfo;
+  occa::properties& kernelInfo = *ins->kernelInfo;
   kernelInfo["defines"].asObject();
   kernelInfo["includes"].asArray();
   kernelInfo["header"].asArray();
@@ -358,8 +359,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  occa::properties kernelInfoV  = kernelInfo;
-  occa::properties kernelInfoP  = kernelInfo;
+  occa::properties& kernelInfoV  = kernelInfo;
+  occa::properties& kernelInfoP  = kernelInfo;
 
   // ADD-DEFINES
   kernelInfo["defines/" "p_pbar"]= ins->pbar;
