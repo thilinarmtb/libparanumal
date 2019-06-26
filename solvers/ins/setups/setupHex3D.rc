@@ -47,7 +47,7 @@ CUDA
 TOMBO2
 
 [SUBCYCLING STEPS]
-0
+2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -82,7 +82,7 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-10000
+25
 
 [START TIME]
 0
@@ -95,7 +95,7 @@ NONE
 
 # overwrites time step size
 [DT]
-1.0E-5
+1.0E-3
 
 [OUTPUT TYPE]
 VTU

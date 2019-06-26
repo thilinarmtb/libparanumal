@@ -61,19 +61,19 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
     ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
     
     ins->velocityHaloScatterKernel(mesh->Nelements,
-				   mesh->totalHaloPairs,
-				   ins->fieldOffset,
-				   o_U,
-				   ins->o_vHaloBuffer);
+           mesh->totalHaloPairs,
+           ins->fieldOffset,
+           o_U,
+           ins->o_vHaloBuffer);
 #else
     
     ins->haloGetKernel(mesh->totalHaloPairs,
-		       ins->NVfields,
-		       ins->fieldOffset,
-		       mesh->o_haloElementList,
-		       mesh->o_haloGetNodeIds,
-		       o_U,
-		       ins->o_vHaloBuffer);
+           ins->NVfields,
+           ins->fieldOffset,
+           mesh->o_haloElementList,
+           mesh->o_haloGetNodeIds,
+           o_U,
+           ins->o_vHaloBuffer);
 
     dlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
 
@@ -81,21 +81,21 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
     ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0);// zero offset             
     // start halo exchange
     meshHaloExchangeStart(mesh,
-			  mesh->Nfp*(ins->NVfields)*sizeof(dfloat),
-			  ins->vSendBuffer,
-			  ins->vRecvBuffer);
+        mesh->Nfp*(ins->NVfields)*sizeof(dfloat),
+        ins->vSendBuffer,
+        ins->vRecvBuffer);
     
     meshHaloExchangeFinish(mesh);
 
     ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer, Ndata*sizeof(dfloat), 0);  // zero offset
     
     ins->haloPutKernel(mesh->totalHaloPairs,
-		       ins->NVfields,
-		       ins->fieldOffset,
-		       mesh->o_haloElementList,
-		       mesh->o_haloPutNodeIds,
-		       ins->o_vHaloBuffer,
-		       o_U);
+           ins->NVfields,
+           ins->fieldOffset,
+           mesh->o_haloElementList,
+           mesh->o_haloPutNodeIds,
+           ins->o_vHaloBuffer,
+           o_U);
     
 #endif
   }
@@ -112,10 +112,12 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 
   // Solve for Each SubProblem
   for (int torder=ins->ExplicitOrder-1; torder>=0; torder--){
+
+   //  printf("Checking: %.4e %d %d \n", time, torder, ins->ExplicitOrder-1);
     
     b=ins->extbdfB[torder];
     bScale += b;
-
+    
     // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
     dlong toffset = torder*ins->NVfields*ins->Ntotal;
 
@@ -274,7 +276,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
           mesh->device.finish();
         }
 
-        //Surface Kernel
+       // Surface Kernel
         occaTimerTic(mesh->device,"AdvectionSurface");
         if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
           ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
@@ -285,8 +287,8 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                               mesh->o_intLIFTT,
                                               mesh->o_cubInterpT,
                                               mesh->o_cubProjectT,
-					     mesh->o_vmapM,
-					     mesh->o_vmapP, 
+                              					     mesh->o_vmapM,
+                              					     mesh->o_vmapP, 
                                               mesh->o_EToB,
                                               bScale,
                                               t,

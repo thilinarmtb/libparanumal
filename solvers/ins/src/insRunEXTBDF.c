@@ -97,8 +97,8 @@ void insRunEXTBDF(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
-   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-  //for(int tstep=0;tstep<5;++tstep){
+  // for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<5;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 

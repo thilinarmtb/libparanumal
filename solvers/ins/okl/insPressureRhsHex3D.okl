@@ -52,18 +52,19 @@
 
 // F (o_rkU) = sum_j (alfa_j U_j)/dt- sum_j ( beta_j (NU_j + NC_j) )
 @kernel void insPressureRhsTOMBOHex3D(const dlong Nelements,
-				      @restrict const  dfloat *  vgeo,
-				      @restrict const  dfloat *  MM,
-				      const dfloat idt,
-				      const dfloat nu,
-				      @restrict const  dfloat *  extbdfA,
-				      @restrict const  dfloat *  extbdfB,
-				      const dlong fieldOffset,
-				      @restrict const  dfloat *  U,
-				      @restrict const  dfloat *  NU,
-				      @restrict const  dfloat *  NC,
-				      @restrict const  dfloat *  FU,
-              @restrict dfloat *  rhsU){
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  MM,
+                                const dfloat idt,
+                                const dfloat nu,
+                                const dfloat g0,
+                                @restrict const  dfloat *  extbdfA,
+                                @restrict const  dfloat *  extbdfB,
+                                const dlong fieldOffset,
+                                @restrict const  dfloat *  U,
+                                @restrict const  dfloat *  NU,
+                                @restrict const  dfloat *  NC,
+                                @restrict const  dfloat *  FU,
+                                      @restrict dfloat *  rhsU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
@@ -83,29 +84,25 @@
               dfloat rhsWn;
 
               if (p_SUBCYCLING) {
-                // //NU holds \hat{U} after subcycling
-                // const dfloat NUm = NU[id+0*fieldOffset];
-                // const dfloat NVm = NU[id+1*fieldOffset];
-                // const dfloat NWm = NU[id+2*fieldOffset];
+                 // Characteristic Velocity
+                 rhsUn = idt*NU[id+0*fieldOffset]; 
+                 rhsVn = idt*NU[id+1*fieldOffset]; 
+                 rhsWn = idt*NU[id+2*fieldOffset]; 
 
-                // rhsUn = JW*inu*idt*NUm;
-                // rhsVn = JW*inu*idt*NVm;
-                // rhsWn = JW*inu*idt*NWm;
+                for (int s=0;s<p_Nstages;s++) {
+                  // Curl Curl
+                  const dfloat NCx  = NC[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+                  const dfloat NCy  = NC[id+1*fieldOffset+s*p_NVfields*fieldOffset];               
+                  const dfloat NCz  = NC[id+2*fieldOffset+s*p_NVfields*fieldOffset];               
+                  // FU
+                  const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+                  const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+                  const dfloat FUz  = FU[id+2*fieldOffset+s*p_NVfields*fieldOffset];
 
-                // for (int s=0;s<p_Nstages;s++) {
-                //   // GP
-                //   const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-                //   const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-                //   const dfloat GPz  = GP[id+2*fieldOffset+s*p_NVfields*fieldOffset];
-                //   //
-                //   const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-                //   const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-                //   const dfloat FUz  = FU[id+2*fieldOffset+s*p_NVfields*fieldOffset];
-
-                //   rhsUn -= JW*inu*(extbdfC[s]*GPx+extbdfA[s]*FUx);
-                //   rhsVn -= JW*inu*(extbdfC[s]*GPy+extbdfA[s]*FUy);
-                //   rhsWn -= JW*inu*(extbdfC[s]*GPz+extbdfA[s]*FUz);
-		           //}
+                  rhsUn -= extbdfA[s]*(FUx + nu*NCx);
+                  rhsVn -= extbdfA[s]*(FUy + nu*NCy);
+                  rhsWn -= extbdfA[s]*(FUz + nu*NCz);
+		           }
       	      } else {
             		rhsUn = 0.f;
             		rhsVn = 0.f;

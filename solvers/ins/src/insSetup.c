@@ -1210,12 +1210,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
-    //   sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
-    //   if(ins->TOMBO)
-    //   sprintf(kernelName, "insVelocityUpdateTOMBO");
-    //   else
-    //   sprintf(kernelName, "insVelocityUpdate");
-    //   ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
+      sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
+      // if(ins->TOMBO)
+      // sprintf(kernelName, "insVelocityUpdateTOMBO");
+      // else
+      sprintf(kernelName, "insVelocityUpdate");
+      ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
 
 
 

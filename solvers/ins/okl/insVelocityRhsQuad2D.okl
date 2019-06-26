@@ -131,7 +131,7 @@ SOFTWARE.
                 //
                 const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
                 const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-
+                //
                 rhsUn -= JW*inu*(extbdfC[s]*GPx + extbdfA[s]*FUx);
                 rhsVn -= JW*inu*(extbdfC[s]*GPy + extbdfA[s]*FUy);
 
@@ -178,11 +178,13 @@ SOFTWARE.
                                       @restrict const  dfloat *  MM,
                                       const dfloat idt,
                                       const dfloat inu,
+                                      const dfloat g0,
                                       @restrict const  dfloat *  extbdfA,
                                       @restrict const  dfloat *  extbdfB,
                                       const dlong fieldOffset,
                                       @restrict const  dfloat *  U,
                                       @restrict const  dfloat *  NU,
+                                      @restrict const  dfloat *  FU,
                                       @restrict const  dfloat *  GP,
                                             @restrict dfloat *  rhsU,
                                             @restrict dfloat *  rhsV,
@@ -203,20 +205,21 @@ SOFTWARE.
             dfloat rhsVn;
 
             if (p_SUBCYCLING) {
+              // Gradient P
               rhsUn = -JW*inu*GP[id+0*fieldOffset];
               rhsVn = -JW*inu*GP[id+1*fieldOffset];
-              // 
-              rhsUn += JW*inu*(idt*NU[id+0*fieldOffset]);
-              rhsVn += JW*inu*(idt*NU[id+1*fieldOffset]);
-
-              // for (int s=0;s<p_Nstages;s++) {
-              //   // FU
-              //   const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-              //   const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-
-              //   rhsUn += JW*inu*(- extbdfA[s]*FUx);
-              //   rhsVn += JW*inu*(- extbdfA[s]*FUy);
-              // }
+              // Characteristic Velocity
+              rhsUn += JW*inu*idt*NU[id+0*fieldOffset];
+              rhsVn += JW*inu*idt*NU[id+1*fieldOffset];
+              //
+                for (int s=0;s<p_Nstages;s++) {
+                  // FU
+                  const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+                  const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+                  // 
+                  rhsUn -= JW*inu*extbdfA[s]*FUx;
+                  rhsVn -= JW*inu*extbdfA[s]*FUy;
+              }
             } else {
               rhsUn = -JW*inu*GP[id+0*fieldOffset];
               rhsVn = -JW*inu*GP[id+1*fieldOffset];
@@ -228,9 +231,12 @@ SOFTWARE.
                 // NU
                 const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
                 const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+                // FU
+                const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+                const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
 
-                rhsUn += JW*inu*(idt*extbdfB[s]*Um - extbdfA[s]*NUm);
-                rhsVn += JW*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*NVm);
+                rhsUn += JW*inu*(idt*extbdfB[s]*Um - extbdfA[s]*(NUm + FUx));
+                rhsVn += JW*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*(NVm + FUy));
               }
             }
 

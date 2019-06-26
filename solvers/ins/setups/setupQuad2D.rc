@@ -9,6 +9,8 @@ data/insVortex2D.h
 #../../meshes/insKovasznaySpectralConvergenceQuad.msh
 ../../meshes/insVortexQuadStructured.msh
 
+#../../meshes/insVortexQuad2D.msh
+
 #../../meshes/insKovasznayCircleQuad2D.msh
 #../../meshes/insKovasznayCircleQuad2D_1.msh
 #../../meshes/insKovasznayCircleQuad2D_05.msh
@@ -56,12 +58,12 @@ TOMBO2
 
 
 [SUBCYCLING STEPS]
-0
+2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-CUBATURE
-#COLLOCATION
+#CUBATURE
+COLLOCATION
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
@@ -92,7 +94,7 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1000
+1
 
 [START TIME]
 0

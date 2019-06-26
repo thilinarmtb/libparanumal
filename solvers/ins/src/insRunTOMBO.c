@@ -36,10 +36,11 @@ void insRunTOMBO(ins_t *ins){
     
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
-
+  
+  
 for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-  // for(int tstep=0;tstep<1;++tstep){
-
+  //for(int tstep=0;tstep<5;++tstep){
+   
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
     else if(tstep<2 && ins->temporalOrder>=2) 
@@ -50,26 +51,26 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     dfloat time = ins->startTime + tstep*ins->dt;
 
     dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
-
-    if(ins->Nsubsteps) 
-    insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
+    
+    if(ins->Nsubsteps)
+     insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     else 
     insAdvection(ins, time, ins->o_U, ins->o_NU);
-
+      
 
     insCurlCurl(ins, time, ins->o_U, ins->o_NC); 
 
 #if 0
-    ins->o_NC.copyTo(ins->U);
+    ins->o_NU.copyTo(ins->U);
 
     char fname[BUFSIZ];
     string outName;
-    sprintf(fname, "insCurl_%04d.vtu",ins->frame++);
+    sprintf(fname, "insUhat_%04d.vtu",ins->frame++);
     insPlotVTU(ins, fname);
 #endif
 
-     // // Add explicit contrubitions like gravity, relaxation etc...
-   // // insAddVelocityRhs(ins, time); 
+   // Add explicit contrubitions like gravity, relaxation etc...
+   insAddVelocityRhs(ins, time); 
 
    insPressureRhs  (ins, time+ins->dt, ins->Nstages);
    insPressureSolve(ins, time+ins->dt, ins->Nstages); 
@@ -139,6 +140,7 @@ ins->setFlowFieldKernel(mesh->Nelements,
        (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
    }
 
+    
 
     occaTimerTic(mesh->device,"Report");
 

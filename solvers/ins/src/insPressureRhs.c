@@ -42,6 +42,7 @@ if(ins->TOMBO){
                          mesh->o_MM,
                          ins->idt,
                          ins->nu,
+                         ins->g0,
                          ins->o_extbdfA,
                          ins->o_extbdfB,
                          ins->fieldOffset,
