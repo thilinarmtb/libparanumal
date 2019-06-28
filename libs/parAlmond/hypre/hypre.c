@@ -61,11 +61,11 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
               printf("Custom HYPREsettings[%d]: %.2f\n", i+1, hypre_param[i]);
       }
   } else {
-      hypre_param[0] = 10;   /* HMIS                        */
+      hypre_param[0] = 8;   /* HMIS                        */
       hypre_param[1] = 6;    /* 6 Extended+i                  */
       hypre_param[2] = 0;    /* not used                    */
-      hypre_param[3] = 3;    /* SSOR smoother for crs level */
-      hypre_param[4] = 2;
+      hypre_param[3] = 9;    /* SSOR smoother for crs level */
+      hypre_param[4] = 1;
       hypre_param[5] = 0.25;
       hypre_param[6] = 0.1;
       hypre_param[7] = 0.0;

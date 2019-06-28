@@ -1217,8 +1217,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "insVelocityUpdate");
       ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
 
-
-
     sprintf(fileName, DINS "/okl/insError%s.okl", suffix);
     sprintf(kernelName, "insError%s", suffix);
     ins->errorKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
