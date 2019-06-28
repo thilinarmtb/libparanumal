@@ -22,7 +22,7 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-7
+8
 
 
 [ELEMENT MAP]
@@ -47,7 +47,11 @@ CUDA
 TOMBO2
 
 [SUBCYCLING STEPS]
-2
+4
+
+[SUBCYCLING TYPE]
+NEK
+#LIBP
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -82,7 +86,7 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-25
+10000
 
 [START TIME]
 0
@@ -95,7 +99,7 @@ NONE
 
 # overwrites time step size
 [DT]
-1.0E-3
+3E-4
 
 [OUTPUT TYPE]
 VTU

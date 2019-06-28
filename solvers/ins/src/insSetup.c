@@ -1262,10 +1262,13 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   if(ins->elementType==HEXAHEDRA){
   sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
   ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(kernelName, "insSubCycleNekVolume%s", suffix);
+  ins->subCycleNekVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  }
+
 
   sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
   ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-  }
 
   sprintf(fileName, DINS "/okl/insSubCycle.okl");
   sprintf(kernelName, "insSubCycleRKUpdate");

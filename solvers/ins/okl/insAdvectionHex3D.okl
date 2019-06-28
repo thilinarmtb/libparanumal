@@ -1739,7 +1739,7 @@
 }
 #undef quadSurfaceTerms
 
-// Compute Divergence in weak Form
+
 @kernel void insStrongAdvectionVolumeHex3D(const dlong Nelements,
 					   @restrict const  dfloat *  vgeo,
 					   @restrict const  dfloat *  D,
@@ -1831,9 +1831,9 @@
 
 	  const dlong id =e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  NU[id+0*offset] =  -(u*dudx + v*dudy + w*dudz);
-	  NU[id+1*offset] =  -(u*dvdx + v*dvdy + w*dvdz);
-	  NU[id+2*offset] =  -(u*dwdx + v*dwdy + w*dwdz);
+	  NU[id+0*offset] =  (u*dudx + v*dudy + w*dudz);
+	  NU[id+1*offset] =  (u*dvdx + v*dvdy + w*dvdz);
+	  NU[id+2*offset] =  (u*dwdx + v*dwdy + w*dwdz);
 	}
       }
     }

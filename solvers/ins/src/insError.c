@@ -160,6 +160,12 @@ void insError(ins_t *ins, dfloat time){
     ins->o_Uex.copyTo(ins->Uer); 
     ins->o_Pex.copyTo(ins->Per);
 
+
+    #if 0
+    ins->o_Uex.copyTo(ins->U); 
+    ins->o_Pex.copyTo(ins->P);
+    #endif
+
    
       // Compute Inf Norm of error  
       uLi = insLInfNorm(ins, 0*offset, ins->Uer); 

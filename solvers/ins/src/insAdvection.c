@@ -33,7 +33,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
   int ipdg = ins->vOptions.compareArgs("DISCRETIZATION","IPDG");
   
-  if(0) // turn this off
+  if(1) // turn this off
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
 
     // just do GLL at the moment (fix this later)

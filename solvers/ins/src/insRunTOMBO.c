@@ -33,13 +33,17 @@ void insRunTOMBO(ins_t *ins){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
 
+  int NekSubCycle = 0;
+  if(ins->options.compareArgs("SUBCYCLING TYPE", "NEK"))
+    NekSubCycle = 1;
+
     
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
   
   
 for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-  //for(int tstep=0;tstep<5;++tstep){
+ // for(int tstep=0;tstep<250;++tstep){
    
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
@@ -51,11 +55,21 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     dfloat time = ins->startTime + tstep*ins->dt;
 
     dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+
+     if(ins->Nsubsteps) {
+      if(!NekSubCycle){
+        insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
+      }else{
+        insNekSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
+      }
+    } else {
+       insAdvection(ins, time, ins->o_U, ins->o_NU);
+    }
     
-    if(ins->Nsubsteps)
-     insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
-    else 
-    insAdvection(ins, time, ins->o_U, ins->o_NU);
+    // if(ins->Nsubsteps)
+    //  insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
+    // else 
+    // insAdvection(ins, time, ins->o_U, ins->o_NU);
       
 
     insCurlCurl(ins, time, ins->o_U, ins->o_NC); 
