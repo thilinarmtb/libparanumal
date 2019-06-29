@@ -34,7 +34,7 @@ void insRunEXTBDF(ins_t *ins){
   occaTimerTic(mesh->device,"INS");
 
   int NekSubCycle = 0;
-  if(ins->options.compareArgs("SUBCYCLING TYPE", "NEK"))
+  if(ins->options.compareArgs("ADVECTION TYPE", "CONVECTIVE"))
     NekSubCycle = 1;
   
   int NstokesSteps = 0;

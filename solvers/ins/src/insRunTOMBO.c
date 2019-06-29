@@ -34,7 +34,7 @@ void insRunTOMBO(ins_t *ins){
   occaTimerTic(mesh->device,"INS");
 
   int NekSubCycle = 0;
-  if(ins->options.compareArgs("SUBCYCLING TYPE", "NEK"))
+  if(ins->options.compareArgs("ADVECTION TYPE", "CONVECTIVE"))
     NekSubCycle = 1;
 
     
@@ -43,7 +43,7 @@ void insRunTOMBO(ins_t *ins){
   
   
 for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
- // for(int tstep=0;tstep<250;++tstep){
+ // for(int tstep=0;tstep<10;++tstep){
    
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
@@ -66,22 +66,9 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
        insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
     
-    // if(ins->Nsubsteps)
-    //  insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
-    // else 
-    // insAdvection(ins, time, ins->o_U, ins->o_NU);
-      
-
+  
     insCurlCurl(ins, time, ins->o_U, ins->o_NC); 
 
-#if 0
-    ins->o_NU.copyTo(ins->U);
-
-    char fname[BUFSIZ];
-    string outName;
-    sprintf(fname, "insUhat_%04d.vtu",ins->frame++);
-    insPlotVTU(ins, fname);
-#endif
 
    // Add explicit contrubitions like gravity, relaxation etc...
    insAddVelocityRhs(ins, time); 
@@ -90,38 +77,10 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
    insPressureSolve(ins, time+ins->dt, ins->Nstages); 
    insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
    
-    // //  ins->scaledAddKernel(ins->Ntotal, 1.0, 0, ins->o_PI, 1.0, 0, ins->o_P);
-    // // no need to cycle pressure in TOMBO 
-    // // for (int s=ins->Nstages;s>1;s--) {
-    // //   ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
-    // //                               (s-1)*ins->Ntotal*sizeof(dfloat), 
-    // //                               (s-2)*ins->Ntotal*sizeof(dfloat));
-    // // }
 
     // copy updated pressure
     ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
 
-
-#if 0
-ins->setFlowFieldKernel(mesh->Nelements,
-          ins->startTime,
-          mesh->o_x,
-          mesh->o_y,
-          mesh->o_z,
-          ins->fieldOffset,
-          ins->o_rkU,
-          ins->o_P);
-#endif
-
-
-#if 0
-    ins->o_P.copyTo(ins->P);
-
-    char fname[BUFSIZ];
-    string outName;
-    sprintf(fname, "inspressure_%04d.vtu",ins->frame++);
-    insPlotVTU(ins, fname);
-#endif
 
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);

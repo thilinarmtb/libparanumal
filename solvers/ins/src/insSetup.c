@@ -1047,6 +1047,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       sprintf(kernelName, "insStrongAdvectionVolume%s", suffix);
       ins->advectionStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "insStrongAdvectionCubatureVolume%s", suffix);
+      ins->advectionStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
       // ===========================================================================
       if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION")){

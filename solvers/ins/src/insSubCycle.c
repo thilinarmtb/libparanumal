@@ -159,51 +159,6 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                ins->o_extC,
                                o_U,
                                ins->o_Ue);
-
-
-	// if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
-
-	//   // Compute Volume Contribution
-	//   occaTimerTic(mesh->device,"AdvectionVolume");
-	//   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){        
-	//     ins->subCycleNekCubatureVolumeKernel(mesh->Nelements,
-	// 					 mesh->o_vgeo,
-	// 					 mesh->o_cubvgeo,
-	// 					 mesh->o_cubDWmatrices,
-	// 					 mesh->o_cubInterpT,
-	// 					 mesh->o_cubProjectT,
-	// 					 ins->o_invLumpedMassMatrix,
-	// 					 ins->fieldOffset,
-	// 					 ins->o_Ue,
-	// 					 o_Ud,
-	// 					 ins->o_cU,     
-	// 					 ins->o_cUd,     
-	// 					 ins->o_rhsUd);
-	//   }else{
-	//     ins->subCycleNekVolumeKernel(mesh->Nelements,
-	// 				 mesh->o_vgeo,
-	// 				 mesh->o_Dmatrices,
-	// 				 ins->fieldOffset,
-	// 				 ins->o_Ue,
-	// 				 o_Ud,
-	// 				 ins->o_rhsUd);
-	//   }
-  
-	//   occaTimerToc(mesh->device,"AdvectionVolume");
-
-	//   for(int k=0;k<ins->dim;++k){
-	//     ogsGatherScatter(ins->o_rhsUd+k*ins->fieldOffset*sizeof(dfloat), ogsDfloat, ogsAdd, mesh->ogs);
-	//   } 
-
-	//   int nfield = ins->dim; // number of fields
-	//   ins->invMassMatrixKernel(mesh->Nelements,
-	// 			   ins->fieldOffset,
-	// 			   nfield,
-	// 			   mesh->o_vgeo,
-	// 			   ins->o_InvM, // mesh->o_MM, // should be invMM for tri/tet
-	// 			   ins->o_rhsUd);
-
-	// }else{
 	  if(mesh->totalHaloPairs>0){
 	    // make sure compute device is ready to perform halo extract
 	    mesh->device.finish();
@@ -359,7 +314,6 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 	  }
 	  occaTimerToc(mesh->device,"AdvectionSurface");
 
-	// }         
         // Update Kernel
         occaTimerTic(mesh->device,"AdvectionUpdate");
         ins->subCycleRKUpdateKernel(mesh->Nelements,

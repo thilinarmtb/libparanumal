@@ -33,10 +33,20 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
   int ipdg = ins->vOptions.compareArgs("DISCRETIZATION","IPDG");
   
-  if(1) // turn this off
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if(ins->options.compareArgs("ADVECTION TYPE", "CONVECTIVE")){
 
-    // just do GLL at the moment (fix this later)
+    if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE"))
+      ins->advectionStrongCubatureVolumeKernel(mesh->Nelements,
+                                       mesh->o_vgeo,
+                                       mesh->o_cubvgeo,
+                                       mesh->o_cubDWmatrices,
+                                       mesh->o_cubInterpT,
+                                       mesh->o_cubProjectT,
+                                       ins->fieldOffset,
+                                       o_U,
+                                       ins->o_cU,
+                                       o_NU);
+    else
     ins->advectionStrongVolumeKernel(mesh->Nelements,
 				     mesh->o_vgeo,
 				     mesh->o_Dmatrices,
@@ -45,7 +55,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 				     o_NU);
 
     return;
-  }
+}
 
   if(ipdg){
     

@@ -214,6 +214,7 @@ typedef struct {
   occa::kernel advectionCubatureSurfaceKernel;
 
   occa::kernel advectionStrongVolumeKernel;
+  occa::kernel advectionStrongCubatureVolumeKernel;
   
   occa::kernel diffusionKernel;
   occa::kernel diffusionIpdgKernel;
