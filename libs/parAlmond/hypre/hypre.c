@@ -64,8 +64,8 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
       hypre_param[0] = 8;   /* HMIS                        */
       hypre_param[1] = 6;    /* 6 Extended+i                  */
       hypre_param[2] = 0;    /* not used                    */
-      hypre_param[3] = 9;    /* SSOR smoother for crs level */
-      hypre_param[4] = 1;
+      hypre_param[3] = 3;    /* SSOR smoother for crs level */
+      hypre_param[4] = 3;
       hypre_param[5] = 0.25;
       hypre_param[6] = 0.1;
       hypre_param[7] = 0.0;
@@ -81,10 +81,13 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
 
   HYPRE_BoomerAMGSetCycleRelaxType(solver, 16, 1);
   HYPRE_BoomerAMGSetCycleRelaxType(solver, 16, 2);
+  HYPRE_BoomerAMGSetCycleRelaxType(solver,  9, 3);
   HYPRE_BoomerAMGSetChebyFraction(solver, 1./20); 
 
-  HYPRE_BoomerAMGSetCycleRelaxType(solver, hypre_param[3], 3);
-  HYPRE_BoomerAMGSetCycleNumSweeps(solver, hypre_param[4], 3);
+  if (null_space) {
+    HYPRE_BoomerAMGSetCycleRelaxType(solver, hypre_param[3], 3);
+    HYPRE_BoomerAMGSetCycleNumSweeps(solver, hypre_param[4], 3);
+  }
 
   HYPRE_BoomerAMGSetStrongThreshold(solver,hypre_param[5]);
 
