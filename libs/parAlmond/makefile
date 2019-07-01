@@ -73,7 +73,8 @@ $(HYPREDIR)/hypre.o
 all: lib
 
 hypre:
-	cd hypre && env CC="$(CC)" ./install
+	cd hypre && env CC="$(CC)" NEKRS_SRC_THIRD_PARTY_DIR="${NEKRS_SRC_THIRD_PARTY_DIR}" \
+	  ./install
 
 lib: hypre
 	@$(MAKE) --no-print-directory libParAlmond
