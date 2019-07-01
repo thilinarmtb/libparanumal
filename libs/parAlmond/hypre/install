@@ -11,11 +11,12 @@ fi
 if [ ! -f ./lib/libHYPRE.a ]; then
   rm -rf hypre 2>/dev/null
 
-#  wget --no-check-certificate -O v$VER.tar.gz https://github.com/hypre-space/hypre/archive/v$VER.tar.gz 
-#  mkdir hypre
-#  tar -zxvf v$VER.tar.gz -C ./hypre --strip-components=1
-
-  git clone --depth 1 https://github.com/hypre-space/hypre.git
+  HYPRE_TAR=${NEKRS_SRC_THIRD_PARTY_DIR}/hypre.tgz
+  if [ -f ${HYPRE_TAR} ]; then
+    tar -xvf ${HYPRE_TAR}
+  else
+    git clone --depth 1 https://github.com/hypre-space/hypre.git
+  fi
 
   cd hypre
   mkdir -p build
