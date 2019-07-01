@@ -3,6 +3,7 @@
 #include "mpi.h"
 #include "mesh.h"
 
+#if 0
 #include "parmetis.h"
 #include "defs.h"
 //#include "parmetisdefs.h"
@@ -233,3 +234,4 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
  free(part);
 
 }
+#endif

@@ -24,44 +24,13 @@ SOFTWARE.
 
 */
 
-#include "elliptic.h"
-
-int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
-                  occa::memory &o_r, occa::memory &o_x){
+@kernel void setScalar(const dlong N,
+                      const dfloat alpha,
+                      @restrict dfloat *  x){
   
-  mesh_t *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
-
-  int Niter = 0;
-  int maxIter = 1000; 
-
-#if USE_NULL_PROJECTION==1
-  if(elliptic->allNeumann) // zero mean of RHS
-    ellipticZeroMean(elliptic, o_r);
-#endif
-  
-  options.getArgs("MAXIMUM ITERATIONS", maxIter);
-
-  options.getArgs("SOLVER TOLERANCE", tol);
-  
-  if(options.compareArgs("KRYLOV SOLVER", "PBICGSTAB"))
-    Niter=pbicgstab(elliptic,lambda,o_r,o_x,tol,maxIter);
-  else if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
-    Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  else{
-    if(!options.compareArgs("KRYLOV SOLVER", "FLEXIBLE")){
-      Niter = nbpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-    }
-    else{      
-      Niter = nbfpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+    if(n<N){
+      x[n] = alpha;
     }
   }
-
-#if USE_NULL_PROJECTION==1
-  if(elliptic->allNeumann) // zero mean of RHS
-    ellipticZeroMean(elliptic, o_x);
-#endif
-  
-  return Niter;
-
 }

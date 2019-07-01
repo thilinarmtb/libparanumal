@@ -85,6 +85,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->p);
   elliptic->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), elliptic->p);
   elliptic->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
+  elliptic->o_s   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->s);
+  elliptic->o_shat   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->shat);
+  elliptic->o_t   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->t);
+  elliptic->o_v   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->v);
 
   elliptic->o_res = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
   elliptic->o_Sres = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
@@ -396,6 +400,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       elliptic->scaledAddKernel =
           mesh->device.buildKernel(DHOLMES "/okl/scaledAdd.okl",
                                          "scaledAdd",
+                                         kernelInfo);
+
+      elliptic->setScalarKernel =
+          mesh->device.buildKernel(DHOLMES "/okl/setScalar.okl",
+                                         "setScalar",
                                          kernelInfo);
 
       elliptic->dotMultiplyKernel =
