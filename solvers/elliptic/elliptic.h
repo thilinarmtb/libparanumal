@@ -67,7 +67,7 @@ typedef struct {
   dfloat allNeumannScale;
 
   // HOST shadow copies
-  dfloat *x, *Ax, *p, *r, *z, *Ap, *tmp, *grad;
+  dfloat *x, *Ax, *p, *r, *z, *v, *t, *s, *shat, *Ap, *tmp, *grad;
   dfloat *invDegree;
 
   dfloat *Ry, *R; //multigrid restriction matrix
@@ -96,6 +96,10 @@ typedef struct {
 
   occa::memory o_x;
   occa::memory o_r;
+  occa::memory o_s;
+  occa::memory o_shat;
+  occa::memory o_t;
+  occa::memory o_v;
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
   occa::memory o_res;
@@ -128,6 +132,8 @@ typedef struct {
   occa::kernel weightedInnerProduct1Kernel;
   occa::kernel weightedInnerProduct2Kernel;
   occa::kernel scaledAddKernel;
+  occa::kernel scaledAddNormKernel;
+  occa::kernel setScalarKernel;
   occa::kernel dotMultiplyKernel;
   occa::kernel dotMultiplyAddKernel;
   occa::kernel dotDivideKernel;
@@ -228,10 +234,12 @@ void ellipticEndHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentri
 
 //Linear solvers
 int pcg      (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+int pbicgstab(elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
 
 
 
 void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
+void ellipticSetScalar(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a);
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
 
 dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
