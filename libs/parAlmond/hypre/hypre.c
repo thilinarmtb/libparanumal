@@ -61,8 +61,8 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
               printf("Custom HYPREsettings[%d]: %.2f\n", i+1, hypre_param[i]);
       }
   } else {
-      hypre_param[0] = 8;   /* HMIS                        */
-      hypre_param[1] = 6;    /* 6 Extended+i                  */
+      hypre_param[0] = 10;   /* HMIS                        */
+      hypre_param[1] = 6;    /* Extended+i                  */
       hypre_param[2] = 0;    /* not used                    */
       hypre_param[3] = 3;    /* SSOR smoother for crs level */
       hypre_param[4] = 3;
@@ -74,6 +74,7 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
   }
 
   //HYPRE_BoomerAMGSetCycleType(solver,2);
+  HYPRE_BoomerAMGSetMaxCoarseSize(solver, 10);
   HYPRE_BoomerAMGSetCoarsenType(solver,hypre_param[0]);
   HYPRE_BoomerAMGSetInterpType(solver,hypre_param[1]);
 
