@@ -4,6 +4,9 @@
 [DATA FILE]
 data/ellipticHomogeneous2D.h
 
+[BOX DOMAIN]
+FALSE
+
 [MESH FILE]
 ../../meshes/cavityQuadH00125.msh
 
@@ -40,10 +43,24 @@ CONTINUOUS
 [BASIS]
 NODAL
 
+[ELLIPTIC INTEGRATION]
+NODAL
+
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
 MULTIGRID
 
+[FIXED ITERATION COUNT]
+FALSE
+
+[ELLIPTIC INTEGRATION]
+NODAL
+
+[SOLVER TOLERANCE]
+1e-8
+
+[MAXIMUM ITERATIONS]
+1000
 
 ########## MULTIGRID Options ##############
 
@@ -60,6 +77,7 @@ DAMPEDJACOBI,CHEBYSHEV
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
 2
+
 
 ###########################################
 
@@ -92,7 +110,11 @@ DEFAULT
 MAX
 #MIN
 
-###########################################
+[PARALMOND SMOOTH COARSEST]
+FALSE
+
+[PARALMOND SMOOTH COARSEST DEGREE]
+8
 
 [RESTART FROM FILE]
 0
@@ -102,3 +124,9 @@ cavity
 
 [VERBOSE]
 TRUE
+
+[DEBUG ENABLE REDUCTIONS]
+1
+
+[DEBUG ENABLE OGS]
+1

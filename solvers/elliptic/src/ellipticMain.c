@@ -221,17 +221,6 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
-#if 0
-    char fname[BUFSIZ];
-    string outName;
-    options.getArgs("OUTPUT FILE NAME", outName);
-    // original
-    elliptic->options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
-    ellipticPlotVTUHex3D(mesh, fname, 0);
-#endif
-
-#if 1
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
@@ -240,29 +229,12 @@ int main(int argc, char **argv){
       meshPlotVTU3D(mesh, fname, 0);
     else
       meshPlotVTU2D(mesh, fname, 0);
-#endif
   }
 
-#if 0
-  {
-    dfloat maxError = 0;
-    for(int n=0;n<mesh->Np*mesh->Nelements;++n){
-      dfloat sc = M_PI;
-      dfloat exact = cos(sc*mesh->x[n])*cos(sc*mesh->y[n])*cos(sc*mesh->z[n]);
-      dfloat error =  exact - mesh->q[n];
-      maxError = mymax(maxError, fabs(error));
-    }
-    printf("maxError = %g\n", maxError);
-
-    printf("PRINTING VTU\n");
-    ellipticPlotVTUHex3D(mesh, "bah", 0);
-  }
-#endif
-
-  //  cout << kernelInfo;
+  // cout << kernelInfo;
   
   // build one-ring ( to rule them all )
-  //  ellipticBuildOneRing(elliptic, kernelInfo);
+  // ellipticBuildOneRing(elliptic, kernelInfo);
   
   // close down MPI
   MPI_Finalize();

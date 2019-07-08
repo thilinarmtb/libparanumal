@@ -5,6 +5,10 @@
 #data/insKovasznay2D.h
 data/insVortex2D.h
 
+
+[BOX DOMAIN]
+FALSE
+
 [MESH FILE]
 #../../meshes/insKovasznaySpectralConvergenceQuad.msh
 ../../meshes/insVortexQuadStructured.msh
@@ -28,7 +32,6 @@ data/insVortex2D.h
 #../../meshes/insVortexQuadStructured_0.msh
 ## works, DDNN setup
 #../../meshes/insVortexQuadStructured_1.msh
-
 
 [MESH DIMENSION]
 2
@@ -56,6 +59,9 @@ CUDA
 EXTBDF2
 #TOMBO2
 
+
+[SUBCYCLING TYPE]
+LIBP
 
 [SUBCYCLING STEPS]
 2
@@ -161,6 +167,9 @@ DAMPEDJACOBI,CHEBYSHEV
 [VELOCITY CHEBYSHEV DEGREE]
 2
 
+[VELOCITY MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -217,6 +226,9 @@ NODAL
 [PRESSURE PRECONDITIONER]
 MULTIGRID
 #FULLALMOND
+
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
 
 ########## MULTIGRID Options ##############
 
@@ -302,4 +314,5 @@ FALSE
 
 [USE PRECOMPILED BINARIES]
 FALSE
+
 

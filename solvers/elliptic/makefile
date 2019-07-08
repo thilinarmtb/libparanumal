@@ -27,9 +27,6 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 
-PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
-METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
-
 # libraries to be linked in
 LIBS	= -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
 
@@ -94,8 +91,8 @@ AOBJS    = \
 
 # library objects
 LOBJS = \
-../../src/meshConnectPeriodicFaceNodes3D.o \
 ../../src/meshConnectPeriodicFaceNodes2D.o \
+../../src/meshConnectPeriodicFaceNodes3D.o \
 ../../src/meshSetupBoxHex3D.o \
 ../../src/meshApplyElementMatrix.o \
 ../../src/meshConnect.o \
