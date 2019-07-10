@@ -161,9 +161,37 @@ void insError(ins_t *ins, dfloat time){
     ins->o_Pex.copyTo(ins->Per);
 
 
-    #if 0
-    ins->o_Uex.copyTo(ins->U); 
-    ins->o_Pex.copyTo(ins->P);
+    #if 1
+     for(dlong e=0;e<mesh->Nelements;++e){
+        for(int n=0;n<mesh->Np;++n){
+          dlong id = n+e*mesh->Np;
+          dfloat x = mesh->x[id];
+          dfloat y = mesh->y[id];
+          dfloat z = mesh->z[id];
+
+          dfloat a = M_PI/4.f;
+          dfloat d = M_PI/2.f;
+
+          dfloat uExact = -a*exp(-ins->nu*d*d*time)*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y));
+          dfloat vExact = -a*exp(-ins->nu*d*d*time)*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z));
+          dfloat wExact = -a*exp(-ins->nu*d*d*time)*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x));
+          dfloat pExact = -0.5f*a*a*exp(-2.f*ins->nu*d*d*time)*(
+                            2.f*exp(a*(z+y))*cos(a*z+d*x)*sin(a*x+d*y)+ 
+                            2.f*exp(a*(z+x))*cos(a*x+d*y)*sin(a*y+d*z)+ 
+                            2.f*exp(a*(y+x))*cos(a*y+d*z)*sin(a*z+d*x)+
+                            exp(2.f*a*z) + exp(2.f*a*y) +exp(2.f*a*x) );
+
+
+
+
+
+
+    ins->U[id + 0*ins->fieldOffset] -= uExact; 
+    ins->U[id + 1*ins->fieldOffset] -= vExact; 
+    ins->U[id + 2*ins->fieldOffset] -= wExact;
+
+    }
+    } 
     #endif
 
    

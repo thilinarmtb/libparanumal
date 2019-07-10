@@ -43,7 +43,7 @@ void insRunTOMBO(ins_t *ins){
   
   
 for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
- // for(int tstep=0;tstep<10;++tstep){
+// for(int tstep=0;tstep<3;++tstep){
    
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
@@ -69,7 +69,6 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
   
     insCurlCurl(ins, time, ins->o_U, ins->o_NC); 
 
-
    // Add explicit contrubitions like gravity, relaxation etc...
    insAddVelocityRhs(ins, time); 
 
@@ -78,15 +77,25 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
    insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
    
 
+#if 0
+   if(tstep<3)
+ins->setFlowFieldKernel(mesh->Nelements,
+          time+ins->dt,
+          mesh->o_x,
+          mesh->o_y,
+          mesh->o_z,
+          ins->fieldOffset,
+          ins->o_rkU,
+          ins->o_rkP);
+#endif
+
+
     // copy updated pressure
     ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
 
 
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
-
-   //  // update velocity
-   //  // insVelocityUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkGP, ins->o_rkU);
 
      //cycle velocity history after velocityUpdate
     for (int s=ins->Nstages;s>1;s--) {
@@ -95,8 +104,24 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
-     //copy updated pressure
+   
+
+
+#if 0
+    if(tstep<3)
+ins->setFlowFieldKernel(mesh->Nelements,
+          time+ins->dt,
+          mesh->o_x,
+          mesh->o_y,
+          mesh->o_z,
+          ins->fieldOffset,
+          ins->o_rkU,
+          ins->o_rkP);
+#endif
+
+  //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
+
 
     //cycle rhs history
     for (int s=ins->Nstages;s>1;s--) {

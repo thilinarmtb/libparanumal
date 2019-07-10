@@ -951,18 +951,19 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 	    const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
 	    const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
 
-	    dfloat dudr = 0, duds = 0;
-	    dfloat dvdr = 0, dvds = 0;
+	    dfloat dudr = 0.f, duds = 0.f;
+	    dfloat dvdr = 0.f, dvds = 0.f;
 
 #pragma unroll p_Nq
 	    for(int n=0;n<p_Nq;++n){
 	      const dfloat Dr = s_D[i][n];
 	      const dfloat Ds = s_D[j][n];
-	      dudr = Dr*s_U[es][j][n];
-	      duds = Ds*s_U[es][n][i];
+        //
+	      dudr += Dr*s_U[es][j][n];
+	      duds += Ds*s_U[es][n][i];
 
-	      dvdr = Dr*s_V[es][j][n];
-	      dvds = Ds*s_V[es][n][i];
+	      dvdr += Dr*s_V[es][j][n];
+	      dvds += Ds*s_V[es][n][i];
 	    }
 
 
@@ -975,13 +976,270 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 	    dfloat u = s_U[es][j][i];
 	    dfloat v = s_V[es][j][i];
 
-	    const dlong id =e*p_Np + j*p_Nq + i;
+	    const dlong id = e*p_Np + j*p_Nq + i;
 
-	    NU[id+0*offset] =  -(u*dudx + v*dudy);
-	    NU[id+1*offset] =  -(u*dvdx + v*dvdy);
+	    NU[id+0*offset] =  (u*dudx + v*dudy);
+	    NU[id+1*offset] =  (u*dvdx + v*dvdy);
 	  }
 	}
       }
     }
   }
 }
+
+
+
+// Compute Divergence in weak Form :::: fix later AK   
+@kernel void insStrongAdvectionCubatureVolumeQuad2D(const dlong Nelements,
+                 @restrict const  dfloat *  vgeo,
+                 @restrict const  dfloat *  cubvgeo,
+                 @restrict const  dfloat *  cubD,
+                 @restrict const  dfloat *  cubInterpT,
+                 @restrict const  dfloat *  cubProjectT,
+                 const dlong offset,
+                 @restrict const  dfloat *  U,
+                 @restrict dfloat *  cU, //storage for interpolated fields
+                 @restrict dfloat *  NU){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_cubNblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_V[p_cubNblockV][p_cubNq][p_cubNq];
+
+    @shared dfloat s_cU[p_cubNblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_cV[p_cubNblockV][p_cubNq][p_cubNq];
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+
+    @exclusive dfloat r_Un, r_Vn;
+    // @exclusive dfloat r_cUn, r_cVn;
+    // #define s_cU = s_U
+    // #define s_cV = s_V
+
+
+   //fetch the U and V values and store in flux arrays in @shared
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){    
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){ 
+            
+            if((i<p_Nq) && (j<p_Nq)){ 
+            const dlong id = e*p_Np + j*p_Nq+i;
+
+            s_U[es][j][i] = U[id+0*offset];
+            s_V[es][j][i] = U[id+1*offset];
+            }
+
+          const int id = i+j*p_cubNq;
+          if ((es==0) && (id<p_Nq*p_cubNq)) {
+            s_cubInterpT[0][id] = cubInterpT[id];
+            s_cubProjectT[0][id] = cubProjectT[id];
+           }
+           
+          if (es==0) 
+           s_cubD[0][id] = cubD[id];
+
+
+        }
+      }
+    }
+  }
+
+    @barrier("local");
+
+    //interpolate in i, store in register
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq) {
+            r_Un = 0.f; r_Vn = 0.f;
+#pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ini = s_cubInterpT[n][i];
+              r_Un  += Ini*s_U[es][j][n];
+              r_Vn  += Ini*s_V[es][j][n];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+   //write register back to @shared
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq) {
+            s_U[es][j][i] = r_Un;
+            s_V[es][j][i] = r_Vn;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in j and store flux in register
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          r_Un  = 0.f; r_Vn  = 0.f;
+
+#pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Inj = s_cubInterpT[n][j];
+            r_Un  += Inj*s_U[es][n][i];
+            r_Vn  += Inj*s_V[es][n][i];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+
+    //write register back to @shared
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+            s_U[es][j][i] = r_Un;
+            s_V[es][j][i] = r_Vn;
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //construct flux from registers
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){ 
+            const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
+            const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
+            const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
+            const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
+            const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
+            const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
+
+            dfloat dudr = 0.f, duds = 0.f; 
+            dfloat dvdr = 0.f, dvds = 0.f; 
+
+            #pragma unroll p_cubNq
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Dr = s_cubD[i][n];
+              const dfloat Ds = s_cubD[j][n];
+              //
+              dudr += Dr*s_U[es][j][n];
+              duds += Ds*s_U[es][n][i];
+
+              dvdr += Dr*s_V[es][j][n];
+              dvds += Ds*s_V[es][n][i];
+            }
+
+            const dfloat dudx = drdx*dudr + dsdx*duds;
+            const dfloat dudy = drdy*dudr + dsdy*duds;
+
+            const dfloat dvdx = drdx*dvdr + dsdx*dvds;
+            const dfloat dvdy = drdy*dvdr + dsdy*dvds;
+
+            s_cU[es][j][i] =  JW*(r_Un*dudx + r_Vn*dudy);
+            s_cV[es][j][i] =  JW*(r_Un*dvdx + r_Vn*dvdy);
+
+            // r_cUn =  JW*(r_uN*dudx + r_Vn*dudy);
+            // r_cVn =  JW*(r_uN*dvdx + r_Vn*dvdy);
+
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // //write register back to @shared
+    // for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+    //   for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    //     for(int i=0;i<p_cubNq;++i;@inner(0)){
+    //         s_U[es][j][i] = r_cUn;
+    //         s_U[es][j][i] = r_cVn;
+    //     }
+    //   }
+    // }
+    //
+   //  @barrier("local");
+
+// Here .....AK
+
+
+    // project in r
+
+
+     //interpolate in i, store in register
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq) {
+            r_Un = 0.f; r_Vn = 0.f;
+          #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+             // const dfloat Ini = s_cubProjectT[n][j];
+              const dfloat Ini = s_cubInterpT[j][n];
+              r_Un  += Ini*s_cU[es][n][i];
+              r_Vn  += Ini*s_cV[es][n][i];
+            }
+            s_cU[es][j][i] = r_Un;
+            s_cV[es][j][i] = r_Vn;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+
+    //write register back to @shared
+    // for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
+    //   for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    //     for(int i=0;i<p_cubNq;++i;@inner(0)){
+    //       if (j<p_Nq) {
+    //         s_cU[es][j][i] = r_Un;
+    //         s_cV[es][j][i] = r_Vn;
+    //       }
+    //     }
+    //   }
+    // }
+
+    // @barrier("local");    
+
+    //project/differentiate in i and write back 
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){ 
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){  
+          const dlong e = eo+es; // element in block
+          if((e<Nelements) && (i<p_Nq) && (j<p_Nq)){ 
+            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+            
+            dfloat nu = 0.f, nv = 0.f;
+            
+#pragma unroll p_cubNq
+      for(int n=0;n<p_cubNq;++n){
+       // const dfloat Pni = s_cubProjectT[n][i];
+         const dfloat Pni = s_cubInterpT[i][n];
+        nu += Pni*s_cU[es][j][n];
+        nv += Pni*s_cV[es][j][n];
+      }
+            const dlong id = e*p_Np + j*p_Nq + i;
+            NU[id+0*offset] = invJW*nu;
+            NU[id+1*offset] = invJW*nv;
+          }
+        }
+      }
+    }
+  }  
+} 

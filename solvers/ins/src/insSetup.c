@@ -1067,8 +1067,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->pressureAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
         
         // needed for velocity increament
-        // sprintf(kernelName,"insVelocityAx%s", suffix);
-        // ins->velocityAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+        sprintf(kernelName,"insVelocityAx%s", suffix);
+        ins->velocityAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
 
         // Curl operations...
         sprintf(fileName,DINS "/okl/insCurl%s.okl", suffix); 
@@ -1154,7 +1154,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
           sprintf(kernelName, "insPressureBC%s", suffix);
           ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-          sprintf(kernelName, "insPressureAddBC%s", suffix);
+
+          if(ins->TOMBO){
+            sprintf(kernelName, "insPressureAddBCTOMBO%s", suffix);
+          }else{
+            sprintf(kernelName, "insPressureAddBC%s", suffix);
+          }
           ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
         }
 
@@ -1199,24 +1204,35 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       // ===========================================================================
       if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
   sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
+
   sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
   ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
   sprintf(kernelName, "insVelocityBC%s", suffix);
   ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-  
-  // if (options.compareArgs("TIME INTEGRATOR", "TOMBO")) 
-  //   sprintf(kernelName, "insVelocityAddBCTOMBO%s", suffix);
-  // else
-  sprintf(kernelName, "insVelocityAddBC%s", suffix);
 
+  // These are required for velocity increament
+  if (options.compareArgs("TIME INTEGRATOR", "TOMBO") && 
+      options.compareArgs("TIME INTEGRATOR", "DIFF") ){ 
+
+    sprintf(kernelName, "insVelocityBCTOMBO%s", suffix);
+  ins->velocityRhsBCTOMBOKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+    sprintf(kernelName, "insVelocityAddBCTOMBO%s", suffix);
+    ins->velocityAddBCTOMBOKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+    sprintf(kernelName, "insVelocityAddBCTOMBODiff%s", suffix);
+   ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  }else{
+  sprintf(kernelName, "insVelocityAddBC%s", suffix);
   ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+   }
       }
 
       sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
-      // if(ins->TOMBO)
-      // sprintf(kernelName, "insVelocityUpdateTOMBO");
-      // else
+      if(ins->TOMBO)
+      sprintf(kernelName, "insVelocityUpdateTOMBO");
+      else
       sprintf(kernelName, "insVelocityUpdate");
       ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
 
