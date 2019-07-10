@@ -196,7 +196,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 		      Rows,
 		      Cols,
 		      Vals,
-		      0,
+		      elliptic->allNeumann,
 		      0.0);
 #endif
 

@@ -98,7 +98,7 @@ void coarseSolver::setup(parCSR *A) {
                        rows,
                        cols,
                        vals,
-                       A->nullSpace,
+                       (int) A->nullSpace,
                        comm,
                        Nthreads,
                        settings);
