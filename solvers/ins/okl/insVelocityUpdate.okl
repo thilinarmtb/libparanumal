@@ -76,11 +76,8 @@ SOFTWARE.
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id  = n + e*p_Np;
-     
       for (int i=0;i<p_NVfields;i++) {
-
-      dfloat Un = rkU[id+i*fieldOffset] + U[id+i*fieldOffset];
-      rkU[id+i*fieldOffset] = Un;
+      rkU[id+i*fieldOffset] += U[id+i*fieldOffset];
       }
     }
   }

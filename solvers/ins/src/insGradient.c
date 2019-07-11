@@ -161,5 +161,5 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
 			     o_P,
 			     o_GP);
   occaTimerToc(mesh->device,"GradientSurface");
-}
+ }
 }

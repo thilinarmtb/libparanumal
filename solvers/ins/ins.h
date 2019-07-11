@@ -238,7 +238,9 @@ typedef struct {
   occa::kernel velocityRhsKernel;
   occa::kernel velocityRhsIpdgBCKernel;
   occa::kernel velocityRhsBCKernel;
+  occa::kernel velocityRhsBCTOMBOKernel;
   occa::kernel velocityAddBCKernel;
+  occa::kernel velocityAddBCTOMBOKernel;
   occa::kernel velocityUpdateKernel;  
   
   occa::kernel vorticityKernel;

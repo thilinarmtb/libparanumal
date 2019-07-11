@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -71,19 +71,8 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            o_rhsW);
   }else if (ins->options.compareArgs("TIME INTEGRATOR", "TOMBO")) {
 
-    // Get ready to velocity solve!!!!
+    // Get ready to velocity solve, compute Gradient of Pressure
     insGradient (ins, time, ins->o_P, ins->o_rkGP); 
-
-#if 0
-    ins->o_rhsP.copyFrom(ins->o_rkGP,ins->Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
-    // ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
-    ins->o_rhsP.copyTo(ins->P);
-    
-    char fname[BUFSIZ];
-    string outName;
-    sprintf(fname, "insGradient_%04d.vtu",ins->frame++);
-    insPlotVTU(ins, fname);
-#endif  
 
     // rhsU^s = MM*1/nu*[ -(grad P) + sum_i ( (a_i) U^(n-q)/dt - b_i NU ^(n-q)) 
     ins->velocityRhsKernel(mesh->Nelements,
@@ -103,25 +92,62 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            o_rhsV,
                            o_rhsW);
 
+    // for Velocity Increament Solve
+   if (ins->options.compareArgs("TIME INTEGRATOR", "DIFF")){
+    // Update Un+1 at dirichlet boundaries only
+      ins->velocityAddBCTOMBOKernel(mesh->Nelements,
+				    time,
+				    ins->fieldOffset,
+				    mesh->o_sgeo,
+				    mesh->o_x,
+				    mesh->o_y,
+				    mesh->o_z,
+				    mesh->o_vmapM,
+				    ins->o_VmapB,   
+				    ins->o_U);
 
-    // Add helmholtz of old velocity
-    const dfloat lambda = -ins->g0*ins->idt*ins->inu; 
+      // add [lap(Un) + lambda* Un] to Rhs to convert to velocity Difference
+      //      const dfloat lambda = -ins->g0*ins->idt*ins->inu;  
+      const dfloat lambda = -ins->lambda;  
+      // simple AX kernel, modify later!!!!!!!AK 
+      dlong voffset = 0*ins->fieldOffset; 
+      // First for U
+      ins->velocityAxKernel(mesh->Nelements,
+			    mesh->o_ggeo, 
+			    mesh->o_Dmatrices, 
+			    mesh->o_Smatrices, 
+			    mesh->o_MM, 
+			    lambda, 
+			    voffset, 
+			    ins->o_U, 
+			    o_rhsU); 
+
+      voffset = 1*ins->fieldOffset; 
+      // First for U
+      ins->velocityAxKernel(mesh->Nelements,
+			    mesh->o_ggeo, 
+			    mesh->o_Dmatrices, 
+			    mesh->o_Smatrices, 
+			    mesh->o_MM, 
+			    lambda, 
+			    voffset, 
+			    ins->o_U, 
+			    o_rhsV); 
 
 
-  //   // simple AX kernel, will be modified later AK..... for increament
-  // ins->velocityAxKernel(mesh->Nelements,
-  //                       mesh->o_ggeo, 
-  //                       mesh->o_Dmatrices, 
-  //                       mesh->o_Smatrices, 
-  //                       mesh->o_MM, 
-  //                       lambda, 
-  //                       ins->fieldOffset, 
-  //                       ins->o_U, 
-  //                       ins->o_rhsU,
-  //                       ins->o_rhsV,
-  //                       ins->o_rhsW); 
-
-
+      if(ins->dim==3){
+      	voffset = 2*ins->fieldOffset; 
+      	ins->velocityAxKernel(mesh->Nelements,
+      			      mesh->o_ggeo, 
+      			      mesh->o_Dmatrices, 
+      			      mesh->o_Smatrices, 
+      			      mesh->o_MM, 
+      			      lambda, 
+      			      voffset, 
+      			      ins->o_U, 
+      			      o_rhsW); 
+      }
+   }
 
 
   }
