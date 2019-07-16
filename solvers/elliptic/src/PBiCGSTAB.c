@@ -60,7 +60,6 @@ int pbicgstab(elliptic_t* elliptic, dfloat lambda,
 
   norm2=ellipticWeightedNorm2(elliptic,o_invDegree,o_r);
   dfloat TOL=mymax(tol*tol*norm2,tol*tol);
-  if(norm2<TOL) return 0;
 
   // set scalars rho0,omega0,alpha
   dfloat alpha,beta,rho[2],omega;
@@ -101,7 +100,7 @@ int pbicgstab(elliptic_t* elliptic, dfloat lambda,
     if(norm2<TOL){
       //x=x+alpha*phat
       ellipticScaledAdd(elliptic,alpha,o_phat,1.f,o_x);
-      return 0;
+      return iter;
     }
     //Precon.
     //shat=M^{-1}s
@@ -123,11 +122,12 @@ int pbicgstab(elliptic_t* elliptic, dfloat lambda,
     ellipticScaledAdd(elliptic,-omega,o_t,1.f,o_r);
     norm2=ellipticWeightedNorm2(elliptic,o_invDegree,o_r);
 
-    if(norm2<TOL) return 0;
+    if(norm2<TOL) return iter;
     if(verbose && mesh->rank==0)
       printf("BiCGStab: it %d r norm %12.12le alpha = %le \n",iter,sqrt(norm2),alpha);    
 
-    if(fabs(omega)<EPSILON) return 3;
+    if(fabs(omega)<EPSILON) return MAXIT;
   }
-  return 1;
+
+  return iter;
 }
