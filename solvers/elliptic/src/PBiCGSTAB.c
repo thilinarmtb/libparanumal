@@ -25,7 +25,6 @@ SOFTWARE.
 */
 
 #include "elliptic.h"
-#define EPSILON 1e-9
 
 // FROM NEKBONE: not appropriate since it assumes zero initial data
 int pbicgstab(elliptic_t* elliptic, dfloat lambda, 
@@ -49,40 +48,38 @@ int pbicgstab(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ax = elliptic->o_Ax;
   occa::memory &o_invDegree = elliptic->o_invDegree;
 
-  // compute A*x
+  // compute initial residual
   ellipticOperator(elliptic,lambda,o_x,elliptic->o_Ax,dfloatString);
-  
-  // subtract r = b - A*x
   ellipticScaledAdd(elliptic,-1.f,o_Ax,1.f,o_r);
-
-  //set rtilde = r
-  o_rtilde.copyFrom(o_r);
 
   norm2=ellipticWeightedNorm2(elliptic,o_invDegree,o_r);
   dfloat TOL=mymax(tol*tol*norm2,tol*tol);
 
-  // set scalars rho0,omega0,alpha
-  dfloat alpha,beta,rho[2],omega;
-  
+  // make inital rp = r
+  o_rtilde.copyFrom(o_r);
+
+  dfloat alpha = 1.0;
+  dfloat omega = 1.0;
+  dfloat rho[2];
+  rho[1] = 1.0;
+  dfloat beta;
+
+  // change me to setScalar
+  ellipticScaledAdd(elliptic,0.f,o_r,0.f,o_p);
+  ellipticScaledAdd(elliptic,0.f,o_r,0.f,o_v);
+ 
   int iter;
   for(iter=1;iter<=MAXIT;++iter){
     //rho_i=<rtilde,r_{i-1}>
     rho[0]=ellipticWeightedInnerProduct(elliptic,o_invDegree,o_rtilde,o_r);
+    beta=(rho[0]/rho[1])*(alpha/omega);
 
-    if(fabs(rho[0])<EPSILON) return 2;
-
-    if(iter==1) o_p.copyFrom(o_r);
-    else {
-      //beta=(rho_i/rho_{i-1})*(alpha/omega_{i-1})
-      beta=(rho[0]/rho[1])*(alpha/omega);
-
-      //TODO: Combine
-      //p_{i-1}=-omega_{i-1}*v_{i-1}+1.0*p_{i-1}
-      ellipticScaledAdd(elliptic,-omega,o_v,1.f,o_p);
-      //p_{i}=beta*p_{i-1}+1.0*r_{i-1}
-      ellipticScaledAdd(elliptic,1.f,o_r,beta,o_p);
-    }
-    // Precon.
+    //TODO: Combine
+    //p_{i-1}=-omega_{i-1}*v_{i-1}+1.0*p_{i-1}
+    ellipticScaledAdd(elliptic,-omega,o_v,1.f,o_p);
+    //p_{i}=beta*p_{i-1}+1.0*r_{i-1}
+    ellipticScaledAdd(elliptic,1.f,o_r,beta,o_p);
+   
     //phat=M^{-1}p
     ellipticPreconditioner(elliptic,lambda,o_p,o_phat);
     
@@ -100,9 +97,9 @@ int pbicgstab(elliptic_t* elliptic, dfloat lambda,
     if(norm2<TOL){
       //x=x+alpha*phat
       ellipticScaledAdd(elliptic,alpha,o_phat,1.f,o_x);
-      return iter;
+      break;
     }
-    //Precon.
+
     //shat=M^{-1}s
     ellipticPreconditioner(elliptic,lambda,o_s,o_shat);
 
@@ -122,12 +119,11 @@ int pbicgstab(elliptic_t* elliptic, dfloat lambda,
     ellipticScaledAdd(elliptic,-omega,o_t,1.f,o_r);
     norm2=ellipticWeightedNorm2(elliptic,o_invDegree,o_r);
 
-    if(norm2<TOL) return iter;
-    if(verbose && mesh->rank==0)
-      printf("BiCGStab: it %d r norm %12.12le alpha = %le \n",iter,sqrt(norm2),alpha);    
-
-    if(fabs(omega)<EPSILON) return MAXIT;
+    if(norm2<TOL) break;
   }
+
+  if(verbose && mesh->rank==0)
+    printf("BiCGStab: it %d r norm %12.12le alpha = %le \n",iter,sqrt(norm2),alpha);    
 
   return iter;
 }
