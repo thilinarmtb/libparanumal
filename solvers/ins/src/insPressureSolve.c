@@ -104,6 +104,23 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
   occaTimerToc(mesh->device,"Pr Solve"); 
 
  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+
+    if(ins->TOMBO){ 
+    ins->pressureAddBCKernel(mesh->Nelements,
+                            time,
+                            ins->dt,
+                            ins->fieldOffset, 
+                            mesh->o_sgeo,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            mesh->o_vmapM,
+                            ins->o_PmapB,
+                            mesh->o_EToB,
+                            ins->o_U,
+                            ins->o_PI);
+
+  }else{
     ins->pressureAddBCKernel(mesh->Nelements,
                             time,
                             ins->dt,
@@ -117,5 +134,6 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             mesh->o_vmapM,
                             ins->o_PmapB,
                             ins->o_PI);
+  }
   }
 }

@@ -629,8 +629,60 @@ SOFTWARE.
 }
 
 
-
+// We are solving for Pressure Difference
 @kernel void insPressureAddBCTOMBOHex3D(const dlong Nelements,
+                                  const dfloat time,
+                                  const dfloat dt,
+                                  const dlong offset,
+                                  @restrict const  dfloat *  sgeo, 
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  mapB,
+                                  @restrict const  int    *  EToB,
+                                  @restrict const  dfloat *  U,
+                                        @restrict dfloat *  P){
+  
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+        const int f = n/p_Nfp; 
+        const dlong sid  = e*p_Nfaces*p_Nfp + n;
+        const dlong vid  = vmapM[e*p_Nfp*p_Nfaces + n];
+        // const int bc     = mapB[vid];const int bc     = (mapB[vid] ==3 && EToB[f + p_Nfaces*e]==3) ? 3:0;
+
+        // I think that should work for pressure outflow, i.e. prioritize bc=3
+        const int bc     = EToB[f + p_Nfaces*e];   
+      
+      if(bc==3) {
+        const dfloat nx = sgeo[sid*p_Nsgeo+p_NXID];
+        const dfloat ny = sgeo[sid*p_Nsgeo+p_NYID];
+        const dfloat nz = sgeo[sid*p_Nsgeo+p_NZID];
+        // Get Current Solution i.e. Un
+        const dfloat un = U[vid + 0*offset]; 
+        const dfloat vn = U[vid + 1*offset]; 
+        const dfloat wn = U[vid + 2*offset]; 
+
+        dfloat pP = 0.f;
+        //insPressureDirichletConditions3Dnew(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, vx, vy, vz, 0.f, &pP);
+        insPressureDirichletConditions3D(bc,time, x[vid], y[vid], z[vid], 0.f, 0.f, 0.f, 0.f, &pP);
+
+        dfloat ctime = time-dt;
+        // get U^{n-1}
+        const dfloat uno = U[vid + 0*offset + p_NVfields*offset]; 
+        const dfloat vno = U[vid + 1*offset + p_NVfields*offset]; 
+        const dfloat wno = U[vid + 2*offset + p_NVfields*offset]; 
+        dfloat pPm = 0.f;
+        //insPressureDirichletConditions3Dnew(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, vxo, vyo, vzo, 0.f, &pPm);
+        insPressureDirichletConditions3D(bc, ctime, x[vid], y[vid], z[vid], 0.f, 0.f, 0.f, 0.f, &pPm);
+        P[vid] = pP-pPm;
+    }    
+   }
+  }
+}
+
+
+@kernel void insPressureAddBCTOMBOHex3D_v0(const dlong Nelements,
                                   const dfloat time,
                                   const dfloat dt,
                                   const int stage,
