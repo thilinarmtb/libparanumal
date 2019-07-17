@@ -41,7 +41,7 @@ coarseSolver::coarseSolver(setupAide options_) {
 }
 
 int coarseSolver::getTargetSize() {
-  if(options.compareArgs("AMG SOLVER", "HYPRE"))
+  if(options.compareArgs("AMG SOLVER", "BOOMERAMG"))
     return INT_MAX;
   else 
     return 1000;
@@ -58,7 +58,7 @@ void coarseSolver::setup(parCSR *A) {
   if ((rank==0)&&(options.compareArgs("VERBOSE","TRUE")))
     printf("Setting up coarse solver...");fflush(stdout);
 
-  if (options.compareArgs("AMG SOLVER", "HYPRE")){
+  if (options.compareArgs("AMG SOLVER", "BOOMERAMG")){
     int Nthreads = 1;
  
     hlong rowOffset = A->globalRowStarts[rank];
@@ -90,8 +90,25 @@ void coarseSolver::setup(parCSR *A) {
       }
     }
 
-    double settings[1];
-    settings[0] = 0; /* use default settings*/
+
+
+    double settings[HYPRE_NPARAM+1];
+    settings[0]  = 1;    /* custom settings             */
+    settings[1]  = 10;   /* HMIS                        */
+    settings[2]  = 6;    /* Extended+i                  */
+    settings[3]  = 1;    /* number of cycles            */
+    settings[4]  = 3;    /* SSOR smoother for crs level */
+    settings[5]  = 2;    /* number of coarse sweeps     */
+    settings[6]  = 0.25; /* strong threshold            */
+    settings[7]  = 0.1;
+    settings[8]  = 0.0;
+    settings[9]  = 0.01;
+    settings[10] = 0.05;
+
+    options.getArgs("BOOMERAMG COARSEN TYPE", settings[1]);
+    options.getArgs("BOOMERAMG ITERATIONS", settings[3]);
+    options.getArgs("BOOMERAMG STRONG THRESHOLD", settings[6]);
+
     crsh = hypre_setup(A->Nrows,
                        rowOffset,
                        totalNNZ,
@@ -269,7 +286,7 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
       o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
   }
 
-  if (options.compareArgs("AMG SOLVER", "HYPRE")){
+  if (options.compareArgs("AMG SOLVER", "BOOMERAMG")){
     hypre_solve(xLocal, crsh, rhsLocal);
   } else {
     //gather the full vector

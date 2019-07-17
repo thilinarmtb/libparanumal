@@ -54,11 +54,12 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
  
   // Set AMG parameters
   if (uparam) {
+      //printf("\n");
       int i;
       for (i = 0; i < HYPRE_NPARAM; i++) {
           hypre_param[i] = param[i+1]; 
-           if (rank == 0)
-              printf("Custom HYPREsettings[%d]: %.2f\n", i+1, hypre_param[i]);
+           //if (rank == 0)
+           //   printf("Custom HYPREsettings[%d]: %.2f\n", i+1, hypre_param[i]);
       }
   } else {
       hypre_param[0] = 10;   /* HMIS                        */
@@ -99,7 +100,7 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
  
   //HYPRE_BoomerAMGSetAggNumLevels(solver, 1); 
 
-  HYPRE_BoomerAMGSetMaxIter(solver,2); // number of V-cycles
+  HYPRE_BoomerAMGSetMaxIter(solver,hypre_param[2]); // number of V-cycles
   HYPRE_BoomerAMGSetTol(solver,0);
 
   HYPRE_BoomerAMGSetPrintLevel(solver,1);
