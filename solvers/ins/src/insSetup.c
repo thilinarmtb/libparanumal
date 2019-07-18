@@ -1022,9 +1022,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // --
       if(ins->dim==3 && ins->elementType==QUADRILATERALS){
-      	sprintf(fileName, DINS "/okl/insConstrainQuad3D.okl");
-      	sprintf(kernelName, "insConstrainQuad3D");
-      	ins->constrainKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(fileName, DINS "/okl/insConstrainQuad3D.okl");
+        sprintf(kernelName, "insConstrainQuad3D");
+        ins->constrainKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
       
       // ===========================================================================
@@ -1225,8 +1225,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   }else{
   sprintf(kernelName, "insVelocityAddBC%s", suffix);
   ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+    }
    }
-      }
 
       sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
       if(ins->TOMBO)
@@ -1303,9 +1303,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     sprintf(fileName, DHOLMES "/okl/addScalar.okl");
     sprintf(kernelName, "setScalar");
     ins->setScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-// #if 0
-// #endif
-      
     }
     MPI_Barrier(mesh->comm);
   }

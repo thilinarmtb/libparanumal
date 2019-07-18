@@ -314,6 +314,9 @@ void insBrownMinionQuad3D(ins_t *ins);
 void insExtBdfCoefficents(ins_t *ins, int order);
 dfloat insMean(ins_t *ins, occa::memory o_q);
 
+// just for testing, remove later
+void insFieldDifference(ins_t *ins, char *fileName1, char *fileName2);
+void insWriteField(ins_t *ins, char *fileName);
 
 void insCurlCurl(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NC); 
 

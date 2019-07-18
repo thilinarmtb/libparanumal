@@ -78,10 +78,6 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
     occaTimerToc(mesh->device,"PoissonRhsIpdg");
   }
 
-  //keep current PI as the initial guess?
-
-  // printf("Nmasked : %d\n", solver->Nmasked);
-
   // gather-scatter
   if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
@@ -89,15 +85,6 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
   }
-
-#if 0
-    ins->o_rhsP.copyTo(ins->P);
-
-    char fname[BUFSIZ];
-    string outName;
-    sprintf(fname, "GatherScatterMaskedRhsP_%04d.vtu",ins->frame++);
-    insPlotVTU(ins, fname);
-#endif
 
   occaTimerTic(mesh->device,"Pr Solve");
   ins->NiterP = ellipticSolve(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI); 

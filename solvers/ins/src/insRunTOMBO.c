@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -37,14 +37,12 @@ void insRunTOMBO(ins_t *ins){
   if(ins->options.compareArgs("ADVECTION TYPE", "CONVECTIVE"))
     NekSubCycle = 1;
 
-    
+  ins->frame=1;  
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
   
   
-for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-// for(int tstep=0;tstep<3;++tstep){
-   
+  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
     else if(tstep<2 && ins->temporalOrder>=2) 
@@ -56,39 +54,26 @@ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
 
     dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
-     if(ins->Nsubsteps) {
+    if(ins->Nsubsteps) {
       if(!NekSubCycle){
         insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
       }else{
         insNekSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
       }
     } else {
-       insAdvection(ins, time, ins->o_U, ins->o_NU);
+      insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
     
   
     insCurlCurl(ins, time, ins->o_U, ins->o_NC); 
 
-   // Add explicit contrubitions like gravity, relaxation etc...
-   insAddVelocityRhs(ins, time); 
+    // Add explicit contrubitions like gravity, relaxation etc...
+    insAddVelocityRhs(ins, time); 
 
-   insPressureRhs  (ins, time+ins->dt, ins->Nstages);
-   insPressureSolve(ins, time+ins->dt, ins->Nstages); 
-   insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
+    insPressureRhs  (ins, time+ins->dt, ins->Nstages);
+    insPressureSolve(ins, time+ins->dt, ins->Nstages); 
+    insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
    
-
-#if 0
-   if(tstep<3)
-ins->setFlowFieldKernel(mesh->Nelements,
-          time+ins->dt,
-          mesh->o_x,
-          mesh->o_y,
-          mesh->o_z,
-          ins->fieldOffset,
-          ins->o_rkU,
-          ins->o_rkP);
-#endif
-
 
     // copy updated pressure
     ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
@@ -97,29 +82,15 @@ ins->setFlowFieldKernel(mesh->Nelements,
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-     //cycle velocity history after velocityUpdate
+    //cycle velocity history after velocityUpdate
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+      (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
    
-
-
-#if 0
-    if(tstep<3)
-ins->setFlowFieldKernel(mesh->Nelements,
-          time+ins->dt,
-          mesh->o_x,
-          mesh->o_y,
-          mesh->o_z,
-          ins->fieldOffset,
-          ins->o_rkU,
-          ins->o_rkP);
-#endif
-
-  //copy updated pressure
+    //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
 
@@ -136,7 +107,7 @@ ins->setFlowFieldKernel(mesh->Nelements,
       ins->o_FU.copyFrom(ins->o_FU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
        (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
        (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-   }
+    }
 
     
 
@@ -152,7 +123,7 @@ ins->setFlowFieldKernel(mesh->Nelements,
         // Write a restart file
         if(ins->writeRestartFile){
           if(mesh->rank==0) printf("\nWriting Binary Restart File....");
-            insRestartWrite(ins, ins->options, time+ins->dt);
+    insRestartWrite(ins, ins->options, time+ins->dt);
           if(mesh->rank==0) printf("done\n");
         }
       }

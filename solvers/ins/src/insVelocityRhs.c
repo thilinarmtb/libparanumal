@@ -93,18 +93,21 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            o_rhsW);
 
     // for Velocity Increament Solve
-   if (ins->options.compareArgs("TIME INTEGRATOR", "DIFF")){
-    // Update Un+1 at dirichlet boundaries only
+    if (ins->options.compareArgs("TIME INTEGRATOR", "DIFF")){
+    
+      ins->o_rkU.copyFrom(ins->o_U,ins->NVfields*ins->Ntotal*sizeof(dfloat),0,0);
+
+      // Update Un+1 at dirichlet boundaries only
       ins->velocityAddBCTOMBOKernel(mesh->Nelements,
-				    time,
-				    ins->fieldOffset,
-				    mesh->o_sgeo,
-				    mesh->o_x,
-				    mesh->o_y,
-				    mesh->o_z,
-				    mesh->o_vmapM,
-				    ins->o_VmapB,   
-				    ins->o_U);
+            time,
+            ins->fieldOffset,
+            mesh->o_sgeo,
+            mesh->o_x,
+            mesh->o_y,
+            mesh->o_z,
+            mesh->o_vmapM,
+            ins->o_VmapB,   
+            ins->o_rkU);
 
       // add [lap(Un) + lambda* Un] to Rhs to convert to velocity Difference
       //      const dfloat lambda = -ins->g0*ins->idt*ins->inu;  
@@ -113,42 +116,41 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
       dlong voffset = 0*ins->fieldOffset; 
       // First for U
       ins->velocityAxKernel(mesh->Nelements,
-			    mesh->o_ggeo, 
-			    mesh->o_Dmatrices, 
-			    mesh->o_Smatrices, 
-			    mesh->o_MM, 
-			    lambda, 
-			    voffset, 
-			    ins->o_U, 
-			    o_rhsU); 
+          mesh->o_ggeo, 
+          mesh->o_Dmatrices, 
+          mesh->o_Smatrices, 
+          mesh->o_MM, 
+          lambda, 
+          voffset, 
+          ins->o_rkU, 
+          o_rhsU); 
 
       voffset = 1*ins->fieldOffset; 
       // First for U
       ins->velocityAxKernel(mesh->Nelements,
-			    mesh->o_ggeo, 
-			    mesh->o_Dmatrices, 
-			    mesh->o_Smatrices, 
-			    mesh->o_MM, 
-			    lambda, 
-			    voffset, 
-			    ins->o_U, 
-			    o_rhsV); 
+          mesh->o_ggeo, 
+          mesh->o_Dmatrices, 
+          mesh->o_Smatrices, 
+          mesh->o_MM, 
+          lambda, 
+          voffset, 
+          ins->o_rkU, 
+          o_rhsV); 
 
 
       if(ins->dim==3){
-      	voffset = 2*ins->fieldOffset; 
-      	ins->velocityAxKernel(mesh->Nelements,
-      			      mesh->o_ggeo, 
-      			      mesh->o_Dmatrices, 
-      			      mesh->o_Smatrices, 
-      			      mesh->o_MM, 
-      			      lambda, 
-      			      voffset, 
-      			      ins->o_U, 
-      			      o_rhsW); 
-      }
-   }
-
+        voffset = 2*ins->fieldOffset; 
+        ins->velocityAxKernel(mesh->Nelements,
+                  mesh->o_ggeo, 
+                  mesh->o_Dmatrices, 
+                  mesh->o_Smatrices, 
+                  mesh->o_MM, 
+                  lambda, 
+                  voffset, 
+                  ins->o_rkU, 
+                  o_rhsW); 
+      }      
+    }
 
   }
 }

@@ -83,10 +83,10 @@ void insError(ins_t *ins, dfloat time){
     if(mesh->rank==0)
       if (ins->dim==3) {
         printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g\n", 
-	       (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP );
+         (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP );
       } else {
         printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g\n", 
-	       (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP );
+         (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP );
       }
 
     if( isnan(gMinU) || isnan(gMaxU) || 
@@ -300,4 +300,60 @@ dfloat insLInfNorm(ins_t *ins, dlong offset, dfloat *U){
 
   return glinfnorm;
 
+}
+
+
+// AK Test functions will be removed later....
+// interpolate data to plot nodes and save to file (one per process
+void insFieldDifference(ins_t *ins, char *fileName1, char *fileName2){
+  size_t out; 
+  mesh_t *mesh = ins->mesh;
+  
+  dlong offset    = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  dfloat *field1  = (dfloat *) calloc(ins->NVfields, sizeof(dfloat)); 
+  dfloat *field2  = (dfloat *) calloc(ins->NVfields, sizeof(dfloat)); 
+  FILE *fp1, *fp2;
+  
+  fp1 = fopen(fileName1, "rb");
+  fp2 = fopen(fileName2, "rb");
+
+  // compute plot node coordinates on the fly
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dfloat u1=0.f, v1=0.f, w1=0.f; 
+      dfloat u2=0.f, v2=0.f, w2=0.f; 
+      out = fread(field1, sizeof(dfloat), ins->NVfields, fp1);
+      out = fread(field2, sizeof(dfloat), ins->NVfields, fp2);
+      ins->U[e*mesh->Np + n + 0*offset] = field1[0] - field2[0]; 
+      ins->U[e*mesh->Np + n + 1*offset] = field1[1] - field2[1]; 
+      ins->U[e*mesh->Np + n + 2*offset] = field1[2] - field2[2]; 
+    }
+  }
+  fclose(fp1);
+  fclose(fp2);
+}
+
+// interpolate data to plot nodes and save to file (one per process
+void insWriteField(ins_t *ins, char *fileName){
+  
+  size_t out; 
+  mesh_t *mesh = ins->mesh;
+  
+  dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  dfloat *field  = (dfloat *) calloc(ins->NVfields, sizeof(dfloat)); 
+
+  FILE *fp;
+  
+  fp = fopen(fileName, "wb");
+
+  // compute plot node coordinates on the fly
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      field[0] = ins->U[e*mesh->Np + n + 0*offset]; 
+      field[1] = ins->U[e*mesh->Np + n + 1*offset]; 
+      field[2] = ins->U[e*mesh->Np + n + 2*offset]; 
+      out = fwrite(field, sizeof(dfloat), ins->NVfields, fp);
+    }
+  }
+  fclose(fp);
 }
