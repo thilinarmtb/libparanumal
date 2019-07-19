@@ -421,11 +421,10 @@ SOFTWARE.
         dfloat pP = P[idM];
         insPressureDirichletConditions2D(bc,time, x[idM], y[idM], 0.f, 0.f, 0.f, &pP);
 
-        dfloat ctime = time-dt;
-
-        dfloat pPm = 0.f;
-        insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], 0.f, 0.f, 0.f, &pPm); 
-        pP    -= pPm;
+        // dfloat ctime = time-dt;
+        // dfloat pPm = 0.f;
+        // insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], 0.f, 0.f, 0.f, &pPm); 
+        // pP    -= pPm;
         P[idM] = pP;
       }    
     }

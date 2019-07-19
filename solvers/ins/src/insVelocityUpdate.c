@@ -37,6 +37,7 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage,
   if(ins->TOMBO)
      ins->velocityUpdateKernel(mesh->Nelements,
                               ins->fieldOffset,
+                              ins->o_VmapB,
                               ins->o_U,
                               o_rkU);
   else  

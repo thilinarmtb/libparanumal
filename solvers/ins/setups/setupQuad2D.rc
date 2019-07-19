@@ -11,9 +11,9 @@ FALSE
 
 [MESH FILE]
 #../../meshes/insKovasznaySpectralConvergenceQuad.msh
-../../meshes/insVortexQuadStructured.msh
+#../../meshes/insVortexQuadStructured.msh
 
-#../../meshes/insVortexQuad2D.msh
+../../meshes/insVortexQuad2D.msh
 
 #../../meshes/insKovasznayCircleQuad2D.msh
 #../../meshes/insKovasznayCircleQuad2D_1.msh

@@ -32,6 +32,14 @@ void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP){
   
   // P^s = PI + \sum^s-1 prk_si P^i 
   occaTimerTic(mesh->device,"PressureUpdate");
+  if(ins->TOMBO){
+    ins->pressureUpdateKernel(mesh->Nelements,
+                            ins->fieldOffset,
+                            ins->o_PmapB,
+                            ins->o_PI,
+                            ins->o_P,
+                            o_rkP);
+  }else{
   ins->pressureUpdateKernel(mesh->Nelements,
                             stage,
 		                        ins->o_prkB,
@@ -39,5 +47,6 @@ void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP){
                             ins->o_PI,
                             ins->o_P,
                             o_rkP);
+}
   occaTimerToc(mesh->device,"PressureUpdate");
 }

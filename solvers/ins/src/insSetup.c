@@ -1163,7 +1163,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         }
 
       sprintf(fileName, DINS "/okl/insPressureUpdate.okl");
-      sprintf(kernelName, "insPressureUpdate");
+      if(ins->TOMBO){
+         sprintf(kernelName, "insPressureUpdateTOMBO");
+        }else{
+         sprintf(kernelName, "insPressureUpdate");
+        }
       ins->pressureUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 

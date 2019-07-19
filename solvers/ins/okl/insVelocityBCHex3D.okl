@@ -1483,12 +1483,12 @@
         }else{
           insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
           
-          dfloat ctime = time-dt;
-          dfloat uPo = 0.f, vPo = 0.f, wPo = 0.f;
-          insVelocityDirichletConditions3D(bc, ctime, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uPo, &vPo, &wPo);
-          uP -= uPo; 
-          vP -= vPo; 
-          wP -= wPo; 
+          // dfloat ctime = time-dt;
+          // dfloat uPo = 0.f, vPo = 0.f, wPo = 0.f;
+          // insVelocityDirichletConditions3D(bc, ctime, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uPo, &vPo, &wPo);
+          // uP -= uPo; 
+          // vP -= vPo; 
+          // wP -= wPo; 
         }
         
           U[idM] = uP;
