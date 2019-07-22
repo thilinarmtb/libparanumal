@@ -1218,17 +1218,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   if (options.compareArgs("TIME INTEGRATOR", "TOMBO") && 
       options.compareArgs("TIME INTEGRATOR", "DIFF") ){ 
 
-    sprintf(kernelName, "insVelocityBCTOMBO%s", suffix);
-  ins->velocityRhsBCTOMBOKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
     sprintf(kernelName, "insVelocityAddBCTOMBO%s", suffix);
     ins->velocityAddBCTOMBOKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
     sprintf(kernelName, "insVelocityAddBCTOMBODiff%s", suffix);
-   ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+    ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
   }else{
-  sprintf(kernelName, "insVelocityAddBC%s", suffix);
-  ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+    sprintf(kernelName, "insVelocityAddBC%s", suffix);
+    ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
     }
    }
 

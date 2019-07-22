@@ -864,9 +864,9 @@
     s_U  [j][i] =  uP;              \
     s_V  [j][i] =  vP;              \
     s_W  [j][i] =  wP;              \
-    s_ndU[j][i] = -0.f*WsJ*(nx*(dudxP) + ny*(dudyP) + nz*(dudzP));    \
-    s_ndV[j][i] = -0.f*WsJ*(nx*(dvdxP) + ny*(dvdyP) + nz*(dvdzP));    \
-    s_ndW[j][i] = -0.f*WsJ*(nx*(dwdxP) + ny*(dwdyP) + nz*(dwdzP));    \
+    s_ndU[j][i] =  WsJ*(nx*(dudxP) + ny*(dudyP) + nz*(dudzP));    \
+    s_ndV[j][i] =  WsJ*(nx*(dvdxP) + ny*(dvdyP) + nz*(dvdzP));    \
+    s_ndW[j][i] =  WsJ*(nx*(dwdxP) + ny*(dwdyP) + nz*(dwdzP));    \
   }
 
 
