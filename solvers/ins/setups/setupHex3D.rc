@@ -3,12 +3,12 @@
 
 [DATA FILE]
 #data/insVortex3D.h
-#data/insBeltrami3D.h
-data/insChannel3D.h
+data/insBeltrami3D.h
+#data/insChannel3D.h
 
 [MESH FILE]
-../../meshes/insChannelSlipHex3D.msh
-#../../meshes/insBeltramiHex3D.msh
+#../../meshes/insChannelSlipHex3D.msh
+../../meshes/insBeltramiHex3D.msh
 #../../meshes/insVortex3D.msh
 
 
@@ -70,8 +70,8 @@ NONE
 0.9
 
 [VISCOSITY]
-0.01
-#0.1
+#0.01
+0.1
 
 [UBAR]
 1.0
@@ -86,7 +86,7 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1000
 
 [START TIME]
 0
@@ -280,8 +280,8 @@ FALSE
 # can be BELTRAMI
 [EXACT]
 #VORTEX
-#BELTRAMI
-NONE
+BELTRAMI
+#NONE
 
 [VERBOSE]
 FALSE

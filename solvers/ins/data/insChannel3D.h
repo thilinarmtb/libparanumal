@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+//    
 
 // Initial conditions 
 #define insFlowField3D(t,x,y,z, u,v,w,p) \
@@ -39,7 +40,7 @@ SOFTWARE.
 #define insVelocityDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
 {                                   \
   if(bc==2){                 \
-    *(uB) = 1.f - 4.f*y*y/1.f ;     \
+    *(u) = 1.f - 4.f*y*y/1.f ;     \
     *(vB) = 0.f;                    \
     *(wB) = 0.f;                    \
   } \

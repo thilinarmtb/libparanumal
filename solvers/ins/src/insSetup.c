@@ -269,8 +269,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->cU = ins->U;
 
   ins->Nsubsteps = 0;
-   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF") || 
-       options.compareArgs("TIME INTEGRATOR", "TOMBO") )
+  if (options.compareArgs("TIME INTEGRATOR", "EXTBDF") || 
+      options.compareArgs("TIME INTEGRATOR", "TOMBO") )
     options.getArgs("SUBCYCLING STEPS",ins->Nsubsteps);
 
   if(ins->Nsubsteps){
@@ -879,7 +879,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   }
 
   if  (options.compareArgs("TIME INTEGRATOR", "EXTBDF") || 
-      options.compareArgs("TIME INTEGRATOR", "TOMBO") ){
+       options.compareArgs("TIME INTEGRATOR", "TOMBO") ){
     dfloat rkC[4] = {1.0, 0.0, -1.0, -2.0};
 
     ins->o_rkC  = mesh->device.malloc(4*sizeof(dfloat),rkC);
@@ -909,7 +909,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_rkGP  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkGP);
 
   // Currently walid only for quad and HEX !!!!!!! AK
-   if (options.compareArgs("TIME INTEGRATOR", "TOMBO")){
+  if (options.compareArgs("TIME INTEGRATOR", "TOMBO")){
     ins->o_NC = ins->o_GP; // Use GP storage to store curl(curl(u)) history
 
     // build lumped mass matrix for NEK
@@ -930,19 +930,19 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
     ins->o_invLumpedMassMatrix = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), lumpedMassMatrix);
 
-     // Need to be revised for Tet/Tri
-     ins->o_InvM = ins->o_invLumpedMassMatrix; 
-   }
+    // Need to be revised for Tet/Tri
+    ins->o_InvM = ins->o_invLumpedMassMatrix; 
+  }
     
   ins->o_rkU   = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkU);
   ins->o_rkP   = mesh->device.malloc(              Ntotal*sizeof(dfloat), ins->rkP);
   ins->o_PI    = mesh->device.malloc(              Ntotal*sizeof(dfloat), ins->PI);
 
   if (options.compareArgs("TIME INTEGRATOR", "ARK")){
-  ins->o_GU    = mesh->device.malloc(ins->NVfields*Ntotal*4*sizeof(dfloat), ins->GU);
-  ins->o_LU    = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->LU);
-  ins->o_rkNU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkNU);
-  ins->o_rkLU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkLU);
+    ins->o_GU    = mesh->device.malloc(ins->NVfields*Ntotal*4*sizeof(dfloat), ins->GU);
+    ins->o_LU    = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->LU);
+    ins->o_rkNU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkNU);
+    ins->o_rkLU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rkLU);
   }
 
 
@@ -1075,11 +1075,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->curlKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
         
         if(ins->dim==2){
-        sprintf(kernelName,"insCurlB%s", suffix);
-        ins->curlBKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+	  sprintf(kernelName,"insCurlB%s", suffix);
+	  ins->curlBKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
         }
 
-         // Curl operations...
+	// Curl operations...
         sprintf(fileName,DINS "/okl/insMassMatrix.okl"); 
         sprintf(kernelName,"insMassMatrix%s", suffix);
         ins->massMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
@@ -1089,7 +1089,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       }
       
-      #if 0
+#if 0
       // ===========================================================================
       
       // sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
@@ -1105,7 +1105,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       // ins->velocityGradientKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // // ===========================================================================
-      #endif
+#endif
 
 
       sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
@@ -1134,7 +1134,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
-        // ===========================================================================
+      // ===========================================================================
       
       sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
       if(ins->TOMBO){
@@ -1145,41 +1145,41 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       ins->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
         
-        if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
-          sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
-          sprintf(kernelName, "insPressureIpdgBC%s", suffix);
-          ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
+	sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
+	sprintf(kernelName, "insPressureIpdgBC%s", suffix);
+	ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-          sprintf(kernelName, "insPressureBC%s", suffix);
-          ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insPressureBC%s", suffix);
+	ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
-          if(ins->TOMBO){
-            sprintf(kernelName, "insPressureAddBCTOMBO%s", suffix);
-          }else{
-            sprintf(kernelName, "insPressureAddBC%s", suffix);
-          }
-          ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-        }
+	if(ins->TOMBO){
+	  sprintf(kernelName, "insPressureAddBCTOMBO%s", suffix);
+	}else{
+	  sprintf(kernelName, "insPressureAddBC%s", suffix);
+	}
+	ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
 
       sprintf(fileName, DINS "/okl/insPressureUpdate.okl");
       if(ins->TOMBO){
-         sprintf(kernelName, "insPressureUpdateTOMBO");
-        }else{
-         sprintf(kernelName, "insPressureUpdate");
-        }
+	sprintf(kernelName, "insPressureUpdateTOMBO");
+      }else{
+	sprintf(kernelName, "insPressureUpdate");
+      }
       ins->pressureUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
-        // AK. Note that currently only HEX and QUAD is implemented in weak form !!!!!!!
-        sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
-        if(ins->elementType==HEXAHEDRA || (ins->elementType==QUADRILATERALS && ins->dim==2)){
-          sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
-          ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-        }else{ // implement other divergence operators in weak form also!!!!
-          sprintf(kernelName, "insDivergenceVolume%s", suffix);
-          ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
-        }
+      // AK. Note that currently only HEX and QUAD is implemented in weak form !!!!!!!
+      sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
+      if(ins->elementType==HEXAHEDRA || (ins->elementType==QUADRILATERALS && ins->dim==2)){
+	sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
+	ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }else{ // implement other divergence operators in weak form also!!!!
+	sprintf(kernelName, "insDivergenceVolume%s", suffix);
+	ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+      }
 
      
       
@@ -1215,80 +1215,80 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
         sprintf(kernelName, "insVelocityAddBC%s", suffix);
         ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-   }
+      }
 
       sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
       sprintf(kernelName, "insVelocityUpdate");
       ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
 
-    sprintf(fileName, DINS "/okl/insError%s.okl", suffix);
-    sprintf(kernelName, "insError%s", suffix);
-    ins->errorKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DINS "/okl/insError%s.okl", suffix);
+      sprintf(kernelName, "insError%s", suffix);
+      ins->errorKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-     sprintf(kernelName, "insSetFlowFieldCub%s", suffix);
-    ins->setFlowFieldCubKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insSetFlowFieldCub%s", suffix);
+      ins->setFlowFieldCubKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
       if(ins->dim==3 && ins->options.compareArgs("OUTPUT TYPE","ISO")){
-  sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
-  sprintf(kernelName, "insIsoSurface3D");
+	sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
+	sprintf(kernelName, "insIsoSurface3D");
 
-  ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+	ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
       }
       
   
 
       // Not implemented for Quad 3D yet !!!!!!!!!!
       if(ins->Nsubsteps){
-  // Note that resU and resV can be replaced with already introduced buffer
-  ins->o_Ue    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ue);
-  ins->o_Ud    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ud);
-  ins->o_resU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->resU);
-  ins->o_rhsUd = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rhsUd);
+	// Note that resU and resV can be replaced with already introduced buffer
+	ins->o_Ue    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ue);
+	ins->o_Ud    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ud);
+	ins->o_resU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->resU);
+	ins->o_rhsUd = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rhsUd);
 
-  if(ins->elementType==HEXAHEDRA)
-    ins->o_cUd = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cUd);
-  else 
-    ins->o_cUd = ins->o_Ud;
+	if(ins->elementType==HEXAHEDRA)
+	  ins->o_cUd = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cUd);
+	else 
+	  ins->o_cUd = ins->o_Ud;
       
-  sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
-  sprintf(kernelName, "insSubCycleVolume%s", suffix);
-  ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
+	sprintf(kernelName, "insSubCycleVolume%s", suffix);
+	ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, "insSubCycleSurface%s", suffix);
-  ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleSurface%s", suffix);
+	ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
-  ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
+	ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
   
-  if(ins->elementType==HEXAHEDRA){
-  sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
-  ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-  sprintf(kernelName, "insSubCycleNekVolume%s", suffix);
-  ins->subCycleNekVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-  }
+	if(ins->elementType==HEXAHEDRA){
+	  sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
+	  ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	  sprintf(kernelName, "insSubCycleNekVolume%s", suffix);
+	  ins->subCycleNekVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	}
 
 
-  sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
-  ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
+	ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(fileName, DINS "/okl/insSubCycle.okl");
-  sprintf(kernelName, "insSubCycleRKUpdate");
-  ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(fileName, DINS "/okl/insSubCycle.okl");
+	sprintf(kernelName, "insSubCycleRKUpdate");
+	ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, "insSubCycleExt");
-  ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleExt");
+	ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
       ins->haloGetKernel =
-  mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloGet", kernelInfo);
+	mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloGet", kernelInfo);
       ins->haloPutKernel =
-  mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloPut", kernelInfo);
+	mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloPut", kernelInfo);
 
 
-    sprintf(fileName, DHOLMES "/okl/addScalar.okl");
-    sprintf(kernelName, "setScalar");
-    ins->setScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DHOLMES "/okl/addScalar.okl");
+      sprintf(kernelName, "setScalar");
+      ins->setScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
     }
     MPI_Barrier(mesh->comm);
   }
@@ -1297,9 +1297,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
  
   if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION"))
-  insFilterSetup(ins); 
+    insFilterSetup(ins); 
 
-if(!ins->options.compareArgs("EXACT","NONE")){ // check if there is an exact solution
+  if(!ins->options.compareArgs("EXACT","NONE")){ // check if there is an exact solution
     ins->Uer  = (dfloat*) calloc(ins->NVfields*mesh->Nelements*mesh->cubNp, sizeof(dfloat));
     ins->Per  = (dfloat*) calloc(              mesh->Nelements*mesh->cubNp, sizeof(dfloat));
 
