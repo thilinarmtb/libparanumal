@@ -39,13 +39,13 @@
                                                                         \
     const int bc = EToB[face+p_Nfaces*e];       \
     if(bc>0) {                \
-      if(bc==1){              \
+      if(bc==1 || bc==4 || bc==5 || bc==6){              \
   uP = 0.f; vP = 0.f; wP = 0.f;         \
       }else{                \
   insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
       }                 \
       insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
-    }                 \
+    }         \
                                                                         \
     const dfloat du = uP;           \
     const dfloat dv = vP;           \
