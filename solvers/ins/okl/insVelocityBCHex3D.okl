@@ -26,62 +26,62 @@
 
 
 #define surfaceTerms(sk,face,i, j)                                      \
-  {                 \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];        \
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];        \
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];        \
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
-    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
+  {									\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
                                                                         \
-    dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;       \
-    dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;       \
-    dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;       \
+    dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;				\
+    dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;				\
+    dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;				\
                                                                         \
-    const int bc = EToB[face+p_Nfaces*e];       \
-    if(bc>0) {                \
-      if(bc==1 || bc==4 || bc==5 || bc==6){              \
-  uP = 0.f; vP = 0.f; wP = 0.f;         \
-      }else{                \
-  insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
-      }                 \
+    const int bc = EToB[face+p_Nfaces*e];				\
+    if(bc>0) {								\
+      if(bc==1 || bc==4 || bc==5 || bc==6){				\
+	uP = 0.f; vP = 0.f; wP = 0.f;					\
+      }else{								\
+	insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
+      }									\
       insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
-    }         \
+    }									\
                                                                         \
-    const dfloat du = uP;           \
-    const dfloat dv = vP;           \
-    const dfloat dw = wP;           \
+    const dfloat du = uP;						\
+    const dfloat dv = vP;						\
+    const dfloat dw = wP;						\
                                                                         \
-    s_dudx[j][i] = WsJ*nx*du;           \
-    s_dudy[j][i] = WsJ*ny*du;           \
-    s_dudz[j][i] = WsJ*nz*du;           \
-    s_dvdx[j][i] = WsJ*nx*dv;           \
-    s_dvdy[j][i] = WsJ*ny*dv;           \
-    s_dvdz[j][i] = WsJ*nz*dv;           \
-    s_dwdx[j][i] = WsJ*nx*dw;           \
-    s_dwdy[j][i] = WsJ*ny*dw;           \
-    s_dwdz[j][i] = WsJ*nz*dw;           \
+    s_dudx[j][i] = WsJ*nx*du;						\
+    s_dudy[j][i] = WsJ*ny*du;						\
+    s_dudz[j][i] = WsJ*nz*du;						\
+    s_dvdx[j][i] = WsJ*nx*dv;						\
+    s_dvdy[j][i] = WsJ*ny*dv;						\
+    s_dvdz[j][i] = WsJ*nz*dv;						\
+    s_dwdx[j][i] = WsJ*nx*dw;						\
+    s_dwdy[j][i] = WsJ*ny*dw;						\
+    s_dwdz[j][i] = WsJ*nz*dw;						\
                                                                         \
-    s_rhsU[j][i] = -WsJ*(nx*dudxP + ny*dudyP+ nz*dudzP+ tau*du*hinv); \
-    s_rhsV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP+ nz*dvdzP+ tau*dv*hinv); \
-    s_rhsW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP+ nz*dwdzP+ tau*dw*hinv); \
+    s_rhsU[j][i] = -WsJ*(nx*dudxP + ny*dudyP+ nz*dudzP+ tau*du*hinv);	\
+    s_rhsV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP+ nz*dvdzP+ tau*dv*hinv);	\
+    s_rhsW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP+ nz*dwdzP+ tau*dw*hinv);	\
   }
 
 @kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
-            @restrict const  dlong  *  vmapM,
-            const dfloat tau,
-            const dfloat time,
-            @restrict const  dfloat *  x,
-            @restrict const  dfloat *  y,
-            @restrict const  dfloat *  z,
-            @restrict const  dfloat *  vgeo,
-            @restrict const  dfloat *  sgeo,
-            @restrict const  int    *  EToB,
-            @restrict const  dfloat *  D,
-            @restrict const  dfloat *  LIFTT,
-            @restrict const  dfloat *  MM,
-            @restrict dfloat *  rhsU,
-            @restrict dfloat *  rhsV,
-            @restrict dfloat *  rhsW){
+				    @restrict const  dlong  *  vmapM,
+				    const dfloat tau,
+				    const dfloat time,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  int    *  EToB,
+				    @restrict const  dfloat *  D,
+				    @restrict const  dfloat *  LIFTT,
+				    @restrict const  dfloat *  MM,
+				    @restrict dfloat *  rhsU,
+				    @restrict dfloat *  rhsV,
+				    @restrict dfloat *  rhsW){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     
@@ -425,54 +425,54 @@
 
 
 #define surfaceTerms(sk,face,i, j)                                      \
-  {                 \
-    const dlong idM = vmapM[sk];          \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];        \
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];        \
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];        \
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+  {									\
+    const dlong idM = vmapM[sk];					\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
                                                                         \
-    dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;     \
-    dfloat dvdxP=0.f, dvdyP=0.f, dvdzP=0.f, vP=0.f;     \
-    dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;     \
+    dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;			\
+    dfloat dvdxP=0.f, dvdyP=0.f, dvdzP=0.f, vP=0.f;			\
+    dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;			\
                                                                         \
-    const int bc = mapB[idM];           \
-    if(bc>0) {                \
-      if(bc==1 || bc==4 || bc==5 || bc==6){              \
-  uP = 0.f; vP = 0.f; wP = 0.f;         \
-      }else{                \
-  insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
-      }                 \
+    const int bc = mapB[idM];						\
+    if(bc>0) {								\
+      if(bc==1 || bc==4 || bc==5 || bc==6){				\
+	uP = 0.f; vP = 0.f; wP = 0.f;					\
+      }else{								\
+	insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
+      }									\
       insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
-    }                 \
-                    \
-    s_U  [j][i] =  uP;              \
-    s_V  [j][i] =  vP;              \
-    s_W  [j][i] =  wP;              \
-    s_ndU[j][i] = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);    \
-    s_ndV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP + nz*dvdzP);    \
-    s_ndW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP + nz*dwdzP);    \
+    }									\
+									\
+    s_U  [j][i] =  uP;							\
+    s_V  [j][i] =  vP;							\
+    s_W  [j][i] =  wP;							\
+    s_ndU[j][i] = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);		\
+    s_ndV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP + nz*dvdzP);		\
+    s_ndW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP + nz*dwdzP);		\
   }
 
 //RHS contributions for continuous solver
 @kernel void insVelocityBCHex3D(const dlong Nelements,
-        @restrict const  dfloat *  ggeo,
-        @restrict const  dfloat *  sgeo,
-        @restrict const  dfloat *  D,
-        @restrict const  dfloat *  S,
-        @restrict const  dfloat *  MM,
-        @restrict const  dlong  *  vmapM,
-        @restrict const  int    *  EToB,
-        @restrict const  dlong  *  sMT,
-        const dfloat lambda,
-        const dfloat time,
-        @restrict const  dfloat *  x,
-        @restrict const  dfloat *  y,
-        @restrict const  dfloat *  z,
-        @restrict const  int    *  mapB,
-        @restrict dfloat *  rhsU,
-        @restrict dfloat *  rhsV,
-        @restrict dfloat *  rhsW){
+				@restrict const  dfloat *  ggeo,
+				@restrict const  dfloat *  sgeo,
+				@restrict const  dfloat *  D,
+				@restrict const  dfloat *  S,
+				@restrict const  dfloat *  MM,
+				@restrict const  dlong  *  vmapM,
+				@restrict const  int    *  EToB,
+				@restrict const  dlong  *  sMT,
+				const dfloat lambda,
+				const dfloat time,
+				@restrict const  dfloat *  x,
+				@restrict const  dfloat *  y,
+				@restrict const  dfloat *  z,
+				@restrict const  int    *  mapB,
+				@restrict dfloat *  rhsU,
+				@restrict dfloat *  rhsV,
+				@restrict dfloat *  rhsW){
 
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
@@ -530,16 +530,16 @@
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 
-  r_U[0] = s_U  [j][i];
-  r_V[0] = s_V  [j][i];
-  r_W[0]  = s_W  [j][i];
+	r_U[0] = s_U  [j][i];
+	r_V[0] = s_V  [j][i];
+	r_W[0]  = s_W  [j][i];
 
-  //face 0
-  if(EToB[e*p_Nfaces+0]>0){
-    r_rhsU[0] += s_ndU[j][i];
-    r_rhsV[0] += s_ndV[j][i];
-    r_rhsW[0] += s_ndW[j][i];
-  }
+	//face 0
+	if(EToB[e*p_Nfaces+0]>0){
+	  r_rhsU[0] += s_ndU[j][i];
+	  r_rhsV[0] += s_ndV[j][i];
+	  r_rhsW[0] += s_ndW[j][i];
+	}
       }
     }
     
@@ -559,16 +559,16 @@
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
   
-  r_U   [p_Nq-1]  = s_U  [j][i];
-  r_V   [p_Nq-1]  = s_V  [j][i];
-  r_W   [p_Nq-1]  = s_W  [j][i];
+	r_U   [p_Nq-1]  = s_U  [j][i];
+	r_V   [p_Nq-1]  = s_V  [j][i];
+	r_W   [p_Nq-1]  = s_W  [j][i];
   
-  //face 5
-  if(EToB[e*p_Nfaces+5]>0){
-    r_rhsU[p_Nq-1] += s_ndU[j][i];
-    r_rhsV[p_Nq-1] += s_ndV[j][i];
-    r_rhsW[p_Nq-1] += s_ndW[j][i];
-  }
+	//face 5
+	if(EToB[e*p_Nfaces+5]>0){
+	  r_rhsU[p_Nq-1] += s_ndU[j][i];
+	  r_rhsV[p_Nq-1] += s_ndV[j][i];
+	  r_rhsW[p_Nq-1] += s_ndW[j][i];
+	}
       }
     }
     
@@ -590,18 +590,18 @@
         if (j==0) {//face 1
     
 #pragma unroll p_Nq
-    for (int k=0;k<p_Nq;k++) {
+	  for (int k=0;k<p_Nq;k++) {
 
-      r_U[k]  = s_U  [k][i];
-      r_V[k]  = s_V  [k][i];
-      r_W[k]  = s_W  [k][i];
+	    r_U[k]  = s_U  [k][i];
+	    r_V[k]  = s_V  [k][i];
+	    r_W[k]  = s_W  [k][i];
       
-      if(EToB[e*p_Nfaces+1]>0){
-        r_rhsU[k] += s_ndU[k][i];
-        r_rhsV[k] += s_ndV[k][i];
-        r_rhsW[k] += s_ndW[k][i]; 
-      }
-    }
+	    if(EToB[e*p_Nfaces+1]>0){
+	      r_rhsU[k] += s_ndU[k][i];
+	      r_rhsV[k] += s_ndV[k][i];
+	      r_rhsW[k] += s_ndW[k][i]; 
+	    }
+	  }
         }
       }
     }
@@ -623,19 +623,19 @@
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==p_Nq-1) {//face 3
 #pragma unroll p_Nq
-    for (int k=0;k<p_Nq;k++) {
+	  for (int k=0;k<p_Nq;k++) {
         
-      r_U[k]  = s_U[k][i];
-      r_V[k]  = s_V[k][i];
-      r_W[k]  = s_W[k][i];
+	    r_U[k]  = s_U[k][i];
+	    r_V[k]  = s_V[k][i];
+	    r_W[k]  = s_W[k][i];
         
-      if(EToB[e*p_Nfaces+3]>0){
-        r_rhsU[k] += s_ndU[k][i];
-        r_rhsV[k] += s_ndV[k][i];
-        r_rhsW[k] += s_ndW[k][i];
-      }
-    }
-  }
+	    if(EToB[e*p_Nfaces+3]>0){
+	      r_rhsU[k] += s_ndU[k][i];
+	      r_rhsV[k] += s_ndV[k][i];
+	      r_rhsW[k] += s_ndW[k][i];
+	    }
+	  }
+	}
       }
     }
 
@@ -656,17 +656,17 @@
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
 #pragma unroll p_Nq
-    for (int k=0;k<p_Nq;k++) {
-      r_U[k] = s_U[k][j];
-      r_V[k] = s_V[k][j];
-      r_W[k] = s_W[k][j];
+	  for (int k=0;k<p_Nq;k++) {
+	    r_U[k] = s_U[k][j];
+	    r_V[k] = s_V[k][j];
+	    r_W[k] = s_W[k][j];
       
-      if(EToB[e*p_Nfaces+2]>0){
-        r_rhsU[k] += s_ndU[k][j];
-        r_rhsV[k] += s_ndV[k][j];
-        r_rhsW[k] += s_ndW[k][j];
-      }
-    }
+	    if(EToB[e*p_Nfaces+2]>0){
+	      r_rhsU[k] += s_ndU[k][j];
+	      r_rhsV[k] += s_ndV[k][j];
+	      r_rhsW[k] += s_ndW[k][j];
+	    }
+	  }
         }
       }
     }
@@ -690,15 +690,15 @@
 #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
       
-      r_U[k]  = s_U[k][j];
-      r_V[k]  = s_V[k][j];
-      r_W[k]  = s_W[k][j];
+	    r_U[k]  = s_U[k][j];
+	    r_V[k]  = s_V[k][j];
+	    r_W[k]  = s_W[k][j];
       
-      if(EToB[e*p_Nfaces+4]>0){
-        r_rhsU[k] += s_ndU[k][j];
-        r_rhsV[k] += s_ndV[k][j];
-        r_rhsW[k] += s_ndW[k][j];
-      }
+	    if(EToB[e*p_Nfaces+4]>0){
+	      r_rhsU[k] += s_ndU[k][j];
+	      r_rhsV[k] += s_ndV[k][j];
+	      r_rhsW[k] += s_ndW[k][j];
+	    }
           }
         }
       }
@@ -711,105 +711,105 @@
       @barrier("local");
   
       for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
       
-    // prefetch geometric factors
-    const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  // prefetch geometric factors
+	  const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
       
-    r_G00 = ggeo[gbase+p_G00ID*p_Np];
-    r_G01 = ggeo[gbase+p_G01ID*p_Np];
-    r_G02 = ggeo[gbase+p_G02ID*p_Np];
+	  r_G00 = ggeo[gbase+p_G00ID*p_Np];
+	  r_G01 = ggeo[gbase+p_G01ID*p_Np];
+	  r_G02 = ggeo[gbase+p_G02ID*p_Np];
       
-    r_G11 = ggeo[gbase+p_G11ID*p_Np];
-    r_G12 = ggeo[gbase+p_G12ID*p_Np];
-    r_G22 = ggeo[gbase+p_G22ID*p_Np];
+	  r_G11 = ggeo[gbase+p_G11ID*p_Np];
+	  r_G12 = ggeo[gbase+p_G12ID*p_Np];
+	  r_G22 = ggeo[gbase+p_G22ID*p_Np];
       
-    r_GwJ = ggeo[gbase+p_GWJID*p_Np];
-  }
+	  r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+	}
       }
 
       @barrier("local");
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
-    // share u(:,:,k)
-    s_U[j][i] = r_U[k];
-    s_V[j][i] = r_V[k];
-    s_W[j][i] = r_W[k];
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  // share u(:,:,k)
+	  s_U[j][i] = r_U[k];
+	  s_V[j][i] = r_V[k];
+	  s_W[j][i] = r_W[k];
 
-    r_ut = 0; r_vt = 0; r_wt = 0;
+	  r_ut = 0; r_vt = 0; r_wt = 0;
 
 #pragma unroll p_Nq
-    for(int m = 0; m < p_Nq; m++) {
-      const dfloat Dt = s_D[k][m];
-      r_ut += Dt*r_U[m];
-      r_vt += Dt*r_V[m];
-      r_wt += Dt*r_W[m];
-    }
-  }
+	  for(int m = 0; m < p_Nq; m++) {
+	    const dfloat Dt = s_D[k][m];
+	    r_ut += Dt*r_U[m];
+	    r_vt += Dt*r_V[m];
+	    r_wt += Dt*r_W[m];
+	  }
+	}
       }
 
       @barrier("local");
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
-    dfloat ur = 0.f, vr = 0.f, wr = 0.f;
-    dfloat us = 0.f, vs = 0.f, ws = 0.f;
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  dfloat ur = 0.f, vr = 0.f, wr = 0.f;
+	  dfloat us = 0.f, vs = 0.f, ws = 0.f;
 
 #pragma unroll p_Nq
-    for(int m = 0; m < p_Nq; m++) {
-      const dfloat Dr = s_D[i][m];
-      const dfloat Ds = s_D[j][m];
-      ur += Dr*s_U[j][m];
-      us += Ds*s_U[m][i];
-      vr += Dr*s_V[j][m];
-      vs += Ds*s_V[m][i];
-      wr += Dr*s_W[j][m];
-      ws += Ds*s_W[m][i];
-    }
+	  for(int m = 0; m < p_Nq; m++) {
+	    const dfloat Dr = s_D[i][m];
+	    const dfloat Ds = s_D[j][m];
+	    ur += Dr*s_U[j][m];
+	    us += Ds*s_U[m][i];
+	    vr += Dr*s_V[j][m];
+	    vs += Ds*s_V[m][i];
+	    wr += Dr*s_W[j][m];
+	    ws += Ds*s_W[m][i];
+	  }
 
-    s_Gus[j][i] = (r_G01*ur + r_G11*us + r_G12*r_ut);
-    s_Gur[j][i] = (r_G00*ur + r_G01*us + r_G02*r_ut);
-    s_Gvs[j][i] = (r_G01*vr + r_G11*vs + r_G12*r_vt);
-    s_Gvr[j][i] = (r_G00*vr + r_G01*vs + r_G02*r_vt);
-    s_Gws[j][i] = (r_G01*wr + r_G11*ws + r_G12*r_wt);
-    s_Gwr[j][i] = (r_G00*wr + r_G01*ws + r_G02*r_wt);
+	  s_Gus[j][i] = (r_G01*ur + r_G11*us + r_G12*r_ut);
+	  s_Gur[j][i] = (r_G00*ur + r_G01*us + r_G02*r_ut);
+	  s_Gvs[j][i] = (r_G01*vr + r_G11*vs + r_G12*r_vt);
+	  s_Gvr[j][i] = (r_G00*vr + r_G01*vs + r_G02*r_vt);
+	  s_Gws[j][i] = (r_G01*wr + r_G11*ws + r_G12*r_wt);
+	  s_Gwr[j][i] = (r_G00*wr + r_G01*ws + r_G02*r_wt);
 
-    // put this here for a performance bump
-    r_Gut = (r_G02*ur + r_G12*us + r_G22*r_ut);
-    r_Gvt = (r_G02*vr + r_G12*vs + r_G22*r_vt);
-    r_Gwt = (r_G02*wr + r_G12*ws + r_G22*r_wt);
-    r_Auk = r_GwJ*lambda*r_U[k];
-    r_Avk = r_GwJ*lambda*r_V[k];
-    r_Awk = r_GwJ*lambda*r_W[k];
-  }
+	  // put this here for a performance bump
+	  r_Gut = (r_G02*ur + r_G12*us + r_G22*r_ut);
+	  r_Gvt = (r_G02*vr + r_G12*vs + r_G22*r_vt);
+	  r_Gwt = (r_G02*wr + r_G12*ws + r_G22*r_wt);
+	  r_Auk = r_GwJ*lambda*r_U[k];
+	  r_Avk = r_GwJ*lambda*r_V[k];
+	  r_Awk = r_GwJ*lambda*r_W[k];
+	}
       }
 
       @barrier("local");
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
 
 #pragma unroll p_Nq
-    for(int m = 0; m < p_Nq; m++){
-      const dfloat Dr = s_D[m][i];
-      const dfloat Ds = s_D[m][j];
-      const dfloat Dt = s_D[k][m];
-      r_Auk     += Dr*s_Gur[j][m];
-      r_Auk     += Ds*s_Gus[m][i];
-      r_rhsU[m] += Dt*r_Gut; // DT(m,k)*ut(i,j,k,e)
-      r_Avk     += Dr*s_Gvr[j][m];
-      r_Avk     += Ds*s_Gvs[m][i];
-      r_rhsV[m] += Dt*r_Gvt; // DT(m,k)*ut(i,j,k,e)
-      r_Awk     += Dr*s_Gwr[j][m];
-      r_Awk     += Ds*s_Gws[m][i];
-      r_rhsW[m] += Dt*r_Gwt; // DT(m,k)*ut(i,j,k,e)
-    }
+	  for(int m = 0; m < p_Nq; m++){
+	    const dfloat Dr = s_D[m][i];
+	    const dfloat Ds = s_D[m][j];
+	    const dfloat Dt = s_D[k][m];
+	    r_Auk     += Dr*s_Gur[j][m];
+	    r_Auk     += Ds*s_Gus[m][i];
+	    r_rhsU[m] += Dt*r_Gut; // DT(m,k)*ut(i,j,k,e)
+	    r_Avk     += Dr*s_Gvr[j][m];
+	    r_Avk     += Ds*s_Gvs[m][i];
+	    r_rhsV[m] += Dt*r_Gvt; // DT(m,k)*ut(i,j,k,e)
+	    r_Awk     += Dr*s_Gwr[j][m];
+	    r_Awk     += Ds*s_Gws[m][i];
+	    r_rhsW[m] += Dt*r_Gwt; // DT(m,k)*ut(i,j,k,e)
+	  }
 
-    r_rhsU[k] += r_Auk;
-    r_rhsV[k] += r_Avk;
-    r_rhsW[k] += r_Awk;
-  }
+	  r_rhsU[k] += r_Auk;
+	  r_rhsV[k] += r_Avk;
+	  r_rhsW[k] += r_Awk;
+	}
       }
     }
 
@@ -818,12 +818,12 @@
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 #pragma unroll p_Nq
-  for(int k = 0; k < p_Nq; k++){
-    const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-    rhsU[id] -= r_rhsU[k];
-    rhsV[id] -= r_rhsV[k];
-    rhsW[id] -= r_rhsW[k];
-  }
+	for(int k = 0; k < p_Nq; k++){
+	  const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+	  rhsU[id] -= r_rhsU[k];
+	  rhsV[id] -= r_rhsV[k];
+	  rhsW[id] -= r_rhsW[k];
+	}
       }
     }
   }
@@ -833,619 +833,55 @@
 
 
 @kernel void insVelocityAddBCHex3D(const dlong Nelements,
-           const dfloat time,
-           @restrict const  dfloat *  sgeo,
-           @restrict const  dfloat *  x,
-           @restrict const  dfloat *  y,
-           @restrict const  dfloat *  z,
-           @restrict const  dlong  *  vmapM,
-           @restrict const  int    *  mapB,
-           @restrict dfloat *  U,
-           @restrict dfloat *  V,
-           @restrict dfloat *  W){
+				   const dfloat time,
+				   @restrict const  dfloat *  sgeo,
+				   @restrict const  dfloat *  x,
+				   @restrict const  dfloat *  y,
+				   @restrict const  dfloat *  z,
+				   @restrict const  dlong  *  vmapM,
+				   @restrict const  int    *  mapB,
+				   @restrict dfloat *  U,
+				   @restrict dfloat *  V,
+				   @restrict dfloat *  W){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int f=0; f<p_Nfaces; f++){
       @barrier("global");
       for(int m=0;m<p_Nfp;++m;@inner(0)){
         const int n = m + f*p_Nfp;         
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
+	const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+	const int bc = mapB[idM];
 
-      if(bc>0) {
-        const dfloat uM = U[idM];
-        const dfloat vM = V[idM];
-        const dfloat wM = W[idM];
+	if(bc>0) {
+	  const dfloat uM = U[idM];
+	  const dfloat vM = V[idM];
+	  const dfloat wM = W[idM];
 
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+	  const dlong sk = e*p_Nfp*p_Nfaces + n;
+	  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+	  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+	  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
 
-        dfloat uP = uM;
-        dfloat vP = vM;
-        dfloat wP = wM;
+	  dfloat uP = uM;
+	  dfloat vP = vM;
+	  dfloat wP = wM;
 
-        if(bc==1){
-          uP = 0.f; vP = 0.f; wP = 0.f;
-        }else if(bc==4){
-          uP = 0.f; // vP = vM ; wP = wM;           
-        }else if(bc==5){
-          vP = 0.f; // uP = vM ; wP = wM;           
-        }else if(bc==6){
-          wP = 0.f; // vP = vM ; uP = uM;           
-        }else{               
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-        }
-        U[idM] = uP;
-        V[idM] = vP;
-        W[idM] = wP;
-      }    
-    }
-  }
-  }
-}
-
-
-#if 0
-
-
-#define surfaceTermsTOMBO(sk,face,i, j)                                      \
-  {                 \
-    const dlong idM = vmapM[sk];          \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];        \
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];        \
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];        \
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
-                                                                        \
-    dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;     \
-    dfloat dvdxP=0.f, dvdyP=0.f, dvdzP=0.f, vP=0.f;     \
-    dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;     \
-    \
-    dfloat dudxPo=0.f, dudyPo=0.f, dudzPo=0.f, uPo=0.f;     \
-    dfloat dvdxPo=0.f, dvdyPo=0.f, dvdzPo=0.f, vPo=0.f;     \
-    dfloat dwdxPo=0.f, dwdyPo=0.f, dwdzPo=0.f, wPo=0.f;     \
-                                                                        \
-    const int bc = mapB[idM];           \
-    if(bc>0) {                \
-      if(bc==1){              \
-  uP = 0.f; vP = 0.f; wP = 0.f;         \
-  uPo = 0.f; vPo = 0.f; wPo = 0.f;         \
-      }else{                \
-  insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
-  insVelocityDirichletConditions3D(bc, time-dt, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uPo, &vPo, &wPo); \
-      }                 \
-      insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
-      insVelocityNeumannConditions3D(bc, time-dt, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxPo, &dudyPo, &dudzPo, &dvdxPo, &dvdyPo, &dvdzPo, &dwdxPo, &dwdyPo, &dwdzPo); \
-    }                 \
-                    \
-    s_U  [j][i] =  uP;              \
-    s_V  [j][i] =  vP;              \
-    s_W  [j][i] =  wP;              \
-    s_ndU[j][i] =  WsJ*(nx*(dudxP) + ny*(dudyP) + nz*(dudzP));    \
-    s_ndV[j][i] =  WsJ*(nx*(dvdxP) + ny*(dvdyP) + nz*(dvdzP));    \
-    s_ndW[j][i] =  WsJ*(nx*(dwdxP) + ny*(dwdyP) + nz*(dwdzP));    \
-  }
-
-
- 
-//RHS contributions for continuous solver
-@kernel void insVelocityBCTOMBOHex3D(const dlong Nelements,
-        @restrict const  dfloat *  ggeo,
-        @restrict const  dfloat *  sgeo,
-        @restrict const  dfloat *  D,
-        @restrict const  dfloat *  S,
-        @restrict const  dfloat *  MM,
-        @restrict const  dlong  *  vmapM,
-        @restrict const  int    *  EToB,
-        @restrict const  dlong  *  sMT,
-        const dfloat lambda,
-        const dfloat time,
-        const dfloat dt,
-        @restrict const  dfloat *  x,
-        @restrict const  dfloat *  y,
-        @restrict const  dfloat *  z,
-        @restrict const  int    *  mapB,
-        @restrict dfloat *  rhsU,
-        @restrict dfloat *  rhsV,
-        @restrict dfloat *  rhsW){
-
-
-  for(dlong e=0; e<Nelements; ++e; @outer(0)){
-
-    @shared dfloat s_D[p_Nq][p_Nq];
-    @shared dfloat s_U[p_Nq][p_Nq];
-    @shared dfloat s_V[p_Nq][p_Nq];
-    @shared dfloat s_W[p_Nq][p_Nq];
-    @shared dfloat s_ndU[p_Nq][p_Nq];
-    @shared dfloat s_ndV[p_Nq][p_Nq];
-    @shared dfloat s_ndW[p_Nq][p_Nq];
-
-#define s_Gur s_ndU
-#define s_Gvr s_ndV
-#define s_Gwr s_ndW
-
-    @shared dfloat s_Gus[p_Nq][p_Nq];
-    @shared dfloat s_Gvs[p_Nq][p_Nq];
-    @shared dfloat s_Gws[p_Nq][p_Nq];
-
-    @exclusive dfloat r_ut, r_Gut, r_Auk;
-    @exclusive dfloat r_vt, r_Gvt, r_Avk;
-    @exclusive dfloat r_wt, r_Gwt, r_Awk;
-    @exclusive dfloat r_U[p_Nq], r_V[p_Nq], r_W[p_Nq]; // register array to hold u(i,j,0:N) private to thread
-    @exclusive dfloat r_rhsU[p_Nq], r_rhsV[p_Nq], r_rhsW[p_Nq];// array for results Au(i,j,0:N)
-
-    @exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-
-    // for all face nodes of all elements
-    // face 0
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
-
-#pragma unroll p_Nq
-        for(int k=0;k<p_Nq;++k){
-          r_U[k] = 0.;
-          r_V[k] = 0.;
-          r_W[k] = 0.;
-          r_rhsU[k] = 0.;
-          r_rhsV[k] = 0.;
-          r_rhsW[k] = 0.;
-        }
-
-        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i + j*p_Nq;
-        surfaceTermsTOMBO(sk0,0,i,j);
-      }
-    }
-
-    @barrier("local");
-
-    // face 0
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-
-  r_U[0] = s_U  [j][i];
-  r_V[0] = s_V  [j][i];
-  r_W[0]  = s_W  [j][i];
-
-  //face 0
-  if(EToB[e*p_Nfaces+0]>0){
-    r_rhsU[0] += s_ndU[j][i];
-    r_rhsV[0] += s_ndV[j][i];
-    r_rhsW[0] += s_ndW[j][i];
-  }
-      }
-    }
-    
-    @barrier("local");    
-    
-    // face 5
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
-        surfaceTermsTOMBO(sk5,5,i,j);
-      }
-    }
-
-    @barrier("local");
-
-    // face 5
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-  
-  r_U   [p_Nq-1]  = s_U  [j][i];
-  r_V   [p_Nq-1]  = s_V  [j][i];
-  r_W   [p_Nq-1]  = s_W  [j][i];
-  
-  //face 5
-  if(EToB[e*p_Nfaces+5]>0){
-    r_rhsU[p_Nq-1] += s_ndU[j][i];
-    r_rhsV[p_Nq-1] += s_ndV[j][i];
-    r_rhsW[p_Nq-1] += s_ndW[j][i];
-  }
-      }
-    }
-    
-    @barrier("local");    
-
-    // face 1
-    for(int k=0;k<p_Nq;++k;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){  
-        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
-        surfaceTermsTOMBO(sk1,1,i,k);
-      }
-    }
-
-    @barrier("local");
-
-    // face 1
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if (j==0) {//face 1
-    
-#pragma unroll p_Nq
-    for (int k=0;k<p_Nq;k++) {
-
-      r_U[k]  = s_U  [k][i];
-      r_V[k]  = s_V  [k][i];
-      r_W[k]  = s_W  [k][i];
-      
-      if(EToB[e*p_Nfaces+1]>0){
-        r_rhsU[k] += s_ndU[k][i];
-        r_rhsV[k] += s_ndV[k][i];
-        r_rhsW[k] += s_ndW[k][i]; 
-      }
-    }
-        }
-      }
-    }
-
-    @barrier("local");    
-
-    // face 3
-    for(int k=0;k<p_Nq;++k;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
-        surfaceTermsTOMBO(sk3,3,i,k);
-      }
-    }
-
-    @barrier("local");
-
-    // face 3
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if (j==p_Nq-1) {//face 3
-#pragma unroll p_Nq
-    for (int k=0;k<p_Nq;k++) {
-        
-      r_U[k]  = s_U[k][i];
-      r_V[k]  = s_V[k][i];
-      r_W[k]  = s_W[k][i];
-        
-      if(EToB[e*p_Nfaces+3]>0){
-        r_rhsU[k] += s_ndU[k][i];
-        r_rhsV[k] += s_ndV[k][i];
-        r_rhsW[k] += s_ndW[k][i];
-      }
-    }
-  }
-      }
-    }
-
-    @barrier("local");    
-    
-    // face 2
-    for(int k=0;k<p_Nq;++k;@inner(1)){
-      for(int j=0;j<p_Nq;++j;@inner(0)){
-        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
-        surfaceTermsTOMBO(sk2,2,j,k);
-      }
-    }
-    
-    @barrier("local");
-    
-    // face 2 
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if (i==p_Nq-1) {//face 2
-#pragma unroll p_Nq
-    for (int k=0;k<p_Nq;k++) {
-      r_U[k] = s_U[k][j];
-      r_V[k] = s_V[k][j];
-      r_W[k] = s_W[k][j];
-      
-      if(EToB[e*p_Nfaces+2]>0){
-        r_rhsU[k] += s_ndU[k][j];
-        r_rhsV[k] += s_ndV[k][j];
-        r_rhsW[k] += s_ndW[k][j];
-      }
-    }
-        }
-      }
-    }
-    
-    @barrier("local"); 
-
-    // face 4
-    for(int k=0;k<p_Nq;++k;@inner(1)){
-      for(int j=0;j<p_Nq;++j;@inner(0)){
-        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
-        surfaceTermsTOMBO(sk4,4,j,k);
-      }
-    }
-
-    @barrier("local");
-
-    // face 4
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if (i==0) {//face 4
-#pragma unroll p_Nq
-          for (int k=0;k<p_Nq;k++) {
-      
-      r_U[k]  = s_U[k][j];
-      r_V[k]  = s_V[k][j];
-      r_W[k]  = s_W[k][j];
-      
-      if(EToB[e*p_Nfaces+4]>0){
-        r_rhsU[k] += s_ndU[k][j];
-        r_rhsV[k] += s_ndV[k][j];
-        r_rhsW[k] += s_ndW[k][j];
-      }
-          }
-        }
-      }
-    }
-    
-    // Layer by layer
-#pragma unroll p_Nq
-    for(int k = 0;k < p_Nq; k++){
-
-      @barrier("local");
-  
-      for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
-      
-    // prefetch geometric factors
-    const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-      
-    r_G00 = ggeo[gbase+p_G00ID*p_Np];
-    r_G01 = ggeo[gbase+p_G01ID*p_Np];
-    r_G02 = ggeo[gbase+p_G02ID*p_Np];
-      
-    r_G11 = ggeo[gbase+p_G11ID*p_Np];
-    r_G12 = ggeo[gbase+p_G12ID*p_Np];
-    r_G22 = ggeo[gbase+p_G22ID*p_Np];
-      
-    r_GwJ = ggeo[gbase+p_GWJID*p_Np];
-  }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
-    // share u(:,:,k)
-    s_U[j][i] = r_U[k];
-    s_V[j][i] = r_V[k];
-    s_W[j][i] = r_W[k];
-
-    r_ut = 0; r_vt = 0; r_wt = 0;
-
-#pragma unroll p_Nq
-    for(int m = 0; m < p_Nq; m++) {
-      const dfloat Dt = s_D[k][m];
-      r_ut += Dt*r_U[m];
-      r_vt += Dt*r_V[m];
-      r_wt += Dt*r_W[m];
-    }
-  }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
-    dfloat ur = 0.f, vr = 0.f, wr = 0.f;
-    dfloat us = 0.f, vs = 0.f, ws = 0.f;
-
-#pragma unroll p_Nq
-    for(int m = 0; m < p_Nq; m++) {
-      const dfloat Dr = s_D[i][m];
-      const dfloat Ds = s_D[j][m];
-      ur += Dr*s_U[j][m];
-      us += Ds*s_U[m][i];
-      vr += Dr*s_V[j][m];
-      vs += Ds*s_V[m][i];
-      wr += Dr*s_W[j][m];
-      ws += Ds*s_W[m][i];
-    }
-
-    s_Gus[j][i] = (r_G01*ur + r_G11*us + r_G12*r_ut);
-    s_Gur[j][i] = (r_G00*ur + r_G01*us + r_G02*r_ut);
-    s_Gvs[j][i] = (r_G01*vr + r_G11*vs + r_G12*r_vt);
-    s_Gvr[j][i] = (r_G00*vr + r_G01*vs + r_G02*r_vt);
-    s_Gws[j][i] = (r_G01*wr + r_G11*ws + r_G12*r_wt);
-    s_Gwr[j][i] = (r_G00*wr + r_G01*ws + r_G02*r_wt);
-
-    // put this here for a performance bump
-    r_Gut = (r_G02*ur + r_G12*us + r_G22*r_ut);
-    r_Gvt = (r_G02*vr + r_G12*vs + r_G22*r_vt);
-    r_Gwt = (r_G02*wr + r_G12*ws + r_G22*r_wt);
-    r_Auk = r_GwJ*lambda*r_U[k];
-    r_Avk = r_GwJ*lambda*r_V[k];
-    r_Awk = r_GwJ*lambda*r_W[k];
-  }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_Nq;++j;@inner(1)){
-  for(int i=0;i<p_Nq;++i;@inner(0)){
-
-#pragma unroll p_Nq
-    for(int m = 0; m < p_Nq; m++){
-      const dfloat Dr = s_D[m][i];
-      const dfloat Ds = s_D[m][j];
-      const dfloat Dt = s_D[k][m];
-      r_Auk     += Dr*s_Gur[j][m];
-      r_Auk     += Ds*s_Gus[m][i];
-      r_rhsU[m] += Dt*r_Gut; // DT(m,k)*ut(i,j,k,e)
-      r_Avk     += Dr*s_Gvr[j][m];
-      r_Avk     += Ds*s_Gvs[m][i];
-      r_rhsV[m] += Dt*r_Gvt; // DT(m,k)*ut(i,j,k,e)
-      r_Awk     += Dr*s_Gwr[j][m];
-      r_Awk     += Ds*s_Gws[m][i];
-      r_rhsW[m] += Dt*r_Gwt; // DT(m,k)*ut(i,j,k,e)
-    }
-
-    r_rhsU[k] += r_Auk;
-    r_rhsV[k] += r_Avk;
-    r_rhsW[k] += r_Awk;
-  }
-      }
-    }
-
-    // write out
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-#pragma unroll p_Nq
-  for(int k = 0; k < p_Nq; k++){
-    const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-    rhsU[id] -= r_rhsU[k];
-    rhsV[id] -= r_rhsV[k];
-    rhsW[id] -= r_rhsW[k];
-  }
+	  if(bc==1){
+	    uP = 0.f; vP = 0.f; wP = 0.f;
+	  }else if(bc==4){
+	    uP = 0.f; // vP = vM ; wP = wM;           
+	  }else if(bc==5){
+	    vP = 0.f; // uP = vM ; wP = wM;           
+	  }else if(bc==6){
+	    wP = 0.f; // vP = vM ; uP = uM;           
+	  }else{               
+	    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+	  }
+	  U[idM] = uP;
+	  V[idM] = vP;
+	  W[idM] = wP;
+	}    
       }
     }
   }
 }
-
-
-@kernel void insVelocityAddBCHex3D(const dlong Nelements,
-           const dfloat time,
-           @restrict const  dfloat *  sgeo,
-           @restrict const  dfloat *  x,
-           @restrict const  dfloat *  y,
-           @restrict const  dfloat *  z,
-           @restrict const  dlong  *  vmapM,
-           @restrict const  int    *  mapB,
-           @restrict dfloat *  U,
-           @restrict dfloat *  V,
-           @restrict dfloat *  W){
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
-
-      if(bc>0) {
-        const dfloat uM = U[idM];
-        const dfloat vM = V[idM];
-        const dfloat wM = W[idM];
-
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
-
-        dfloat uP = uM;
-        dfloat vP = vM;
-        dfloat wP = wM;
-
-        if(bc==1){
-    uP = 0.f; vP = 0.f; wP = 0.f;
-        }else{               
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-        }
-        U[idM] = uP;
-        V[idM] = vP;
-        W[idM] = wP;
-      }    
-    }
-  }
-}
-
-@kernel void insVelocityAddBCTOMBODiffHex3D(const dlong Nelements,
-           const dfloat time,
-           @restrict const  dfloat *  sgeo,
-           @restrict const  dfloat *  x,
-           @restrict const  dfloat *  y,
-           @restrict const  dfloat *  z,
-           @restrict const  dlong  *  vmapM,
-           @restrict const  int    *  mapB,
-           @restrict dfloat *  U,
-           @restrict dfloat *  V,
-           @restrict dfloat *  W){
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
-
-      if(bc>0) {
-        const dfloat uM = U[idM];
-        const dfloat vM = V[idM];
-        const dfloat wM = W[idM];
-
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
-
-        dfloat uP = uM;
-        dfloat vP = vM;
-        dfloat wP = wM;
-        
-        // Set all dirichlet to zero in increament solve
-        if(bc==1 || bc==2){
-          uP = 0.f; vP = 0.f; wP = 0.f;
-        }
-
-    //     if(bc==1){
-    // uP = 0.f; vP = 0.f; wP = 0.f;
-    //     }else{            
-    // insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-    //     uP -= uM;
-    //     vP -= vM;
-    //     wP -= wM;
-    //     }
-    
-        U[idM] = uP;
-        V[idM] = vP;
-        W[idM] = wP;
-      }    
-    }
-  }
-}
-
-
-@kernel void insVelocityAddBCTOMBOHex3D(const dlong Nelements,
-           const dfloat time,
-           const dlong offset,
-           @restrict const  dfloat *  sgeo,
-           @restrict const  dfloat *  x,
-           @restrict const  dfloat *  y,
-           @restrict const  dfloat *  z,
-           @restrict const  dlong  *  vmapM,
-           @restrict const  int    *  mapB,
-           @restrict dfloat *  U){
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
-
-      if(bc>0) {
-        const dfloat uM = U[idM + 0*offset];
-        const dfloat vM = U[idM + 1*offset];
-        const dfloat wM = U[idM + 2*offset];
-
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
-
-        dfloat uP = uM;
-        dfloat vP = vM;
-        dfloat wP = wM;
-       
-
-        if(bc==1){
-    uP = 0.f; vP = 0.f; wP = 0.f;
-        }else{            
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-        }
-        U[idM + 0*offset] = uP;
-        U[idM + 1*offset] = vP;
-        U[idM + 2*offset] = wP;
-      }    
-    }
-  }
-}
-
-#endif

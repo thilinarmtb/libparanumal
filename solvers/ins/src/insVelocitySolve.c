@@ -28,9 +28,9 @@
 
 // solve lambda*U + A*U = rhsU
 void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU, 
-          occa::memory o_rhsV, 
-          occa::memory o_rhsW, 
-          occa::memory o_Uhat){
+		      occa::memory o_rhsV, 
+		      occa::memory o_rhsW, 
+		      occa::memory o_Uhat){
 
 
   mesh_t *mesh = ins->mesh; 
@@ -42,24 +42,24 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
  
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D){
 
-      ins->velocityRhsBCKernel(mesh->Nelements,
-             mesh->o_ggeo,
-             mesh->o_sgeo,
-             mesh->o_Dmatrices,
-             mesh->o_Smatrices,
-             mesh->o_MM,
-             mesh->o_vmapM,
-             mesh->o_EToB,
-             mesh->o_sMT,
-             ins->lambda,
-             time,
-             mesh->o_x,
-             mesh->o_y,
-             mesh->o_z,
-             ins->o_VmapB,
-             o_rhsU,
-             o_rhsV,
-             o_rhsW);
+    ins->velocityRhsBCKernel(mesh->Nelements,
+			     mesh->o_ggeo,
+			     mesh->o_sgeo,
+			     mesh->o_Dmatrices,
+			     mesh->o_Smatrices,
+			     mesh->o_MM,
+			     mesh->o_vmapM,
+			     mesh->o_EToB,
+			     mesh->o_sMT,
+			     ins->lambda,
+			     time,
+			     mesh->o_x,
+			     mesh->o_y,
+			     mesh->o_z,
+			     ins->o_VmapB,
+			     o_rhsU,
+			     o_rhsV,
+			     o_rhsW);
 
     // gather-scatter
     ogsGatherScatter(o_rhsU, ogsDfloat, ogsAdd, mesh->ogs);
@@ -71,21 +71,21 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
     occaTimerTic(mesh->device,"velocityRhsIpdg");    
     ins->velocityRhsIpdgBCKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         usolver->tau,
-         time,
-         mesh->o_x,
-         mesh->o_y,
-         mesh->o_z,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         mesh->o_EToB,
-         mesh->o_Dmatrices,
-         mesh->o_LIFTT,
-         mesh->o_MM,
-         o_rhsU,
-         o_rhsV,
-         o_rhsW);
+				 mesh->o_vmapM,
+				 usolver->tau,
+				 time,
+				 mesh->o_x,
+				 mesh->o_y,
+				 mesh->o_z,
+				 mesh->o_vgeo,
+				 mesh->o_sgeo,
+				 mesh->o_EToB,
+				 mesh->o_Dmatrices,
+				 mesh->o_LIFTT,
+				 mesh->o_MM,
+				 o_rhsU,
+				 o_rhsV,
+				 o_rhsW);
     occaTimerToc(mesh->device,"velocityRhsIpdg");   
   }
 
@@ -93,11 +93,11 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
   // set initial condition to zero for velocity Incremanet
-    // Use old velocity for velocity solver initial condition    
-    ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,0*ins->fieldOffset*sizeof(dfloat));
-    ins->o_VH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
-    if (ins->dim==3)
-      ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*ins->fieldOffset*sizeof(dfloat));
+  // Use old velocity for velocity solver initial condition    
+  ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,0*ins->fieldOffset*sizeof(dfloat));
+  ins->o_VH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
+  if (ins->dim==3)
+    ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*ins->fieldOffset*sizeof(dfloat));
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
 
@@ -128,17 +128,17 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
 
-      ins->velocityAddBCKernel(mesh->Nelements,
-             time,
-             mesh->o_sgeo,
-             mesh->o_x,
-             mesh->o_y,
-             mesh->o_z,
-             mesh->o_vmapM,
-             ins->o_VmapB,   //          usolver->o_mapB,
-             ins->o_UH,
-             ins->o_VH,
-             ins->o_WH);
+    ins->velocityAddBCKernel(mesh->Nelements,
+			     time,
+			     mesh->o_sgeo,
+			     mesh->o_x,
+			     mesh->o_y,
+			     mesh->o_z,
+			     mesh->o_vmapM,
+			     ins->o_VmapB,   //          usolver->o_mapB,
+			     ins->o_UH,
+			     ins->o_VH,
+			     ins->o_WH);
   }
 
   //copy into intermediate stage storage

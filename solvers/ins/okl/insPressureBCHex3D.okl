@@ -1,96 +1,96 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
 
 #define surfaceTermsIpdg(sk,face,m, i, j)                               \
-{                                                                       \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+  {									\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
                                                                         \
-  dfloat dpdxP=0.f, dpdyP=0.f, dpdzP=0.f, pP=0.f;                       \
+    dfloat dpdxP=0.f, dpdyP=0.f, dpdzP=0.f, pP=0.f;			\
   									\
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc==3) {                                                           \
-    const dlong idM = vmapM[sk];                                        \
-    insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
-    insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
-    for (int s=0;s<stage;s++) {						\
-      dfloat prkBn, ctime;						\
-      if (ARKswitch) {							\
-        prkBn = prkB[stage*(p_Nstages+1)+s];				\
-        ctime = time-(c[stage]-c[s])*dt;				\
-      } else {								\
-        prkBn = prkB[s];						\
-        ctime = time-(s+1)*dt;						\
+    const int bc = EToB[face+p_Nfaces*e];				\
+    if(bc==3) {								\
+      const dlong idM = vmapM[sk];					\
+      insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
+      insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
+      for (int s=0;s<stage;s++) {					\
+	dfloat prkBn, ctime;						\
+	if (ARKswitch) {						\
+	  prkBn = prkB[stage*(p_Nstages+1)+s];				\
+	  ctime = time-(c[stage]-c[s])*dt;				\
+	} else {							\
+	  prkBn = prkB[s];						\
+	  ctime = time-(s+1)*dt;					\
+	}								\
+									\
+	dfloat pPm, dpdxPm, dpdyPm, dpdzPm;				\
+	insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm); \
+	insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm); \
+									\
+									\
+	pP    -= prkBn*pPm;						\
+	dpdxP -= prkBn*dpdxPm;						\
+	dpdyP -= prkBn*dpdyPm;						\
+	dpdzP -= prkBn*dpdzPm;						\
       }									\
-									\
-      dfloat pPm, dpdxPm, dpdyPm, dpdzPm;				\
-      insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm); \
-      insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm); \
-									\
-									\
-      pP    -= prkBn*pPm;						\
-      dpdxP -= prkBn*dpdxPm;						\
-      dpdyP -= prkBn*dpdyPm;						\
-      dpdzP -= prkBn*dpdzPm;						\
     }									\
-  }                                                                     \
 									\
-  const dfloat dp = pP;                                                 \
+    const dfloat dp = pP;						\
                                                                         \
-  s_dpdx[m][j][i] = WsJ*nx*dp;                                          \
-  s_dpdy[m][j][i] = WsJ*ny*dp;                                          \
-  s_dpdz[m][j][i] = WsJ*nz*dp;                                          \
+    s_dpdx[m][j][i] = WsJ*nx*dp;					\
+    s_dpdy[m][j][i] = WsJ*ny*dp;					\
+    s_dpdz[m][j][i] = WsJ*nz*dp;					\
                                                                         \
-  s_rhsp[m][j][i] = -WsJ*(nx*dpdxP + ny*dpdyP + nz*dpdzP + tau*dp*hinv);\
-}
+    s_rhsp[m][j][i] = -WsJ*(nx*dpdxP + ny*dpdyP + nz*dpdzP + tau*dp*hinv); \
+  }
 
 // Actually solves for Pr increamnet not presssure
 @kernel void insPressureIpdgBCHex3D(const dlong Nelements,
-                                      @restrict const  dlong  *  vmapM,
-                                      const dfloat tau,
-                                      const dfloat time,
-                                      const dfloat dt,
-                                      const int stage,
-                                      const int ARKswitch,
-                                      @restrict const  dfloat *  c,
-                                      @restrict const  dfloat *  prkB,
-                                      @restrict const  dfloat *  x,
-                                      @restrict const  dfloat *  y,
-                                      @restrict const  dfloat *  z,
-                                      @restrict const  dfloat *  vgeo,
-                                      @restrict const  dfloat *  sgeo,
-                                      @restrict const  int    *  EToB,
-                                      @restrict const  dfloat *  D,
-                                      @restrict const  dfloat *  LIFTT,
-                                      @restrict const  dfloat *  MM,
-                                            @restrict dfloat *  rhsP){
+				    @restrict const  dlong  *  vmapM,
+				    const dfloat tau,
+				    const dfloat time,
+				    const dfloat dt,
+				    const int stage,
+				    const int ARKswitch,
+				    @restrict const  dfloat *  c,
+				    @restrict const  dfloat *  prkB,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  int    *  EToB,
+				    @restrict const  dfloat *  D,
+				    @restrict const  dfloat *  LIFTT,
+				    @restrict const  dfloat *  MM,
+				    @restrict dfloat *  rhsP){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -107,7 +107,7 @@ SOFTWARE.
     // loop over slabs
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        #pragma unroll p_Nq
+#pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_dpdx[k] = 0.f;
           r_dpdy[k] = 0.f;
@@ -170,7 +170,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[0][k][i];
             r_dpdy[k] += s_dpdy[0][k][i];
@@ -179,7 +179,7 @@ SOFTWARE.
           }
         }
         if (j==p_Nq-1) {//face 3
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[1][k][i];
             r_dpdy[k] += s_dpdy[1][k][i];
@@ -210,7 +210,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[0][k][j];
             r_dpdy[k] += s_dpdy[0][k][j];
@@ -219,7 +219,7 @@ SOFTWARE.
           }
         }
         if (i==0) {//face 4
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[1][k][j];
             r_dpdy[k] += s_dpdy[1][k][j];
@@ -233,7 +233,7 @@ SOFTWARE.
     @barrier("local");
 
     //layer by layer
-    #pragma unroll p_Nq
+#pragma unroll p_Nq
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -268,7 +268,7 @@ SOFTWARE.
         for(int i=0;i<p_Nq;++i;@inner(0)){
           dfloat dr = 0, ds = 0;
 
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
             dr += s_D[n][i]*s_dpdx[0][j][n];
             r_rhsp[n] += s_D[k][n]*r_dpdt; // DT(m,k)*ut(i,j,k,e)
@@ -285,7 +285,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         
-        #pragma unroll p_Nq
+#pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           rhsP[id] -= r_rhsp[k];
@@ -296,65 +296,65 @@ SOFTWARE.
 }
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
-{                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+  {									\
+    const dlong idM = vmapM[sk];					\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
                                                                         \
-  dfloat dpdxP=0.f, dpdyP=0.f, dpdzP=0.f, pP=0.f;                       \
+    dfloat dpdxP=0.f, dpdyP=0.f, dpdzP=0.f, pP=0.f;			\
                                                                         \
-  const int bc = mapB[idM];                                             \
-  if(bc==3) {                                                           \
-    insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);\
-    insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);\
-    for (int s=0;s<stage;s++) {\
-      dfloat prkBn, ctime;\
-      if (ARKswitch) {\
-        prkBn = prkB[stage*(p_Nstages+1)+s];\
-        ctime = time-(c[stage]-c[s])*dt;\
-      } else {\
-        prkBn = prkB[s];\
-        ctime = time-(s+1)*dt;\
-      }\
-      \
-      dfloat pPm, dpdxPm, dpdyPm, dpdzPm;\
-      insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm);\
-      insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm);\
-      \
-\
-      pP    -= prkBn*pPm;\
-      dpdxP -= prkBn*dpdxPm;\
-      dpdyP -= prkBn*dpdyPm;\
-      dpdzP -= prkBn*dpdzPm;\
-    } \
-  }                                                                     \
+    const int bc = mapB[idM];						\
+    if(bc==3) {								\
+      insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
+      insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
+      for (int s=0;s<stage;s++) {					\
+	dfloat prkBn, ctime;						\
+	if (ARKswitch) {						\
+	  prkBn = prkB[stage*(p_Nstages+1)+s];				\
+	  ctime = time-(c[stage]-c[s])*dt;				\
+	} else {							\
+	  prkBn = prkB[s];						\
+	  ctime = time-(s+1)*dt;					\
+	}								\
+									\
+	dfloat pPm, dpdxPm, dpdyPm, dpdzPm;				\
+	insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm); \
+	insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm); \
+									\
+									\
+	pP    -= prkBn*pPm;						\
+	dpdxP -= prkBn*dpdxPm;						\
+	dpdyP -= prkBn*dpdyPm;						\
+	dpdzP -= prkBn*dpdzPm;						\
+      }									\
+    }									\
                                                                         \
-  s_p  [m][j][i] = pP;                                                  \
-  s_ndp[m][j][i] = -WsJ*(nx*dpdxP + ny*dpdyP + nz*dpdzP);               \
-}
+    s_p  [m][j][i] = pP;						\
+    s_ndp[m][j][i] = -WsJ*(nx*dpdxP + ny*dpdyP + nz*dpdzP);		\
+  }
 
 //RHS contributions for continuous solver
 @kernel void insPressureBCHex3D(const dlong Nelements,
-                              @restrict const  dfloat *  ggeo,
-                              @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  D,
-                              @restrict const  dfloat *  S,
-                              @restrict const  dlong  *  vmapM,
-				                      @restrict const  int  *  EToB,
-                              @restrict const  dlong  *  sMT,
-                              const dfloat time,
-                              const dfloat dt,
-                              const int stage,
-                              const int ARKswitch,
-                              @restrict const  dfloat *  c,
-                              @restrict const  dfloat *  prkB,
-                              @restrict const  dfloat *  x,
-                              @restrict const  dfloat *  y,
-                              @restrict const  dfloat *  z,
-                              @restrict const  int    *  mapB,
-                                   @restrict dfloat  *  rhsP){
+				@restrict const  dfloat *  ggeo,
+				@restrict const  dfloat *  sgeo,
+				@restrict const  dfloat *  D,
+				@restrict const  dfloat *  S,
+				@restrict const  dlong  *  vmapM,
+				@restrict const  int  *  EToB,
+				@restrict const  dlong  *  sMT,
+				const dfloat time,
+				const dfloat dt,
+				const int stage,
+				const int ARKswitch,
+				@restrict const  dfloat *  c,
+				@restrict const  dfloat *  prkB,
+				@restrict const  dfloat *  x,
+				@restrict const  dfloat *  y,
+				@restrict const  dfloat *  z,
+				@restrict const  int    *  mapB,
+				@restrict dfloat  *  rhsP){
   
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
@@ -376,7 +376,7 @@ SOFTWARE.
         // s_D[i][j] = d \phi_i at node j
         s_D[j][i] = D[p_Nq*j+i]; // D is column major
 
-        #pragma unroll p_Nq
+#pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_p[k] = 0.;
           r_rhs[k] = 0.;
@@ -428,7 +428,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] = s_p[0][k][i];
 
@@ -437,7 +437,7 @@ SOFTWARE.
           }
         }
         if (j==p_Nq-1) {//face 3
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] = s_p[1][k][i];
 
@@ -467,7 +467,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] = s_p[0][k][j];
 
@@ -476,7 +476,7 @@ SOFTWARE.
           }
         }
         if (i==0) {//face 4
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] = s_p[1][k][j];
 
@@ -491,91 +491,91 @@ SOFTWARE.
 
 
     // Layer by layer
-    #pragma unroll p_Nq
-      for(int k = 0;k < p_Nq; k++){
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
+#pragma unroll p_Nq
+    for(int k = 0;k < p_Nq; k++){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
 
-            // prefetch geometric factors
-            const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  // prefetch geometric factors
+	  const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-            r_G00 = ggeo[gbase+p_G00ID*p_Np];
-            r_G01 = ggeo[gbase+p_G01ID*p_Np];
-            r_G02 = ggeo[gbase+p_G02ID*p_Np];
+	  r_G00 = ggeo[gbase+p_G00ID*p_Np];
+	  r_G01 = ggeo[gbase+p_G01ID*p_Np];
+	  r_G02 = ggeo[gbase+p_G02ID*p_Np];
 
-            r_G11 = ggeo[gbase+p_G11ID*p_Np];
-            r_G12 = ggeo[gbase+p_G12ID*p_Np];
-            r_G22 = ggeo[gbase+p_G22ID*p_Np];
-          }
-        }
-
-        @barrier("local");
-
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
-
-            // share u(:,:,k)
-            s_p[0][j][i] = r_p[k];
-
-            r_pt = 0;
-
-            #pragma unroll p_Nq
-              for(int m = 0; m < p_Nq; m++) {
-                r_pt += s_D[k][m]*r_p[m];
-              }
-          }
-        }
-
-        @barrier("local");
-
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
-
-            dfloat pr = 0.f;
-            dfloat ps = 0.f;
-
-            #pragma unroll p_Nq
-              for(int m = 0; m < p_Nq; m++) {
-                pr += s_D[i][m]*s_p[0][j][m];
-                ps += s_D[j][m]*s_p[0][m][i];
-              }
-
-            //reuse the s_ndp array
-            s_ndp[0][j][i] = (r_G01*pr + r_G11*ps + r_G12*r_pt);
-            s_ndp[1][j][i] = (r_G00*pr + r_G01*ps + r_G02*r_pt);
-
-            // put this here for a performance bump
-            r_Gpt = (r_G02*pr + r_G12*ps + r_G22*r_pt);
-          }
-        }
-
-        @barrier("local");
-
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
-            dfloat Apk=0.f;
-
-            #pragma unroll p_Nq
-              for(int m = 0; m < p_Nq; m++){
-                Apk      += s_D[m][j]*s_ndp[0][m][i];
-                r_rhs[m] += s_D[k][m]*r_Gpt; // DT(m,k)*ut(i,j,k,e)
-                Apk      += s_D[m][i]*s_ndp[1][j][m];
-              }
-
-            r_rhs[k] += Apk;
-          }
-        }
+	  r_G11 = ggeo[gbase+p_G11ID*p_Np];
+	  r_G12 = ggeo[gbase+p_G12ID*p_Np];
+	  r_G22 = ggeo[gbase+p_G22ID*p_Np];
+	}
       }
+
+      @barrier("local");
+
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	  // share u(:,:,k)
+	  s_p[0][j][i] = r_p[k];
+
+	  r_pt = 0;
+
+#pragma unroll p_Nq
+	  for(int m = 0; m < p_Nq; m++) {
+	    r_pt += s_D[k][m]*r_p[m];
+	  }
+	}
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	  dfloat pr = 0.f;
+	  dfloat ps = 0.f;
+
+#pragma unroll p_Nq
+	  for(int m = 0; m < p_Nq; m++) {
+	    pr += s_D[i][m]*s_p[0][j][m];
+	    ps += s_D[j][m]*s_p[0][m][i];
+	  }
+
+	  //reuse the s_ndp array
+	  s_ndp[0][j][i] = (r_G01*pr + r_G11*ps + r_G12*r_pt);
+	  s_ndp[1][j][i] = (r_G00*pr + r_G01*ps + r_G02*r_pt);
+
+	  // put this here for a performance bump
+	  r_Gpt = (r_G02*pr + r_G12*ps + r_G22*r_pt);
+	}
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  dfloat Apk=0.f;
+
+#pragma unroll p_Nq
+	  for(int m = 0; m < p_Nq; m++){
+	    Apk      += s_D[m][j]*s_ndp[0][m][i];
+	    r_rhs[m] += s_D[k][m]*r_Gpt; // DT(m,k)*ut(i,j,k,e)
+	    Apk      += s_D[m][i]*s_ndp[1][j][m];
+	  }
+
+	  r_rhs[k] += Apk;
+	}
+      }
+    }
 
     // write out
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        #pragma unroll p_Nq
-          for(int k = 0; k < p_Nq; k++){
-            const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-            rhsP[id] -= r_rhs[k];
-          }
+#pragma unroll p_Nq
+	for(int k = 0; k < p_Nq; k++){
+	  const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+	  rhsP[id] -= r_rhs[k];
+	}
       }
     }
   }
@@ -583,18 +583,18 @@ SOFTWARE.
 
 // need to fix race condition on that also AK....
 @kernel void insPressureAddBCHex3D(const dlong Nelements,
-                                  const dfloat time,
-                                  const dfloat dt,
-                                  const int stage,
-                                  const int ARKswitch,
-                                  @restrict const  dfloat *  c,
-                                  @restrict const  dfloat *  prkB,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  int    *  mapB,
-                                        @restrict dfloat *  P){
+				   const dfloat time,
+				   const dfloat dt,
+				   const int stage,
+				   const int ARKswitch,
+				   @restrict const  dfloat *  c,
+				   @restrict const  dfloat *  prkB,
+				   @restrict const  dfloat *  x,
+				   @restrict const  dfloat *  y,
+				   @restrict const  dfloat *  z,
+				   @restrict const  dlong  *  vmapM,
+				   @restrict const  int    *  mapB,
+				   @restrict dfloat *  P){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
@@ -631,28 +631,28 @@ SOFTWARE.
 
 // We are solving for Pressure Difference
 @kernel void insPressureAddBCTOMBOHex3D(const dlong Nelements,
-                                  const dfloat time,
-                                  const dfloat dt,
-                                  const dlong offset,
-                                  @restrict const  dfloat *  sgeo, 
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  int    *  mapB,
-                                  @restrict const  int    *  EToB,
-                                  @restrict const  dfloat *  U,
+					const dfloat time,
+					const dfloat dt,
+					const dlong offset,
+					@restrict const  dfloat *  sgeo, 
+					@restrict const  dfloat *  x,
+					@restrict const  dfloat *  y,
+					@restrict const  dfloat *  z,
+					@restrict const  dlong  *  vmapM,
+					@restrict const  int    *  mapB,
+					@restrict const  int    *  EToB,
+					@restrict const  dfloat *  U,
                                         @restrict dfloat *  P){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-        const int f = n/p_Nfp; 
-        const dlong sid  = e*p_Nfaces*p_Nfp + n;
-        const dlong vid  = vmapM[e*p_Nfp*p_Nfaces + n];
-        // const int bc     = mapB[vid];const int bc     = (mapB[vid] ==3 && EToB[f + p_Nfaces*e]==3) ? 3:0;
+      const int f = n/p_Nfp; 
+      const dlong sid  = e*p_Nfaces*p_Nfp + n;
+      const dlong vid  = vmapM[e*p_Nfp*p_Nfaces + n];
+      // const int bc     = mapB[vid];const int bc     = (mapB[vid] ==3 && EToB[f + p_Nfaces*e]==3) ? 3:0;
 
-        // I think that should work for pressure outflow, i.e. prioritize bc=3
-        const int bc     = EToB[f + p_Nfaces*e];   
+      // I think that should work for pressure outflow, i.e. prioritize bc=3
+      const int bc     = EToB[f + p_Nfaces*e];   
       
       if(bc==3) {
         const dfloat nx = sgeo[sid*p_Nsgeo+p_NXID];
@@ -667,51 +667,7 @@ SOFTWARE.
         //insPressureDirichletConditions3Dnew(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, vx, vy, vz, 0.f, &pP);
         insPressureDirichletConditions3D(bc,time, x[vid], y[vid], z[vid], 0.f, 0.f, 0.f, 0.f, &pP);
         P[vid] = pP;         
-    }    
-   }
-  }
-}
-
-
-
-
-#if 0
-@kernel void insPressureAddBCTOMBOHex3D_v0(const dlong Nelements,
-                                  const dfloat time,
-                                  const dfloat dt,
-                                  const int stage,
-                                  const int ARKswitch,
-                                  @restrict const  dfloat *  c,
-                                  @restrict const  dfloat *  prkB,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  int    *  mapB,
-                                        @restrict dfloat *  P){
-  
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int f=0; f<p_Nfaces; f++){
-      @barrier("global");
-      for(int m=0;m<p_Nfp;++m;@inner(0)){
-        const int n = m + f*p_Nfp;       
-        const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-        const int bc = mapB[idM];
-
-      if(bc==3) {
-        // dfloat pP = 0.f;
-        dfloat pP = P[idM]; // just to be safe
-        insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], 0.f, 0.f, 0.f, 0.f, &pP);
-
-        dfloat ctime = time-dt;
-
-        dfloat pPm = 0.f;
-        insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], 0.f, 0.f, 0.f, 0.f, &pPm);
-        pP    -= pPm;
-        P[idM] = pP;
       }    
     }
-   }
   }
 }
-#endif
