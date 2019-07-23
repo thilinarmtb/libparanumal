@@ -342,7 +342,7 @@ SOFTWARE.
                               @restrict const  dfloat *  D,
                               @restrict const  dfloat *  S,
                               @restrict const  dlong  *  vmapM,
-				@restrict const  int  *  EToB,
+				                      @restrict const  int  *  EToB,
                               @restrict const  dlong  *  sMT,
                               const dfloat time,
                               const dfloat dt,
@@ -666,24 +666,16 @@ SOFTWARE.
         dfloat pP = 0.f;
         //insPressureDirichletConditions3Dnew(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, vx, vy, vz, 0.f, &pP);
         insPressureDirichletConditions3D(bc,time, x[vid], y[vid], z[vid], 0.f, 0.f, 0.f, 0.f, &pP);
-        
-        P[vid] = pP; 
-        
-        // dfloat ctime = time-dt;
-        // // get U^{n-1}
-        // const dfloat uno = U[vid + 0*offset + p_NVfields*offset]; 
-        // const dfloat vno = U[vid + 1*offset + p_NVfields*offset]; 
-        // const dfloat wno = U[vid + 2*offset + p_NVfields*offset]; 
-        // dfloat pPm = 0.f;
-        // //insPressureDirichletConditions3Dnew(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, vxo, vyo, vzo, 0.f, &pPm);
-        // insPressureDirichletConditions3D(bc, ctime, x[vid], y[vid], z[vid], 0.f, 0.f, 0.f, 0.f, &pPm);
-        // P[vid] = pP-pPm;
+        P[vid] = pP;         
     }    
    }
   }
 }
 
 
+
+
+#if 0
 @kernel void insPressureAddBCTOMBOHex3D_v0(const dlong Nelements,
                                   const dfloat time,
                                   const dfloat dt,
@@ -722,3 +714,4 @@ SOFTWARE.
    }
   }
 }
+#endif

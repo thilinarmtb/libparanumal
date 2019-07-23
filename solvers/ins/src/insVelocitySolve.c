@@ -39,12 +39,9 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   elliptic_t *wsolver = ins->wSolver;
 
   int quad3D      = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
-  int tombo_diff  = (ins->options.compareArgs("TIME INTEGRATOR", "TOMBO")
-                     && ins->options.compareArgs("TIME INTEGRATOR", "DIFF")) ? 1:0; 
-
+ 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D){
 
-    if(!tombo_diff)
       ins->velocityRhsBCKernel(mesh->Nelements,
              mesh->o_ggeo,
              mesh->o_sgeo,
@@ -96,19 +93,11 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
   // set initial condition to zero for velocity Incremanet
-  if(tombo_diff){
-    dfloat zero = 0.0; 
-    ins->setScalarKernel(ins->Ntotal, zero, ins->o_UH); 
-    ins->setScalarKernel(ins->Ntotal, zero, ins->o_VH); 
-    if (ins->dim==3)
-      ins->setScalarKernel(ins->Ntotal, zero, ins->o_WH);  
-  }else{ 
     // Use old velocity for velocity solver initial condition    
     ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,0*ins->fieldOffset*sizeof(dfloat));
     ins->o_VH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
     if (ins->dim==3)
       ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*ins->fieldOffset*sizeof(dfloat));
-  }
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
 
@@ -139,21 +128,6 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
 
-    if(tombo_diff){
-      ins->velocityAddBCKernel(mesh->Nelements,
-             time,
-             ins->dt, 
-             mesh->o_sgeo,
-             mesh->o_x,
-             mesh->o_y,
-             mesh->o_z,
-             mesh->o_vmapM,
-             ins->o_VmapB,   
-             ins->o_UH,
-             ins->o_VH,
-             ins->o_WH);
-
-    }else{
       ins->velocityAddBCKernel(mesh->Nelements,
              time,
              mesh->o_sgeo,
@@ -165,7 +139,6 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
              ins->o_UH,
              ins->o_VH,
              ins->o_WH);
-    }
   }
 
   //copy into intermediate stage storage
@@ -173,8 +146,5 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   ins->o_VH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),1*ins->fieldOffset*sizeof(dfloat),0);    
   if (ins->dim==3)
     ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*ins->fieldOffset*sizeof(dfloat),0);  
-  
-  if(tombo_diff) 
-    insVelocityUpdate(ins, time, ins->Nstages, ins->o_rkGP, o_Uhat);
 
 }

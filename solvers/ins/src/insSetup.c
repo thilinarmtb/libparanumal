@@ -1206,33 +1206,18 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       
       // ===========================================================================
       if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
-  sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
+        sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
 
-  sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
-  ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
+        ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, "insVelocityBC%s", suffix);
-  ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-  // These are required for velocity increament
-  if (options.compareArgs("TIME INTEGRATOR", "TOMBO") && 
-      options.compareArgs("TIME INTEGRATOR", "DIFF") ){ 
-
-    sprintf(kernelName, "insVelocityAddBCTOMBO%s", suffix);
-    ins->velocityAddBCTOMBOKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-    sprintf(kernelName, "insVelocityAddBCTOMBODiff%s", suffix);
-    ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-  }else{
-    sprintf(kernelName, "insVelocityAddBC%s", suffix);
-    ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-    }
+        sprintf(kernelName, "insVelocityBC%s", suffix);
+        ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insVelocityAddBC%s", suffix);
+        ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
    }
 
       sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
-      if(ins->TOMBO)
-      sprintf(kernelName, "insVelocityUpdateTOMBO");
-      else
       sprintf(kernelName, "insVelocityUpdate");
       ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
 

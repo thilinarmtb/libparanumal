@@ -438,7 +438,7 @@
                                                                         \
     const int bc = mapB[idM];           \
     if(bc>0) {                \
-      if(bc==1){              \
+      if(bc==1 || bc==4 || bc==5 || bc==6){              \
   uP = 0.f; vP = 0.f; wP = 0.f;         \
       }else{                \
   insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
@@ -830,6 +830,64 @@
 }
 
 
+
+
+@kernel void insVelocityAddBCHex3D(const dlong Nelements,
+           const dfloat time,
+           @restrict const  dfloat *  sgeo,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  z,
+           @restrict const  dlong  *  vmapM,
+           @restrict const  int    *  mapB,
+           @restrict dfloat *  U,
+           @restrict dfloat *  V,
+           @restrict dfloat *  W){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int f=0; f<p_Nfaces; f++){
+      @barrier("global");
+      for(int m=0;m<p_Nfp;++m;@inner(0)){
+        const int n = m + f*p_Nfp;         
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
+
+      if(bc>0) {
+        const dfloat uM = U[idM];
+        const dfloat vM = V[idM];
+        const dfloat wM = W[idM];
+
+        const dlong sk = e*p_Nfp*p_Nfaces + n;
+        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+
+        dfloat uP = uM;
+        dfloat vP = vM;
+        dfloat wP = wM;
+
+        if(bc==1){
+          uP = 0.f; vP = 0.f; wP = 0.f;
+        }else if(bc==4){
+          uP = 0.f; // vP = vM ; wP = wM;           
+        }else if(bc==5){
+          vP = 0.f; // uP = vM ; wP = wM;           
+        }else if(bc==6){
+          wP = 0.f; // vP = vM ; uP = uM;           
+        }else{               
+    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+        }
+        U[idM] = uP;
+        V[idM] = vP;
+        W[idM] = wP;
+      }    
+    }
+  }
+  }
+}
+
+
+#if 0
 
 
 #define surfaceTermsTOMBO(sk,face,i, j)                                      \
@@ -1248,7 +1306,6 @@
 }
 
 
-#if 0
 @kernel void insVelocityAddBCHex3D(const dlong Nelements,
            const dfloat time,
            @restrict const  dfloat *  sgeo,
@@ -1391,163 +1448,4 @@
   }
 }
 
-
-#else
-@kernel void insVelocityAddBCHex3D(const dlong Nelements,
-           const dfloat time,
-           @restrict const  dfloat *  sgeo,
-           @restrict const  dfloat *  x,
-           @restrict const  dfloat *  y,
-           @restrict const  dfloat *  z,
-           @restrict const  dlong  *  vmapM,
-           @restrict const  int    *  mapB,
-           @restrict dfloat *  U,
-           @restrict dfloat *  V,
-           @restrict dfloat *  W){
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int f=0; f<p_Nfaces; f++){
-      @barrier("global");
-      for(int m=0;m<p_Nfp;++m;@inner(0)){
-        const int n = m + f*p_Nfp;         
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
-
-      if(bc>0) {
-        const dfloat uM = U[idM];
-        const dfloat vM = V[idM];
-        const dfloat wM = W[idM];
-
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
-
-        dfloat uP = uM;
-        dfloat vP = vM;
-        dfloat wP = wM;
-
-        if(bc==1){
-    uP = 0.f; vP = 0.f; wP = 0.f;
-        }else{               
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-        }
-        U[idM] = uP;
-        V[idM] = vP;
-        W[idM] = wP;
-      }    
-    }
-  }
-  }
-}
-
-@kernel void insVelocityAddBCTOMBODiffHex3D(const dlong Nelements,
-           const dfloat time,
-           const dfloat dt,
-           @restrict const  dfloat *  sgeo,
-           @restrict const  dfloat *  x,
-           @restrict const  dfloat *  y,
-           @restrict const  dfloat *  z,
-           @restrict const  dlong  *  vmapM,
-           @restrict const  int    *  mapB,
-           @restrict dfloat *  U,
-           @restrict dfloat *  V,
-           @restrict dfloat *  W){
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int f=0; f<p_Nfaces; f++){
-      @barrier("global");
-      for(int m=0;m<p_Nfp;++m;@inner(0)){
-        const int n = m + f*p_Nfp; 
-        const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-        const int bc = mapB[idM];
-
-        if(bc>0) {
-          const dfloat uM = U[idM];
-          const dfloat vM = V[idM];
-          const dfloat wM = W[idM];
-
-          const dlong sk = e*p_Nfp*p_Nfaces + n;
-          const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-          const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-          const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
-
-          dfloat uP = uM;
-          dfloat vP = vM;
-          dfloat wP = wM;
-        // wall bc is hard coded !!!
-        if(bc==1){
-          uP = 0.f; 
-          vP = 0.f; 
-          wP = 0.f; 
-        }else{
-          insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-          
-          // dfloat ctime = time-dt;
-          // dfloat uPo = 0.f, vPo = 0.f, wPo = 0.f;
-          // insVelocityDirichletConditions3D(bc, ctime, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uPo, &vPo, &wPo);
-          // uP -= uPo; 
-          // vP -= vPo; 
-          // wP -= wPo; 
-        }
-        
-          U[idM] = uP;
-          V[idM] = vP;
-          W[idM] = wP;
-        }    
-      }
-    }
-  }
-}
-
-
-
-// this kernel update velocity Dirichlet BC before Helmholtz operator in Velocity Increment
-@kernel void insVelocityAddBCTOMBOHex3D(const dlong Nelements,
-           const dfloat time,
-           const dlong offset,
-           @restrict const  dfloat *  sgeo,
-           @restrict const  dfloat *  x,
-           @restrict const  dfloat *  y,
-           @restrict const  dfloat *  z,
-           @restrict const  dlong  *  vmapM,
-           @restrict const  int    *  mapB,
-           @restrict dfloat *  U){
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int f=0; f<p_Nfaces; f++){
-      @barrier("global");
-      for(int m=0;m<p_Nfp;++m;@inner(0)){
-      const int n = m + f*p_Nfp; 
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
-
-      if(bc>0) {
-        const dfloat uM = U[idM + 0*offset];
-        const dfloat vM = U[idM + 1*offset];
-        const dfloat wM = U[idM + 2*offset];
-
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
-
-        dfloat uP = uM;
-        dfloat vP = vM;
-        dfloat wP = wM;
-       
-
-        if(bc==1){
-    uP = 0.f; vP = 0.f; wP = 0.f;
-        }else{            
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-        }
-        U[idM + 0*offset] = uP;
-        U[idM + 1*offset] = vP;
-        U[idM + 2*offset] = wP;
-      }    
-    }
-  }
-  }
-}
 #endif

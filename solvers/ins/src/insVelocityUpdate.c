@@ -31,7 +31,6 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage,
                         occa::memory o_rkU){
 
   mesh_t *mesh = ins->mesh;
-
   // U^s = Uhat - dt * GP^s + dt*\sum^s-1 pa_si GP^i
   occaTimerTic(mesh->device,"VelocityUpdate");
   if(ins->TOMBO)

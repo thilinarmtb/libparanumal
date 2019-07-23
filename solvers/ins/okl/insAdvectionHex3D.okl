@@ -166,10 +166,16 @@
     const int bc = EToB[face+p_Nfaces*e];				\
     if(bc>0) {								\
       if(bc==1){							\
-	uP = 0.f;  vP = 0.f; wP = 0.f;					\
+	    uP = 0.f;  vP = 0.f; wP = 0.f;\
+      }else if(bc==4){  \
+      uP = 0.f; vP = vM; wP = wM; \
+      } else if(bc==5){             \
+      uP = uM; vP = 0.f; wP = wM; \
+      } else if(bc==6){    \
+      uP = uM; vP = vM; wP = 0.f; \
       }else{								\
-	uP = uM;  vP = vM; wP = wM;					\
-	insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+    	uP = uM;  vP = vM; wP = wM;					\
+    	insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
       }									\
     }									\
                                                                         \
@@ -1109,16 +1115,22 @@
 	dfloat uP = r_UPn, vP = r_VPn, wP = r_WPn;			\
 									\
 	const int bc = EToB[face+p_Nfaces*e];				\
-	if(bc>0) {							\
-	  if(bc==1){							\
-	    uP = 0.f; vP = 0.f; wP = 0.f;				\
-	  }else{							\
-	    uP = uM; vP = vM; wP = wM;					\
-	    insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
-					     inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
-					     intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
-	  }								\
-	}								\
+   if(bc>0) {               \
+      if(bc==1){              \
+      uP = 0.f; vP = 0.f; wP = 0.f;\
+      }else if(bc==4){  \
+      uP = 0.f; vP = vM; wP = wM; \
+      }else if(bc==5){             \
+      uP = uM; vP = 0.f; wP = wM; \
+      }else if(bc==6){    \
+      uP = uM; vP = vM; wP = 0.f; \
+      }else{              \
+      uP = uM; vP = vM; wP = wM;          \
+      insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
+               inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
+               intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+     }               \
+    }                 \
 									\
 	const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);		\
 	const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);		\

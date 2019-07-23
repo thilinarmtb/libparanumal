@@ -132,17 +132,23 @@
     const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset]; \
     dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset]; \
     const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0) {								\
-      if(bc==1){							\
-	uP = 0.f;  vP = 0.f; wP = 0.f;					\
-      }else{								\
-        uP = uM;  vP = vM; wP = wM;					\
-	insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
-      }									\
-      uP = 2.f*uP-uM;							\
-      vP = 2.f*vP-vM;							\
-      wP = 2.f*wP-wM;							\
-    }									\
+    if(bc>0) {                \
+      if(bc==1){              \
+      uP = 0.f;  vP = 0.f; wP = 0.f;\
+      }else if(bc==4){  \
+      uP = 0.f; vP = vM; wP = wM; \
+      } else if(bc==5){             \
+      uP = uM; vP = 0.f; wP = wM; \
+      } else if(bc==6){    \
+      uP = uM; vP = vM; wP = 0.f; \
+      }else{                \
+      uP = uM;  vP = vM; wP = wM;         \
+      insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+      uP = 2.f*uP-uM;             \
+      vP = 2.f*vP-vM;             \
+      wP = 2.f*wP-wM;             \
+      }                 \
+    }                 \
     									\
     const dfloat sc = invWJ * sJ;					\
     s_fluxDiv[m][j][i] = 0.5f*sc*(nx*(uP+uM) + ny*(vP+vM) + nz*(wP+wM)); \
@@ -380,7 +386,8 @@
   }
 }
 
-
+// Adding slip BC to Pressure Rhs i.e. dp/dn = 0 =>dp/dn -n \dot F = -n \dot F for slip
+// or dp/dn -n\dot F = -g0/dt n \dot u^(n+1) for other BC's
 
 #define surfaceTermsTOMBO(sk,face,m, i, j)				\
   {									\
@@ -393,18 +400,23 @@
     const dfloat WSJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
     const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset]; \
     const int bc = EToB[face+p_Nfaces*e];				\
-    dfloat uP = 0.0;							\
-    dfloat vP = 0.0;							\
-    dfloat wP = 0.0;							\
-    if(bc>0) {								\
-      if(bc==1){							\
-	uP = 0.f;  vP = 0.f; wP = 0.f;					\
-      }else{								\
+    dfloat uP = 0.f;							\
+    dfloat vP = 0.f;							\
+    dfloat wP = 0.f;							\
+    if(bc>0) {                \
+      if(bc==1){              \
+      uP = 0.f;  vP = 0.f; wP = 0.f;\
+      }else if(bc==4 || bc==5 || bc==6 ){  \
+      uP = uM; vP = vM; wP = wM; \
+      }else{                       \
 	insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
       }									\
     }									\
-									\
-    s_fluxDiv[m][j][i] = WSJ*(nx*uP + ny*vP + nz*wP);			\
+		dfloat scale = coef; 							\
+    if(bc==4 || bc==5 || bc==6 ){  \
+      scale = -1.f; \
+    } \
+    s_fluxDiv[m][j][i] = scale*WSJ*(nx*uP + ny*vP + nz*wP);			\
   }
 
 @kernel void insDivergenceSurfaceTOMBOHex3D(const dlong Nelements,
@@ -415,7 +427,7 @@
           @restrict const  dlong  *  vmapP,
           @restrict const  int    *  EToB,
           const dfloat time,
-          const dfloat coef, // !!!!!
+          const dfloat coef,
           @restrict const  dfloat *  x,
           @restrict const  dfloat *  y,
           @restrict const  dfloat *  z,
@@ -535,7 +547,7 @@
         for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-          divU[id] += coef*r_div[k];
+          divU[id] += r_div[k];
         }
       }
     }

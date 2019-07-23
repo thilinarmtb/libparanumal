@@ -564,18 +564,24 @@
     dfloat udP = Ud[idP+0*offset], vdP = Ud[idP+1*offset], wdP = Ud[idP+2*offset]; \
                                                                         \
     const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0) {								\
-      if(bc==1){							\
-	udP = 0.f; vdP = 0.f; wdP = 0.f;				\
-      }else{								\
-	udP = udM; vdP = vdM; wdP = wdM;				\
-	insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \
-	udP *= bScale;							\
-	vdP *= bScale;							\
-	wdP *= bScale;							\
-      }									\
-    }									\
-                                                                        \
+     if(bc>0) {               \
+      if(bc==1){              \
+      udP = 0.f; vdP = 0.f; wdP = 0.f;\
+      }else if(bc==4){  \
+      udP = 0.f; vdP = vdM; wdP = wdM; \
+      } else if(bc==5){             \
+      udP = udM; vdP = 0.f; wdP = wdM; \
+      } else if(bc==6){    \
+      udP = udM; vdP = vdM; wdP = 0.f; \
+      }else{                \
+      udP = udM;  vdP = vdM; wdP = wdM;         \
+      insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \
+      }                 \
+  udP *= bScale;              \
+  vdP *= bScale;              \
+  wdP *= bScale;              \
+    }                 \
+                                                                            \
     const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);			\
     const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);			\
     const dfloat unMax = (unM > unP) ? unM : unP;			\
@@ -1720,20 +1726,23 @@
 	dfloat udP = r_UdPn, vdP = r_VdPn, wdP = r_WdPn;		\
 									\
 	const int bc = EToB[face+p_Nfaces*e];				\
-	if(bc>0) {							\
-	  if(bc==1){							\
-	    udP = 0.f; vdP = 0.f; wdP = 0.f;				\
-	  }else{							\
-	    udP = udM; vdP = vdM; wdP = wdM;				\
-	    insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
-					     inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
-					     intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \
-	    udP *= bScale;						\
-	    vdP *= bScale;						\
-	    wdP *= bScale;						\
-	  }								\
-	}								\
-									\
+ if(bc>0) {               \
+      if(bc==1){              \
+      udP = 0.f; vdP = 0.f; wdP = 0.f;\
+      }else if(bc==4){  \
+      udP = 0.f; vdP = vdM; wdP = wdM; \
+      }else if(bc==5){             \
+      udP = udM; vdP = 0.f; wdP = wdM; \
+      }else if(bc==6){    \
+      udP = udM; vdP = vdM; wdP = 0.f; \
+      }else{                \
+      udP = udM;  vdP = vdM; wdP = wdM;         \
+      insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \
+      }                 \
+  udP *= bScale;              \
+  vdP *= bScale;              \
+  wdP *= bScale;              \
+    }                 \
 	const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);		\
 	const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);		\
 	const dfloat unMax = (unM > unP) ? unM : unP;			\
