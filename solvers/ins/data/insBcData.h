@@ -24,6 +24,13 @@ SOFTWARE.
 
 */
 
+#define WALL 1
+#define INLET 2
+#define OUTLET 3
+#define XSLIP 4
+#define YSLIP 5
+#define ZSLIP 6
+
 struct bcData
 {
    int idM;
