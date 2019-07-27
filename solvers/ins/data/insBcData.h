@@ -24,38 +24,28 @@ SOFTWARE.
 
 */
 
+struct bcData
+{
+   int idM;
+   int fieldOffset;
+   int id;
 
-@kernel void insSetFlowField3D(const dlong Nelements,
-                              const dfloat t,
-                              @restrict const  dfloat *  x,
-                              @restrict const  dfloat *  y,
-                              @restrict const  dfloat *  z,
-                              const dlong offset,
-                                    @restrict dfloat *  U,
-                                    @restrict dfloat *  P){
+   dfloat time;
+   dfloat x, y, z;
+   dfloat nx, ny, nz;
 
-  for(dlong n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
+   dfloat uM, vM, wM;
+   dfloat uP, vP, wP;
+   dfloat uxM, uyM, uzM;
+   dfloat vxM, vyM, vzM;
+   dfloat wxM, wyM, wzM;
+   dfloat uxP, uyP, uzP;
+   dfloat vxP, vyP, vzP;
+   dfloat wxP, wyP, wzP;
 
-    if(n<p_Np*Nelements){
-      struct bcData bc;
-      bc.time   = t;
-      bc.idM    = n;
-      bc.fieldOffset = offset;   
-      bc.x = x[n];
-      bc.y = y[n];
-      bc.z = z[n];
-      
-      bc.uP = 0.f;
-      bc.vP = 0.f;
-      bc.wP = 0.f;
-      bc.pP = 0.f;
+   dfloat pM;
+   dfloat pP, pxP, pyP, pzP;
 
-      insFlowField3D(&bc);
+   dfloat* wrk;
 
-      U[n+0*offset] = bc.uP;
-      U[n+1*offset] = bc.vP;
-      U[n+2*offset] = bc.wP;
-      P[n]          = bc.pP;
-    }
-  }
-}
+};

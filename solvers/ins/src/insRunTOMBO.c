@@ -42,7 +42,8 @@ void insRunTOMBO(ins_t *ins){
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
   
   
-  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+ for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+ // for(int tstep=0;tstep<1;++tstep){
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
     else if(tstep<2 && ins->temporalOrder>=2) 

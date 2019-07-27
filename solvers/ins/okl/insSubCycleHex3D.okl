@@ -549,53 +549,62 @@
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
   {									\
-    const dlong  idM = vmapM[sk];					\
-    const dlong  idP = vmapP[sk];					\
+    struct bcData bc;  \
+    const dlong  idM = vmapM[sk];         \
+    const dlong  idP = vmapP[sk];         \
                                                                         \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-                                                                        \
+    bc.time = time; \
+    bc.nx  = sgeo[sk*p_Nsgeo+p_NXID];       \
+    bc.ny  = sgeo[sk*p_Nsgeo+p_NYID];       \
+    bc.nz  = sgeo[sk*p_Nsgeo+p_NZID];       \
+    bc.x   = x[idM]; \
+    bc.y   = y[idM]; \
+    bc.z   = z[idM]; \
+    bc.idM = idM; \
+    bc.fieldOffset = offset; \
+    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];        \
+    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];      \
+    \
     const dfloat uM  = U[idM+0*offset],  vM  = U[idM+1*offset],  wM  = U[idM+2*offset];	\
     const dfloat uP  = U[idP+0*offset],  vP  = U[idP+1*offset],  wP  = U[idP+2*offset];	\
-    const dfloat udM = Ud[idM+0*offset], vdM = Ud[idM+1*offset], wdM = Ud[idM+2*offset]; \
-    dfloat udP = Ud[idP+0*offset], vdP = Ud[idP+1*offset], wdP = Ud[idP+2*offset]; \
+    bc.uM = Ud[idM+0*offset];  bc.vM = Ud[idM+1*offset]; bc.wM = Ud[idM+2*offset]; \
+    bc.uP  = Ud[idP+0*offset]; bc.vP = Ud[idP+1*offset]; bc.wP = Ud[idP+2*offset]; \
+    bc.wrk = (dfloat *) W; \
                                                                         \
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0) {								\
-      if(bc==1){							\
-	udP = 0.f; vdP = 0.f; wdP = 0.f;				\
-      }else if(bc==4){							\
-	udP = 0.f; vdP = vdM; wdP = wdM;				\
-      } else if(bc==5){							\
-	udP = udM; vdP = 0.f; wdP = wdM;				\
-      } else if(bc==6){							\
-	udP = udM; vdP = vdM; wdP = 0.f;				\
-      }else{								\
-	udP = udM;  vdP = vdM; wdP = wdM;				\
-	insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \
-      }									\
-      udP *= bScale;							\
-      vdP *= bScale;							\
-      wdP *= bScale;							\
+    bc.id = EToB[face+p_Nfaces*e];        \
+    if(bc.id>0) {               \
+      if(bc.id==1){             \
+        bc.uP = 0.f;  bc.vP = 0.f; bc.wP = 0.f;          \
+      }else if(bc.id==4){             \
+        bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
+      } else if(bc.id==5){              \
+        bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
+      } else if(bc.id==6){              \
+        bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
+      }else{                \
+        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
+      insVelocityDirichletConditions3D(&bc); \
+      }                 \
+      bc.uP *= bScale;							\
+      bc.vP *= bScale;							\
+      bc.wP *= bScale;							\
     }									\
-									\
-    const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);			\
-    const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);			\
-    const dfloat unMax = (unM > unP) ? unM : unP;			\
+	                                                                    \
+    const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM + bc.nz*bc.wM);     \
+    const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP + bc.nz*bc.wP);      \
+    const dfloat unMax = (unM > unP) ? unM : unP;     \
+                                                                        \
                                                                         \
     const dfloat sc = invWJ * sJ;					\
-    s_fluxNU[m][j][i] = sc*(.5f*(nx*(uP*udP + uM*udM)			\
-				 + ny*(vP*udP + vM*udM)			\
-				 + nz*(wP*udP + wM*udM)  + unMax*(udM-udP) )); \
-    s_fluxNV[m][j][i] = sc*(.5f*(nx*(uP*vdP + uM*vdM)			\
-				 + ny*(vP*vdP + vM*vdM)			\
-				 + nz*(wP*vdP + wM*vdM)  + unMax*(vdM-vdP) )); \
-    s_fluxNW[m][j][i] = sc*(.5f*(nx*(uP*wdP + uM*wdM)			\
-				 + ny*(vP*wdP + vM*wdM)			\
-				 + nz*(wP*wdP + wM*wdM)  + unMax*(wdM-wdP) )); \
+    s_fluxNU[m][j][i] = sc*(.5f*(bc.nx*(uP*bc.uP + uM*bc.uM)			\
+				 + bc.ny*(vP*bc.uP + vM*bc.uM)			\
+				 + bc.nz*(wP*bc.uP + wM*bc.uM)  + unMax*(bc.uM-bc.uP) )); \
+    s_fluxNV[m][j][i] = sc*(.5f*(bc.nx*(uP*bc.vP + uM*bc.vM)			\
+				 + bc.ny*(vP*bc.vP + vM*bc.vM)			\
+				 + bc.nz*(wP*bc.vP + wM*bc.vM)  + unMax*(bc.vM-bc.vP) )); \
+    s_fluxNW[m][j][i] = sc*(.5f*(bc.nx*(uP*bc.wP + uM*bc.wM)			\
+				 + bc.ny*(vP*bc.wP + vM*bc.wM)			\
+				 + bc.nz*(wP*bc.wP + wM*bc.wM)  + unMax*(bc.wM-bc.wP) )); \
   }
 
 @kernel void insSubCycleSurfaceHex3D(const dlong Nelements,
@@ -610,6 +619,7 @@
 				     @restrict const  dfloat *  y,
 				     @restrict const  dfloat *  z,
 				     const dlong offset,
+				     @restrict const  dfloat *  W,
 				     @restrict const  dfloat *  U,
 				     @restrict const  dfloat *  Ud,
 				     @restrict dfloat *  NU){
@@ -1715,47 +1725,56 @@
 									\
     for(int j=0;j<p_cubNq;++j;@inner(1)){				\
       for(int i=0;i<p_cubNq;++i;@inner(0)){				\
-	const dlong sk = e*p_cubNfp*p_Nfaces + face*p_cubNfp + j*p_cubNq + i; \
-	const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];			\
-	const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];			\
-	const dfloat nz = cubsgeo[sk*p_Nsgeo+p_NZID];			\
+	struct bcData bc;  \
+  const dlong sk = e*p_cubNfp*p_Nfaces + face*p_cubNfp + j*p_cubNq + i; \
 	const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];			\
+   bc.time = time; \
+   bc.nx   = cubsgeo[sk*p_Nsgeo+p_NXID];     \
+    bc.ny  = cubsgeo[sk*p_Nsgeo+p_NYID];      \
+    bc.nz  = cubsgeo[sk*p_Nsgeo+p_NZID];     \
+    bc.x   = intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i]; \
+    bc.y   = inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i]; \
+    bc.z   = intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i]; \
+    bc.idM =  e*p_cubNfp*p_Nfaces + face*p_cubNfp + j*p_cubNq + i; \
+    bc.fieldOffset = offset; \
 	const dfloat uM = r_UMn, vM = r_VMn, wM = r_WMn;		\
 	const dfloat uP = r_UPn, vP = r_VPn, wP = r_WPn;		\
-	const dfloat udM = r_UdMn, vdM = r_VdMn, wdM = r_WdMn;		\
-	dfloat udP = r_UdPn, vdP = r_VdPn, wdP = r_WdPn;		\
+	bc.uM = r_UdMn;  bc.vM = r_VdMn; bc.wM = r_WdMn;		\
+	bc.uP = r_UdPn;  bc.vP = r_VdPn; bc.wP = r_WdPn;			\
+        bc.wrk = (dfloat *) W; \
 									\
-	const int bc = EToB[face+p_Nfaces*e];				\
-	if(bc>0) {							\
-	  if(bc==1){							\
-	    udP = 0.f; vdP = 0.f; wdP = 0.f;				\
-	  }else if(bc==4){						\
-	    udP = 0.f; vdP = vdM; wdP = wdM;				\
-	  }else if(bc==5){						\
-	    udP = udM; vdP = 0.f; wdP = wdM;				\
-	  }else if(bc==6){						\
-	    udP = udM; vdP = vdM; wdP = 0.f;				\
-	  }else{							\
-	    udP = udM;  vdP = vdM; wdP = wdM;				\
-	    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \
-	  }								\
-	  udP *= bScale;						\
-	  vdP *= bScale;						\
-	  wdP *= bScale;						\
+	bc.id = EToB[face+p_Nfaces*e];        \
+    if(bc.id>0) {               \
+      if(bc.id==1){             \
+        bc.uP = 0.f;  bc.vP = 0.f; bc.wP = 0.f;          \
+      }else if(bc.id==4){             \
+        bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
+      } else if(bc.id==5){              \
+        bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
+      } else if(bc.id==6){              \
+        bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
+      }else{                \
+        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
+      insVelocityDirichletConditions3D(&bc); \
+      }                 \
+	  bc.uP *= bScale;						\
+	  bc.vP *= bScale;						\
+	  bc.wP *= bScale;						\
 	}								\
-	const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);		\
-	const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);		\
-	const dfloat unMax = (unM > unP) ? unM : unP;			\
-									\
-	s_fluxNU[j][i] = WsJ*(.5f*(nx*(uP*udP + uM*udM)			\
-				   + ny*(vP*udP + vM*udM)		\
-				   + nz*(wP*udP + wM*udM)  + unMax*(udM-udP) )); \
-	s_fluxNV[j][i] = WsJ*(.5f*(nx*(uP*vdP + uM*vdM)			\
-				   + ny*(vP*vdP + vM*vdM)		\
-				   + nz*(wP*vdP + wM*vdM)  + unMax*(vdM-vdP) )); \
-	s_fluxNW[j][i] = WsJ*(.5f*(nx*(uP*wdP + uM*wdM)			\
-				   + ny*(vP*wdP + vM*wdM)		\
-				   + nz*(wP*wdP + wM*wdM)  + unMax*(wdM-wdP) )); \
+	const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM + bc.nz*bc.wM);     \
+    const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP + bc.nz*bc.wP);      \
+    const dfloat unMax = (unM > unP) ? unM : unP;     \
+                                                                        \
+                                                                        \
+    s_fluxNU[j][i] = WsJ*(.5f*(bc.nx*(uP*bc.uP + uM*bc.uM)			\
+				 + bc.ny*(vP*bc.uP + vM*bc.uM)			\
+				 + bc.nz*(wP*bc.uP + wM*bc.uM)  + unMax*(bc.uM-bc.uP) )); \
+    s_fluxNV[j][i] = WsJ*(.5f*(bc.nx*(uP*bc.vP + uM*bc.vM)			\
+				 + bc.ny*(vP*bc.vP + vM*bc.vM)			\
+				 + bc.nz*(wP*bc.vP + wM*bc.vM)  + unMax*(bc.vM-bc.vP) )); \
+    s_fluxNW[j][i] = WsJ*(.5f*(bc.nx*(uP*bc.wP + uM*bc.wM)			\
+				 + bc.ny*(vP*bc.wP + vM*bc.wM)			\
+				 + bc.nz*(wP*bc.wP + wM*bc.wM)  + unMax*(bc.wM-bc.wP) )); \
       }									\
     }									\
 									\
@@ -1833,6 +1852,7 @@
 					     @restrict const  dfloat *  inty,
 					     @restrict const  dfloat *  intz,
 					     const dlong offset,
+					     @restrict const  dfloat *  W,
 					     @restrict const  dfloat *  U,
 					     @restrict const  dfloat *  Ud,
 					     @restrict dfloat *  NU){

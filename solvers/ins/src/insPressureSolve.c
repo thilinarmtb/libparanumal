@@ -36,6 +36,7 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
 
   if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && (!quad3D && !ins->TOMBO )) {
     ins->pressureRhsBCKernel(mesh->Nelements,
+           ins->fieldOffset,
 			     mesh->o_ggeo,
 			     mesh->o_sgeo,
 			     mesh->o_Dmatrices,
@@ -53,10 +54,13 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
 			     mesh->o_y,
 			     mesh->o_z,
 			     ins->o_PmapB,
+           ins->o_Wrk,
+           ins->o_U,
 			     ins->o_rhsP);
   } else if(ins->pOptions.compareArgs("DISCRETIZATION","IPDG") && !quad3D) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
     ins->pressureRhsIpdgBCKernel(mesh->Nelements,
+         ins->fieldOffset,
 				 mesh->o_vmapM,
 				 solver->tau,
 				 time,
@@ -74,6 +78,8 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
 				 mesh->o_Dmatrices,
 				 mesh->o_LIFTT,
 				 mesh->o_MM,
+         ins->o_Wrk,
+         ins->o_U,
 				 ins->o_rhsP);
     occaTimerToc(mesh->device,"PoissonRhsIpdg");
   }
@@ -104,22 +110,27 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
 			       mesh->o_vmapM,
 			       ins->o_PmapB,
 			       mesh->o_EToB,
-			       ins->o_U,
+             ins->o_Wrk,
+             ins->o_U,
 			       ins->o_PI);
 
     }else{
       ins->pressureAddBCKernel(mesh->Nelements,
 			       time,
 			       ins->dt,
+              ins->fieldOffset, 
 			       stage,
 			       ins->ARKswitch,
 			       ins->o_rkC,
 			       ins->o_prkB,
-			       mesh->o_x,
-			       mesh->o_y,
-			       mesh->o_z,
+			       mesh->o_sgeo,
+             mesh->o_x,
+             mesh->o_y,
+             mesh->o_z,
 			       mesh->o_vmapM,
 			       ins->o_PmapB,
+             ins->o_Wrk,
+             ins->o_U,
 			       ins->o_PI);
     }
   }

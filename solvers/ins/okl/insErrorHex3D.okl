@@ -324,23 +324,26 @@
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           //#pragma unroll p_cubNq
           for(int k=0;k<p_cubNq;++k){ 
-            const dfloat xc = r_X[k];
-            const dfloat yc = r_Y[k];
-            const dfloat zc = r_Z[k];
-
             const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
 
-           dfloat u = 0.f;
-           dfloat v = 0.f;
-           dfloat w = 0.f;
-           dfloat p = 0.f;
+            struct bcData bc;
 
-          insFlowField3D(t, xc, yc, zc, &u, &v, &w, &p);
+            bc.uP = 0.f;
+            bc.vP = 0.f;
+            bc.wP = 0.f;
+            bc.pP = 0.f;
+          
+           bc.time = t; 
+           bc.x = r_X[k];
+           bc.y = r_Y[k];
+           bc.z = r_Z[k];
+ 
+           insFlowField3D(&bc);
 
-           U[id +0*offset]  = u; 
-           U[id +1*offset]  = v; 
-           U[id +2*offset]  = w; 
-           P[id +0*offset]  = p; 
+           U[id +0*offset]  = bc.uP; 
+           U[id +1*offset]  = bc.vP; 
+           U[id +2*offset]  = bc.wP; 
+           P[id +0*offset]  = bc.pP; 
         }
       }
     }

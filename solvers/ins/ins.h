@@ -133,6 +133,9 @@ typedef struct {
   dfloat *cU, *cUd;
   occa::memory o_cU, o_cUd;
 
+  dfloat *Wrk;
+  occa::memory o_Wrk; 
+
   // Some Iso-surfacing variables
   int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
   dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 

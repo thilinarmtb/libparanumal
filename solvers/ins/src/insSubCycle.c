@@ -292,6 +292,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 					       mesh->o_inty,
 					       mesh->o_intz,
 					       ins->fieldOffset,
+					       ins->o_Wrk,
 					       ins->o_Ue,
 					       o_Ud,
 					       ins->o_rhsUd);
@@ -308,6 +309,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 				       mesh->o_y,
 				       mesh->o_z,
 				       ins->fieldOffset,
+				       ins->o_Wrk,
 				       ins->o_Ue,
 				       o_Ud,
 				       ins->o_rhsUd);

@@ -140,6 +140,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                         mesh->o_inty,
                                         mesh->o_intz,
                                         ins->fieldOffset,
+                                        ins->o_Wrk,
                                         o_U,
                                         o_NU);
   } else {
@@ -154,6 +155,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                 mesh->o_y,
                                 mesh->o_z,
                                 ins->fieldOffset,
+                                ins->o_Wrk, 
                                 o_U,
                                 o_NU);
   }

@@ -153,6 +153,7 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
              mesh->o_y,
              mesh->o_z,
              ins->fieldOffset,
+             ins->o_Wrk,
              o_U,
              o_DU);
 
@@ -169,6 +170,7 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
              mesh->o_y,
              mesh->o_z,
              ins->fieldOffset,
+             ins->o_Wrk,
              o_U,
              o_DU);
 
