@@ -387,11 +387,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   else 
     ins->ARKswitch = 0;
 
+  // Struct for BC implementation
+  kernelInfo["includes"] += DINS "/data/insBcData.h";
+
   //add boundary data to kernel info
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
   kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
-
+  
   ins->o_U = mesh->device.malloc(ins->NVfields*ins->Nstages*Ntotal*sizeof(dfloat), ins->U);
   ins->o_P = mesh->device.malloc(              ins->Nstages*Ntotal*sizeof(dfloat), ins->P);
 
@@ -893,6 +896,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_prkB = ins->o_extbdfC;
   }
 
+  // dummy decleration for scratch space 
+  ins->Wrk     = (dfloat*) calloc(1, sizeof(dfloat));
+  ins->o_Wrk   = mesh->device.malloc(1*sizeof(dfloat), ins->Wrk);
+ 
   // MEMORY ALLOCATION
   ins->o_rhsU  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsU);
   ins->o_rhsV  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsV);

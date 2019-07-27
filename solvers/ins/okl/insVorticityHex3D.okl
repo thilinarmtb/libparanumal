@@ -420,34 +420,48 @@ if (p1 < TOL){
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
 {                                                                       \
-  const dlong  idM = vmapM[sk];                                         \
-  const dlong  idP = vmapP[sk];                                         \
+  struct bcData bc;  \
+    const dlong  idM = vmapM[sk];         \
+    const dlong  idP = vmapP[sk];         \
                                                                         \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
-                                                                        \
-  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];\
-        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];\
-                                                                        \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    if(bc==1){                                                          \
-      uP = 0.f; vP = 0.f; wP = 0.f;                                     \
-    }else{                                                              \
-    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
-    }                                                                   \
-    uP = 2.f*uP-uM;                                                     \
-    vP = 2.f*vP-vM;                                                     \
-    wP = 2.f*wP-wM;                                                     \
-  }                                                                     \
+    bc.time = time; \
+    bc.nx  = sgeo[sk*p_Nsgeo+p_NXID];       \
+    bc.ny  = sgeo[sk*p_Nsgeo+p_NYID];       \
+    bc.nz  = sgeo[sk*p_Nsgeo+p_NZID];       \
+    bc.x   = x[idM]; \
+    bc.y   = y[idM]; \
+    bc.z   = z[idM]; \
+    bc.idM = idM; \
+    bc.fieldOffset = offset; \
+    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];        \
+    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];      \
+                                                                         \
+    bc.uM = U[idM+0*offset]; bc.vM = U[idM+1*offset]; bc.wM = U[idM+2*offset]; \
+    bc.uP = U[idP+0*offset]; bc.vP = U[idP+1*offset]; bc.wP = U[idP+2*offset]; \
+                                                                           \
+    bc.id = EToB[face+p_Nfaces*e];        \
+    if(bc.id>0) {               \
+      if(bc.id==1){             \
+        bc.uP = 0.f;  bc.vP = 0.f; bc.wP = 0.f;          \
+      }else if(bc.id==4){             \
+        bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
+      } else if(bc.id==5){              \
+        bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
+      } else if(bc.id==6){              \
+        bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
+      }else{                \
+        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
+      insVelocityDirichletConditions3D(&bc); \
+      }                 \
+  bc.uP = 2.f*bc.uP-bc.uM;             \
+  bc.vP = 2.f*bc.vP-bc.vM;             \
+  bc.wP = 2.f*bc.wP-bc.wM;             \
+    }                 \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
-  s_fluxVx[m][j][i] = sc*(.5f*( ny*(wP + wM) - nz*(vP + vM) ));         \
-  s_fluxVy[m][j][i] = sc*(.5f*( nz*(uP + uM) - nx*(wP + wM) ));         \
-  s_fluxVz[m][j][i] = sc*(.5f*( nx*(vP + vM) - ny*(uP + uM) ));         \
+  s_fluxVx[m][j][i] = sc*(.5f*( bc.ny*(bc.wP + bc.wM) - bc.nz*(bc.vP + bc.vM) ));         \
+  s_fluxVy[m][j][i] = sc*(.5f*( bc.nz*(bc.uP + bc.uM) - bc.nx*(bc.wP + bc.wM) ));         \
+  s_fluxVz[m][j][i] = sc*(.5f*( bc.nx*(bc.vP + bc.vM) - bc.ny*(bc.uP + bc.uM) ));         \
 }
 
 @kernel void insVorticitySurfaceHex3D(const dlong Nelements,
