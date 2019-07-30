@@ -91,7 +91,8 @@ AOBJS    = \
 ./src/insBrownMinionQuad3D.o\
 ./src/insExtBdfCoefficents.o \
 ./src/insFilterSetup.o \
-./src/insAddVelocityRhs.o
+./src/insAddVelocityRhs.o \
+./src/insComputeCfl.o
 
 # library objects
 LOBJS = \
