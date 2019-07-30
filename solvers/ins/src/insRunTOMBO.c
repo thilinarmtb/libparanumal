@@ -41,9 +41,8 @@ void insRunTOMBO(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
   
-  
  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
- // for(int tstep=0;tstep<1;++tstep){
+ // for(int tstep=0;tstep<10;++tstep){
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
     else if(tstep<2 && ins->temporalOrder>=2) 
@@ -54,7 +53,6 @@ void insRunTOMBO(ins_t *ins){
     dfloat time = ins->startTime + tstep*ins->dt;
 
     dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
-
     if(ins->Nsubsteps) {
       if(!NekSubCycle){
         insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
@@ -120,6 +118,9 @@ void insRunTOMBO(ins_t *ins){
         if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
 
   insReport(ins, time+ins->dt, tstep+1);
+        
+        dfloat cfl = insComputeCfl(ins, time+ins->dt, tstep+1); printf("CFL = %.4e \n", cfl);
+    
 
         // Write a restart file
         if(ins->writeRestartFile){

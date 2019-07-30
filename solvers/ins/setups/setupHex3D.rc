@@ -96,11 +96,11 @@ NONE
 1.0
 
 [CFL]
-0.1
+0.5
 
 # overwrites time step size
 [DT]
-3E-4
+3E-3
 
 [OUTPUT TYPE]
 VTU

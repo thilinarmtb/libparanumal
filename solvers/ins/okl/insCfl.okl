@@ -1,0 +1,176 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+// Compute Gradient in weak Form
+@kernel void insCflHex3D(const dlong Nelements,
+			 const dfloat dt,
+			 @restrict const  dfloat *  vgeo,
+			 @restrict const  dfloat *  idH,
+			 const dlong offset,
+			 @restrict const  dfloat *  U,
+			 @restrict dfloat *  rhsU){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
+
+    @shared dfloat s_idH[p_Nq];
+    // @shared dfloat s_U[p_Nq][p_Nq];
+    // @shared dfloat s_V[p_Nq][p_Nq];
+    // @shared dfloat s_W[p_Nq][p_Nq];
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
+
+          // s_U[k][j][i]  = U[id+0*offset];
+          // s_V[k][j][i]  = U[id+1*offset];
+          // s_W[k][j][i]  = U[id+2*offset];
+
+          if (k==0 && j==0)
+            s_idH[i] = idH[i];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
+          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+          const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+          const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+          const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+          const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+          //         
+          const dfloat un = U[id+0*offset];
+          const dfloat vn = U[id+1*offset];
+          const dfloat wn = U[id+2*offset];
+
+          dfloat ur  = (un*drdx + vn*drdy +wn*drdz)*s_idH[i]*dt; 
+          dfloat us  = (un*dsdx + vn*dsdy +wn*dsdz)*s_idH[j]*dt; 
+          dfloat ut  = (un*dtdx + vn*dtdy +wn*dtdz)*s_idH[k]*dt; 
+
+          rhsU[id+0*offset] = fabs(ur + us + ut);
+        }
+      }
+    }
+  }  
+}
+
+
+// Compute Gradient in weak Form
+@kernel void insCflQuad2D(const dlong Nelements,
+			  const dfloat dt,
+			  @restrict const  dfloat *  vgeo,
+			  @restrict const  dfloat *  idH,
+			  const dlong offset,
+			  @restrict const  dfloat *  U,
+			  @restrict dfloat *  rhsU){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
+
+    @shared dfloat s_idH[p_Nq];
+    for(int j=0;j<p_Nq;++j;@inner(1)){ 
+      for(int i=0;i<p_Nq;++i;@inner(0)){    
+	      const dlong id = e*p_Np + j*p_Nq+i;
+      	if (j==0)
+      	  s_idH[i] = idH[i];
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){ 
+      for(int i=0;i<p_Nq;++i;@inner(0)){  
+      	const dlong id = e*p_Np + j*p_Nq + i;
+      	const dlong gid = e*p_Np*p_Nvgeo +j*p_Nq +i;
+      	const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+      	const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+      	const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+      	const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+      	//         
+      	const dfloat un = U[id+0*offset];
+      	const dfloat vn = U[id+1*offset];
+
+      	dfloat ur  = (un*drdx + vn*drdy)*s_idH[i]*dt; 
+      	dfloat us  = (un*dsdx + vn*dsdy)*s_idH[j]*dt; 
+
+      	rhsU[id+0*offset] = fabs(ur + us);
+      }
+    }
+  }  
+}
+
+
+
+@kernel void insMax(const dlong N,
+                    @restrict const  dfloat *  x,
+                    @restrict dfloat *  wxx){
+  
+
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
+    
+    @shared volatile dfloat s_wxx[p_blockSize];
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      const dlong id = t + p_blockSize*b;
+      s_wxx[t] = (id<N)?x[id]:0;
+    }
+    
+    @barrier("local");
+#if p_blockSize>512
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_wxx[t] = (s_wxx[t]>s_wxx[t+512]) ? s_wxx[t]:s_wxx[t+512];
+    @barrier("local");
+#endif
+#if p_blockSize>256
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_wxx[t] = (s_wxx[t]>s_wxx[t+256]) ? s_wxx[t]:s_wxx[t+256];
+    @barrier("local");
+#endif
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_wxx[t] = (s_wxx[t]>s_wxx[t+128]) ? s_wxx[t]:s_wxx[t+128];
+    @barrier("local");
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_wxx[t] = (s_wxx[t]>s_wxx[t+64]) ? s_wxx[t]:s_wxx[t+64];
+    @barrier("local");
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_wxx[t] = (s_wxx[t]>s_wxx[t+32]) ? s_wxx[t]:s_wxx[t+32];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_wxx[t] = (s_wxx[t]>s_wxx[t+16]) ? s_wxx[t]:s_wxx[t+16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_wxx[t] = (s_wxx[t]>s_wxx[t+8]) ? s_wxx[t]:s_wxx[t+8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_wxx[t] = (s_wxx[t]>s_wxx[t+4]) ? s_wxx[t]:s_wxx[t+4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_wxx[t] = (s_wxx[t]>s_wxx[t+2]) ? s_wxx[t]:s_wxx[t+2];
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) wxx[b] = (s_wxx[0]>s_wxx[1]) ? s_wxx[0]:s_wxx[1];
+  }
+}
+

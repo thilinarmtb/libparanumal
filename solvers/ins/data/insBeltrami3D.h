@@ -25,69 +25,85 @@ SOFTWARE.
 */
 
 // Initial conditions 
-#define insFlowField3D(bc) \
-  {                                   \
-    dfloat a = M_PI/4.f; \
-    dfloat d = M_PI/2.f; \
-    *(bc.uP) = -a*exp(-p_nu*d*d*bc.time)*(exp(a*bc.x)*sin(a*bc.y+d*bc.z)+exp(a*bc.z)*cos(a*bc.x+d*bc.y));\
-    *(bc.vP) = -a*exp(-p_nu*d*d*bc.time)*(exp(a*bc.y)*sin(a*bc.z+d*bc.x)+exp(a*bc.x)*cos(a*bc.y+d*bc.z));\
-    *(bc.wP) = -a*exp(-p_nu*d*d*bc.time)*(exp(a*bc.z)*sin(a*bc.x+d*bc.y)+exp(a*bc.y)*cos(a*bc.z+d*bc.x));\
-    *(bc.pP) = -0.5f*a*a*exp(-2.f*p_nu*d*d*bc.time)*(2.f*exp(a*(bc.z+bc.y))*cos(a*bc.z+d*bc.x)*sin(a*bc.x+d*bc.y)+2.f*exp(a*(bc.z+bc.x))*cos(a*bc.x+d*bc.y)*sin(a*bc.y+d*bc.z)+2.f*exp(a*(bc.y+bc.x))*cos(a*bc.y+d*bc.z)*sin(a*bc.z+d*bc.x)+exp(2.f*a*bc.z)+exp(2.f*a*bc.y)+exp(2.f*a*bc.x));\
+void insFlowField3D(bcData *bc) 
+  {                             
+    dfloat a = M_PI/4.f; 
+    dfloat d = M_PI/2.f; 
+    dfloat time = bc->time; 
+    dfloat x = bc->x; 
+    dfloat y = bc->y; 
+    dfloat z = bc->z; 
+    bc->uP = -a*exp(-p_nu*d*d*time)*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y));
+    bc->vP = -a*exp(-p_nu*d*d*time)*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z));
+    bc->wP = -a*exp(-p_nu*d*d*time)*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x));
+    bc->pP = -0.5f*a*a*exp(-2.f*p_nu*d*d*time)*(2.f*exp(a*(z+y))*cos(a*z+d*x)*sin(a*x+d*y)+2.f*exp(a*(z+x))*cos(a*x+d*y)*sin(a*y+d*z)+2.f*exp(a*(y+x))*cos(a*y+d*z)*sin(a*z+d*x)+exp(2.f*a*z)+exp(2.f*a*y)+exp(2.f*a*x));
   }   
   
 
 // Boundary conditions
-/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, bc.z-slip 6 */
-#define insVelocityDirichletConditions3D(bc) \
-{                                       \
-  dfloat a = M_PI/4.f;                  \
-  dfloat d = M_PI/2.f;                  \
-  if(bc.id==1){                        \
-    *(bc.uP) = 0.f;                    \
-    *(bc.vP) = 0.f;                    \
-    *(bc.wP) = 0.f;                    \
-  } else if(bc.id==2){                     \
-    *(bc.uP) = -a*exp(-p_nu*d*d*bc.time)*(exp(a*bc.x)*sin(a*bc.y+d*bc.z)+exp(a*bc.z)*cos(a*bc.x+d*bc.y));\
-    *(bc.vP) = -a*exp(-p_nu*d*d*bc.time)*(exp(a*bc.y)*sin(a*bc.z+d*bc.x)+exp(a*bc.x)*cos(a*bc.y+d*bc.z));\
-    *(bc.wP) = -a*exp(-p_nu*d*d*bc.time)*(exp(a*bc.z)*sin(a*bc.x+d*bc.y)+exp(a*bc.y)*cos(a*bc.z+d*bc.x));\
-  }else if(bc.id==4){         \
-    *(bc.uP) = 0.f;       \
-  }else if(bc.id==5){         \
-    *(bc.vP) = 0.f;       \
-  }else if(bc.id==6){         \
-    *(bc.wP)  = 0.f;       \
-  }                        \
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
+void insVelocityDirichletConditions3D(bcData *bc)
+{                                       
+  dfloat a = M_PI/4.f; 
+    dfloat d = M_PI/2.f; 
+    dfloat time = bc->time; 
+    dfloat x = bc->x; 
+    dfloat y = bc->y; 
+    dfloat z = bc->z;                  
+  if(bc->id==1){                        
+    bc->uP = 0.f;                    
+    bc->vP = 0.f;                    
+    bc->wP = 0.f;                    
+  } else if(bc->id==2){                     
+    bc->uP = -a*exp(-p_nu*d*d*time)*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y));
+    bc->vP = -a*exp(-p_nu*d*d*time)*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z));
+    bc->wP = -a*exp(-p_nu*d*d*time)*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x));
+  }else if(bc->id==4){         
+    bc->uP = 0.f;       
+  }else if(bc->id==5){         
+    bc->vP = 0.f;       
+  }else if(bc->id==6){         
+    bc->wP  = 0.f;       
+  }                        
 }
 
-#define insPressureDirichletConditions3D(bc) \
-{                                   \
-  dfloat a = M_PI/4.f;                  \
-  dfloat d = M_PI/2.f;                  \
-  if(bc.id==3){                 \
-    *(bc.pP) = -0.5f*a*a*exp(-2.f*p_nu*d*d*bc.time)*(2.f*exp(a*(bc.z+bc.y))*cos(a*bc.z+d*bc.x)*sin(a*bc.x+d*bc.y)+2.f*exp(a*(bc.z+bc.x))*cos(a*bc.x+d*bc.y)*sin(a*bc.y+d*bc.z)+2.f*exp(a*(bc.y+bc.x))*cos(a*bc.y+d*bc.z)*sin(a*bc.z+d*bc.x)+exp(2.f*a*bc.z)+exp(2.f*a*bc.y)+exp(2.f*a*bc.x));\
-  } \
+void insPressureDirichletConditions3D(bcData *bc)
+{                                   
+ dfloat a = M_PI/4.f; 
+    dfloat d = M_PI/2.f; 
+    dfloat time = bc->time; 
+    dfloat x = bc->x; 
+    dfloat y = bc->y; 
+    dfloat z = bc->z;                 
+  if(bc->id==3){                 
+    bc->pP = -0.5f*a*a*exp(-2.f*p_nu*d*d*time)*(2.f*exp(a*(z+y))*cos(a*z+d*x)*sin(a*x+d*y)+2.f*exp(a*(z+x))*cos(a*x+d*y)*sin(a*y+d*z)+2.f*exp(a*(y+x))*cos(a*y+d*z)*sin(a*z+d*x)+exp(2.f*a*z)+exp(2.f*a*y)+exp(2.f*a*x));
+  } 
 }
 
-#define insVelocityNeumannConditions3D(bc) \
-{                                          \
-  dfloat a = M_PI/4.f; \
-  dfloat d = M_PI/2.f; \
-  if(bc.id==3){                        \
-    *(bc.uxP) = -a*(a*exp(a*bc.x)*sin(a*bc.y+d*bc.z)-a*exp(a*bc.z)*sin(a*bc.x+d*bc.y))*exp(-p_nu*d*d*bc.time); \
-    *(bc.uyP) = -a*(a*exp(a*bc.x)*cos(a*bc.y+d*bc.z)-d*exp(a*bc.z)*sin(a*bc.x+d*bc.y))*exp(-p_nu*d*d*bc.time); \
-    *(bc.uzP) = -a*(d*exp(a*bc.x)*cos(a*bc.y+d*bc.z)+a*exp(a*bc.z)*cos(a*bc.x+d*bc.y))*exp(-p_nu*d*d*bc.time); \
-    *(bc.vxP) = -a*(d*exp(a*bc.y)*cos(a*bc.z+d*bc.x)+a*exp(a*bc.x)*cos(a*bc.y+d*bc.z))*exp(-p_nu*d*d*bc.time); \
-    *(bc.vyP) = -a*(a*exp(a*bc.y)*sin(a*bc.z+d*bc.x)-a*exp(a*bc.x)*sin(a*bc.y+d*bc.z))*exp(-p_nu*d*d*bc.time); \
-    *(bc.vzP) = -a*(a*exp(a*bc.y)*cos(a*bc.z+d*bc.x)-d*exp(a*bc.x)*sin(a*bc.y+d*bc.z))*exp(-p_nu*d*d*bc.time); \
-    *(bc.wxP) =  a*(a*exp(a*bc.z)*cos(a*bc.x+d*bc.y)-d*exp(a*bc.y)*sin(a*bc.z+d*bc.x))*exp(-p_nu*d*d*bc.time); \
-    *(bc.wyP) =  a*(d*exp(a*bc.z)*cos(a*bc.x+d*bc.y)+a*exp(a*bc.y)*cos(a*bc.z+d*bc.x))*exp(-p_nu*d*d*bc.time); \
-    *(bc.wzP) =  a*(a*exp(a*bc.z)*sin(a*bc.x+d*bc.y)-a*exp(a*bc.y)*sin(a*bc.z+d*bc.x))*exp(-p_nu*d*d*bc.time); \
-  }                                                                                 \
+void insVelocityNeumannConditions3D(bcData *bc)
+{                                          
+  dfloat a = M_PI/4.f; 
+    dfloat d = M_PI/2.f; 
+    dfloat time = bc->time; 
+    dfloat x = bc->x; 
+    dfloat y = bc->y; 
+    dfloat z = bc->z; 
+  if(bc->id==3){                        
+    bc->uxP = -a*(a*exp(a*x)*sin(a*y+d*z)-a*exp(a*z)*sin(a*x+d*y))*exp(-p_nu*d*d*time); 
+    bc->uyP = -a*(a*exp(a*x)*cos(a*y+d*z)-d*exp(a*z)*sin(a*x+d*y))*exp(-p_nu*d*d*time); 
+    bc->uzP = -a*(d*exp(a*x)*cos(a*y+d*z)+a*exp(a*z)*cos(a*x+d*y))*exp(-p_nu*d*d*time); 
+    bc->vxP = -a*(d*exp(a*y)*cos(a*z+d*x)+a*exp(a*x)*cos(a*y+d*z))*exp(-p_nu*d*d*time); 
+    bc->vyP = -a*(a*exp(a*y)*sin(a*z+d*x)-a*exp(a*x)*sin(a*y+d*z))*exp(-p_nu*d*d*time); 
+    bc->vzP = -a*(a*exp(a*y)*cos(a*z+d*x)-d*exp(a*x)*sin(a*y+d*z))*exp(-p_nu*d*d*time); 
+    bc->wxP =  a*(a*exp(a*z)*cos(a*x+d*y)-d*exp(a*y)*sin(a*z+d*x))*exp(-p_nu*d*d*time); 
+    bc->wyP =  a*(d*exp(a*z)*cos(a*x+d*y)+a*exp(a*y)*cos(a*z+d*x))*exp(-p_nu*d*d*time); 
+    bc->wzP =  a*(a*exp(a*z)*sin(a*x+d*y)-a*exp(a*y)*sin(a*z+d*x))*exp(-p_nu*d*d*time); 
+  }                                                                                 
 }
 
 // I dont think we need this, AK. 
-#define insPressureNeumannConditions3D(bc) \
-{                                          \
+void insPressureNeumannConditions3D(bcData *bc)
+{                                          
 }
 
 

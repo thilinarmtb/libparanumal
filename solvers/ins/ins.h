@@ -136,6 +136,10 @@ typedef struct {
   dfloat *Wrk;
   occa::memory o_Wrk; 
 
+  // Cfl related
+  int cflComputed; 
+  occa::memory o_idH; // i.e. inverse of 1D Gll Spacing for quad and Hex
+
   // Some Iso-surfacing variables
   int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
   dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
@@ -249,6 +253,9 @@ typedef struct {
 
   occa::kernel setScalarKernel; 
 
+  occa::kernel cflKernel; 
+  occa::kernel maxKernel; 
+
   // New TOMBO stuff
   int TOMBO;  
   occa::kernel pressureAxKernel; 
@@ -320,6 +327,8 @@ void insFieldDifference(ins_t *ins, char *fileName1, char *fileName2);
 void insWriteField(ins_t *ins, char *fileName);
 
 void insCurlCurl(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NC); 
+
+dfloat insComputeCfl(ins_t *ins, dfloat time, int tstep); 
 
 // customized hex writer
 extern "C"

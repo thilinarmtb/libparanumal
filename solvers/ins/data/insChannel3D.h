@@ -27,48 +27,48 @@ SOFTWARE.
 //    
 
 // Initial conditions 
-#define insFlowField3D(t,x,y,z, u,v,w,p) \
-  {                                   \
-    *(u) = 1.f - 4.f*y*y/1.f ;     \
-    *(v) = 0.f;                    \
-    *(w) = 0.f;                    \
-    *(p) = 0.f;                    \
+void insFlowField3D(bcData *bc) 
+  {                                  
+    bc->uP = 1.f - 4.f*y*y/1.f ;    
+    bc->vP = 0.f;                   
+    bc->wP = 0.f;                    
+    bc->pP = 0.f;                   
   }   
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define insVelocityDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
-{                                   \
-  if(bc==2){                 \
-    *(u) = 1.f - 4.f*y*y/1.f ;     \
-    *(vB) = 0.f;                    \
-    *(wB) = 0.f;                    \
-  } \
+void insVelocityDirichletConditions3D(bcData *bc) 
+{                                   
+  if(bc0>id==2){                 
+    bc->uP = 1.f - 4.f*y*y/1.f ;    
+    bc->vP = 0.f;                    
+    bc->wP = 0.f;                    
+  } 
 }
 
-#define insVelocityNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
-{                                          \
-  if(bc==3){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(uzB) = 0.f;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-    *(vzB) = 0.f;                          \
-    *(wxB) = 0.f;                          \
-    *(wyB) = 0.f;                          \
-    *(wzB) = 0.f;                          \
-  }                                        \
+void insVelocityNeumannConditions3D(bcData *bc) 
+{                                          
+  if(bc->id==3){                        
+    bc->uxP = 0.f;                          
+    bc->uyP = 0.f;                          
+    bc->uzP = 0.f;                          
+    bc->vxP = 0.f;                          
+    bc->vyP = 0.f;                          
+    bc->vzP = 0.f;                          
+    bc->wxP = 0.f;                          
+    bc->wyP = 0.f;                          
+    bc->wzP = 0.f;                          
+  }                                        
 }
 
 
-#define insPressureDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, pM, pB) \
-{                                   \
-  if(bc==3){                 \
-    *(pB) = 0.f;                 \
-  } \
+void insPressureDirichletConditions3D(bcData *bc) 
+{                                   
+  if(bc->id==3){                 
+    bc->pB = 0.f;                 
+  } 
 }
 
-#define insPressureNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, pxM, pyM, pzM, pxB, pyB, pzB) \
-{                                          \
+void insPressureNeumannConditions3D(bcData *bc)
+{                                          
 }

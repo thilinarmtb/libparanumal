@@ -501,8 +501,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // Maximum Velocity
   umax = sqrt(umax);
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
-  //printf("magVel = %lf\n", magVel);
-  
   options.getArgs("CFL", ins->cfl);
   dfloat dt     = ins->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
   
@@ -1296,13 +1294,22 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(fileName, DHOLMES "/okl/addScalar.okl");
       sprintf(kernelName, "setScalar");
       ins->setScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      // CFL related Kernels
+      sprintf(fileName, DINS "/okl/insCfl.okl");
+      sprintf(kernelName, "insCfl%s", suffix);
+      ins->cflKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      sprintf(kernelName, "insMax", suffix);
+      ins->maxKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
     }
     MPI_Barrier(mesh->comm);
   }
 
-
-
- 
+  // Initialize Cfl Stuff
+  ins->cflComputed = 0; 
+   
   if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION"))
     insFilterSetup(ins); 
 
