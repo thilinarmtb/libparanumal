@@ -1,0 +1,22 @@
+// We are solving for Pressure Difference
+@kernel void insSetBCVectorValue(const dlong Nelements,
+			  	 const dfloat c,
+			 	 const dlong bcid,
+				 const dlong offset,
+				 @restrict dfloat *  s, 
+				 @restrict const  dlong  *  vmapM,
+				 @restrict const  int    *  EToB){
+  
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+      const int f = n/p_Nfp; 
+      const int idM  = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int id   = EToB[f + p_Nfaces*e]; 
+      if(id==bcid) {
+        s[idM + 0*offset] = c; 
+        s[idM + 1*offset] = c; 
+        s[idM + 2*offset] = c; 
+      }    
+    }
+  }
+}
