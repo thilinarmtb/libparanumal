@@ -76,11 +76,11 @@
           const dfloat vn = U[id+1*offset];
           const dfloat wn = U[id+2*offset];
 
-          dfloat ur  = (un*drdx + vn*drdy +wn*drdz)*s_idH[i]*dt; 
-          dfloat us  = (un*dsdx + vn*dsdy +wn*dsdz)*s_idH[j]*dt; 
-          dfloat ut  = (un*dtdx + vn*dtdy +wn*dtdz)*s_idH[k]*dt; 
+          dfloat ur  = fabs((un*drdx + vn*drdy +wn*drdz)*s_idH[i]*dt); 
+          dfloat us  = fabs((un*dsdx + vn*dsdy +wn*dsdz)*s_idH[j]*dt); 
+          dfloat ut  = fabs((un*dtdx + vn*dtdy +wn*dtdz)*s_idH[k]*dt); 
 
-          rhsU[id+0*offset] = fabs(ur + us + ut);
+          rhsU[id+0*offset] = ur + us + ut;
         }
       }
     }
@@ -123,10 +123,10 @@
       	const dfloat un = U[id+0*offset];
       	const dfloat vn = U[id+1*offset];
 
-      	dfloat ur  = (un*drdx + vn*drdy)*s_idH[i]*dt; 
-      	dfloat us  = (un*dsdx + vn*dsdy)*s_idH[j]*dt; 
+      	dfloat ur  = fabs((un*drdx + vn*drdy)*s_idH[i]*dt); 
+      	dfloat us  = fabs((un*dsdx + vn*dsdy)*s_idH[j]*dt); 
 
-      	rhsU[id+0*offset] = fabs(ur + us);
+      	rhsU[id+0*offset] = ur + us;
       }
     }
   }  
