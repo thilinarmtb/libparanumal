@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include "mesh2D.h"
 #include "mesh3D.h"
 
 mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
@@ -63,7 +64,6 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
 #endif
   
   // load reference (r,s) element nodes
-  void meshLoadReferenceNodesQuad2D(mesh_t *mesh, int N);
   meshLoadReferenceNodesQuad2D(mesh, N);
 
   // compute physical (x,y,z) locations of the element nodes

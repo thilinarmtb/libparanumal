@@ -46,6 +46,7 @@ SOFTWARE.
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
 
+extern "C" { // Start C linkage
 typedef struct {
 
   MPI_Comm comm;
@@ -602,7 +603,11 @@ dfloat matrixConditionNumber(int N, dfloat *A);
 
 void occaDeviceConfig(mesh_t *mesh, setupAide &newOptions);
 
+#if 0
+void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem);
+#else
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
-
+#endif
+} // end C Linkage
 #endif
 

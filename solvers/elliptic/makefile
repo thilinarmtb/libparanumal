@@ -162,11 +162,39 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
+ifeq ($(OS),Windows_NT)
+    detected_OS := Windows
+else
+    detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
+SONAME=
+WHOLE=
+NOWHOLE=
+
+ifeq ($(detected_OS),Linux)
+	SONAME=-soname
+	WHOLE=--whole-archive
+	NOWHOLE=--no-whole-archive
+	SHARED=-shared
+	EXT=so
+endif
+ifeq ($(detected_OS),Darwin)
+	SONAME=-install_name
+	WHOLE=-all_load
+	NOWHOLE=-noall_load
+	SHARED=-dynamiclib -undefined dynamic_lookup
+	EXT=dylib
+endif
+
 ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparAlmond
 	$(LD)  $(LDFLAGS)  -o ellipticMain ./src/ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
 	ar -cr libelliptic.a $(AOBJS)
+
+sharedlib: $(AOBJS)
+	$(LD) $(SHARED) -o libelliptic.$(EXT) $(AOBJS) -Wl,$(SONAME),$(NEKRS_INSTALL_DIR)/elliptic/libelliptic.$(EXT)
 
 libogs:
 	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/elliptic

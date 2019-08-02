@@ -151,7 +151,6 @@ void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
 
 
   if(mesh->NfaceVertices==2){ // Quad 3D
-    void meshLoadReferenceNodesQuad2D(mesh_t *mesh, int N);
     meshLoadReferenceNodesQuad2D(mesh, mesh->N);
     meshPhysicalNodesQuad3D(mesh);
     meshGeometricFactorsQuad3D(mesh);

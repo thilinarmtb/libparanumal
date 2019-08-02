@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include "mesh.h"
 
+extern "C" { // Begin C Linkage
 // will eventually rename mesh2D to mesh_t in src
 #define mesh2D mesh_t
 
@@ -183,5 +184,6 @@ dfloat meshFactorial(int n);
 mesh2D *meshSetupBoxQuad2D(int N, setupAide &options);
 void meshConnectPeriodicFaceNodes2D(mesh2D *mesh, dfloat xper, dfloat yper);
 
+} // end C Linkage
 #endif
 

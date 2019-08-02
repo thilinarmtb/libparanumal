@@ -33,6 +33,7 @@ SOFTWARE.
 #include "mesh3D.h"
 #include "elliptic.h"
 
+extern "C" { // Begin C Linkage
 typedef struct {
 
   int dim, elementType;
@@ -351,3 +352,4 @@ void simpleRayTracer(int     plotNelements,
 		     const int fileIndex);
 
 void insNekSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud);
+} // end C Linkage
