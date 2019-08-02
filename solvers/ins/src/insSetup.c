@@ -1062,10 +1062,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->filterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
-      sprintf(fileName, DINS "/okl/insSetBCValue.okl");
-      sprintf(kernelName, "insSetBCVectorValue");
-      ins->setBCVectorValueKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
       if(options.compareArgs("TIME INTEGRATOR","TOMBO")){
         
         // Create lap(U) kernel for Ins for (lap(u) - lambda*u) operation

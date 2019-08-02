@@ -166,8 +166,6 @@ typedef struct {
   occa::memory o_isoLevels, o_isoq, o_isoNtris; 
   occa::memory o_plotInterp, o_plotEToV; 
 
-  occa::kernel setVectorValueKernel;
-
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
