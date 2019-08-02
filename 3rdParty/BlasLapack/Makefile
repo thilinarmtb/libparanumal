@@ -20,4 +20,4 @@ lib: $(OBJS)
 	$(AR) $(ARFLAGS) libBlasLapack.a *.o
 
 clean:
-	rm -f libBlasLapack *.o
+	rm -f *.o *.a

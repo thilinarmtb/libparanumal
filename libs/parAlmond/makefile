@@ -61,6 +61,31 @@ OBJS = \
 ./src/agmgSetup/transpose.o \
 $(HYPREDIR)/hypre.o
 
+ifeq ($(OS),Windows_NT)
+    detected_OS := Windows
+else
+    detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
+SONAME=
+WHOLE=
+NOWHOLE=
+
+ifeq ($(detected_OS),Linux)
+	SONAME=-soname
+	WHOLE=--whole-archive
+	NOWHOLE=--no-whole-archive
+	SHARED=-shared
+	EXT=so
+endif
+ifeq ($(detected_OS),Darwin)
+	SONAME=-install_name
+	WHOLE=-all_load
+	NOWHOLE=-noall_load
+	SHARED=-dynamiclib -undefined dynamic_lookup
+	EXT=dylib
+endif
+
 # rule for .c files
 .c.o: $(DEPS) 
 	$(CC) $(CFLAGS) -I$(HYPREDIR) -I$(HYPREDIR)/include -o $*.o -c $*.c $(paths)
@@ -79,8 +104,9 @@ hypre:
 lib: hypre
 	@$(MAKE) --no-print-directory libParAlmond
 
-libParAlmond:  $(OBJS)
-	ar -cr libparAlmond.a $(OBJS) $(HYPREDIR)/obj/*.o 
+libParAlmond: hypre  $(OBJS)
+	$(CXX) $(SHARED) -o libparAlmond.$(EXT) $(OBJS) -L$(HYPREDIR)/lib -lHYPRE \
+	    -Wl,$(SONAME),$(NEKRS_INSTALL_DIR)/parAlmond/libparAlmond.$(EXT)
 
 clean:
 	rm -f libparAlmond.a

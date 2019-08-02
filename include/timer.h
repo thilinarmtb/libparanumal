@@ -132,8 +132,10 @@ namespace occa {
   void printTimer();
 }
 
+extern "C" { // Start C Linkage
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);
+} // End C Linkage
 
 
 #endif

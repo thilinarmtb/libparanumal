@@ -30,6 +30,7 @@ SOFTWARE.
 // generic mesh structure 
 #include "mesh.h"
 
+extern "C" { // Begin C Linkage
 #define mesh3D mesh_t
 
 // mesh readers
@@ -221,5 +222,6 @@ void interpolateHex3D(dfloat *Inter, dfloat *x, int N, dfloat *Ix, int M);
 mesh3D *meshSetupBoxHex3D(int N, setupAide &options);
 void meshConnectPeriodicFaceNodes3D(mesh3D *mesh, dfloat xper, dfloat yper, dfloat zper);
 
+} // end C Linkage
 #endif
 

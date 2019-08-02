@@ -27,6 +27,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 #include "mesh.h"
+#include "mesh3D.h"
 
 void meshPhysicalNodesQuad3D(mesh_t *mesh){
   

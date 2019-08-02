@@ -183,3 +183,9 @@ void hypre_free(struct hypre_crs_data *data)
   HYPRE_IJVectorDestroy(data->b);
   free(data);
 }
+
+// Just to fix a hypre linking error
+void hypre_blas_xerbla() {
+}
+void hypre_blas_lsame() {
+}

@@ -72,9 +72,37 @@ COBJS = \
 ./src/ogsHostScatterMany.o \
 ./src/ogsHostSetup.o
 
+ifeq ($(OS),Windows_NT)
+    detected_OS := Windows
+else
+    detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
+SONAME=
+WHOLE=
+NOWHOLE=
+
+ifeq ($(detected_OS),Linux)
+	SONAME=-soname
+	WHOLE=--whole-archive
+	NOWHOLE=--no-whole-archive
+	SHARED=-shared
+	EXT=so
+endif
+ifeq ($(detected_OS),Darwin)
+	SONAME=-install_name
+	WHOLE=-all_load
+	NOWHOLE=-noall_load
+	SHARED=-dynamiclib -undefined dynamic_lookup
+	EXT=dylib
+endif
 
 lib:$(OBJS) gslibInterface
 	ar -cr libogs.a $(OBJS) $(COBJS)
+
+sharedlib: $(OBJS) gslibInterface
+	$(CXX) $(SHARED) -o libogs.$(EXT) $(OBJS) $(COBJS) -Wl,$(WHOLE) -L$(GSDIR)/lib -lgs \
+	    -Wl,$(NOWHOLE) -Wl,$(SONAME),$(NEKRS_INSTALL_DIR)/gatherScatter/libogs.$(EXT)
 
 gslibInterface:
 	cd ../../3rdParty/gslib; CC=$(CC) make -j install; cd ../../libs/gatherScatter
@@ -93,9 +121,9 @@ all: lib
 
 # what to do if user types "make clean"
 clean:
-	rm src/*.o libogs.a
+	rm src/*.o libogs.a libogs.$(EXT)
 
 realclean:
 	cd ../../3rdParty/gslib; make clean; cd ../../libs/gatherScatter
-	rm src/*.o libogs.a
+	rm src/*.o libogs.a libogs.$(EXT)
 

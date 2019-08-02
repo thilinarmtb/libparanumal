@@ -40,6 +40,7 @@ SOFTWARE.
 // block size for reduction (hard coded)
 #define blockSize 256
 
+extern "C" { // C Linkage
 typedef struct {
 
   int dim;
@@ -351,6 +352,7 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
 void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q);
 
 void ellipticThinOasSetup(elliptic_t *elliptic, dfloat lambda);
+} // end C Linkage
 
 #endif
 

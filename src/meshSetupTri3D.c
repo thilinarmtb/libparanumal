@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include "mesh2D.h"
 #include "mesh3D.h"
 
 mesh3D *meshSetupTri3D(char *filename, int N, double sphereRadius){
@@ -47,7 +48,6 @@ mesh3D *meshSetupTri3D(char *filename, int N, double sphereRadius){
   meshConnectBoundary(mesh);
 
   // load reference (r,s) element nodes
-  void meshLoadReferenceNodesTri2D(mesh_t *mesh, int N);
   meshLoadReferenceNodesTri2D(mesh, N);
 
   // compute physical (x,y) locations of the element nodes

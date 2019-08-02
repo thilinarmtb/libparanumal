@@ -27,6 +27,7 @@ SOFTWARE.
 #include <unistd.h>
 #include <stdio.h>
 #include "occa.hpp"
+#include "mesh.h"
 
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem){
 
