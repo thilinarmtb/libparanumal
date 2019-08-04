@@ -507,12 +507,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->dtAdaptStep = 0; 
   options.getArgs("TSTEPS FOR TIME STEP ADAPT", ins->dtAdaptStep);
 
-  // over ride if DT is in the file
-  if(options.getArgs("DT", dt)){
-    if(mesh->rank==0){
-      printf("NOTE: USING DT %lg FROM OPTIONS FILE\n", dt);
-    }
-  }
+  options.getArgs("DT", dt);
   
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dti), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
@@ -540,15 +535,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ins->dtMIN = 1E-2*ins->dt; //minumum allowed timestep
 
-  if (mesh->rank==0) {
-    printf("hmin = %g\n", hmin);
-    printf("hmax = %g\n", hmax);
-    printf("cfl = %g\n",  ins->cfl);
-    printf("dt = %g\n",   dt);
-  }
-
-  if (ins->Nsubsteps && mesh->rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
-  
   // Hold some inverses for kernels
   ins->inu = 1.0/ins->nu; 
   ins->idt = 1.0/ins->dt;
@@ -556,7 +542,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->lambda = ins->g0 / (ins->dt * ins->nu);
 
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", ins->outputStep);
-  if (mesh->rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->outputStep, ins->dt);
 
   ins->outputForceStep = 0;
   options.getArgs("TSTEPS FOR FORCE OUTPUT", ins->outputForceStep);
@@ -860,16 +845,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
   } 
 
-
-
-
-
-  // if (mesh->rank==0) {
+  if (mesh->rank==0) {
   //   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
   //   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
 
-  //   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
-  // }
+    printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
+  }
   
   if (options.compareArgs("TIME INTEGRATOR", "ARK")) {
     ins->o_rkC  = mesh->device.malloc(         ins->Nrk*sizeof(dfloat),ins->rkC );
@@ -1322,10 +1303,3 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   return ins;
 }
-
-
-
-
-
-
-
