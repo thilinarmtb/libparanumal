@@ -96,9 +96,9 @@ void coarseSolver::setup(parCSR *A) {
     settings[0]  = 1;    /* custom settings             */
     settings[1]  = 10;   /* HMIS                        */
     settings[2]  = 6;    /* Extended+i                  */
-    settings[3]  = 1;    /* number of cycles            */
+    settings[3]  = 2;    /* number of cycles            */
     settings[4]  = 3;    /* SSOR smoother for crs level */
-    settings[5]  = 2;    /* number of coarse sweeps     */
+    settings[5]  = 3;    /* number of coarse sweeps     */
     settings[6]  = 0.25; /* strong threshold            */
     settings[7]  = 0.1;
     settings[8]  = 0.0;
