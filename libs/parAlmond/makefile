@@ -11,7 +11,13 @@ include ${OCCA_DIR}/scripts/Makefile
 HDRDIR = ../../
 OGSDIR  = ../gatherScatter
 GSDIR  = ../../3rdParty/gslib
+
+ENABLE_HYPRE ?= 0
 HYPREDIR = ./hypre
+ifeq (1,$(ENABLE_HYPRE))
+  HYPRELIB = -L$(HYPREDIR)/lib -lHYPRE
+  HYPREFLAGS = -DHYPRE -I$(HYPREDIR) -I$(HYPREDIR)/include
+endif
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -26,7 +32,7 @@ CFLAGS = -I. -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(OGS
 LDFLAGS	= $(compilerFlags) $(flags) 
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(HYPREDIR)/lib -lHYPRE \
+LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs $(HYPRELIB) \
 	$(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 INCLUDES = $(includes)
@@ -88,27 +94,30 @@ endif
 
 # rule for .c files
 .c.o: $(DEPS) 
-	$(CC) $(CFLAGS) -I$(HYPREDIR) -I$(HYPREDIR)/include -o $*.o -c $*.c $(paths)
+	$(CC) $(CFLAGS) $(HYPREFLAGS) -o $*.o -c $*.c $(paths)
 
 .cpp.o: $(DEPS) 
-	$(CXX) $(CFLAGS) -I$(HYPREDIR) -I$(HYPREDIR)/include -o $*.o -c $*.cpp $(paths)
+	$(CXX) $(CFLAGS) $(HYPREFLAGS) -o $*.o -c $*.cpp $(paths)
 
 .PHONY: all clean hypre
 
 all: lib
 
 hypre:
+ifeq (1,$(ENABLE_HYPRE))
 	cd hypre && env CC="$(CC)" NEKRS_SRC_THIRD_PARTY_DIR="${NEKRS_SRC_THIRD_PARTY_DIR}" \
 	  ./install
+endif
 
 lib: hypre
 	@$(MAKE) --no-print-directory libParAlmond
 
 libParAlmond: hypre  $(OBJS)
-	$(CXX) $(SHARED) -o libparAlmond.$(EXT) $(OBJS) -L$(HYPREDIR)/lib -lHYPRE \
+	$(CXX) $(SHARED) -o libparAlmond.$(EXT) $(OBJS) $(HYPRELIB) \
 	    -Wl,$(SONAME),$(NEKRS_INSTALL_DIR)/parAlmond/libparAlmond.$(EXT)
 
 clean:
 	rm -f libparAlmond.a
+	rm -f ./hypre/*.o
 	rm -f ./src/*.o
 	rm -f ./src/agmgSetup/*.o

@@ -1,10 +1,18 @@
 #ifndef CRS_HYPRE_H
 #define CRS_HYPRE_H
 
+#ifdef HYPRE
 #include "_hypre_utilities.h"
 #include "HYPRE_parcsr_ls.h"
 #include "_hypre_parcsr_ls.h"
 #include "HYPRE.h"
+#else
+#define HYPRE_Solver void*
+#define HYPRE_IJMatrix void*
+#define HYPRE_IJVector void*
+#define HYPRE_BigInt long long
+#define HYPRE_Real double
+#endif
 
 #define HYPRE_NPARAM 10
 

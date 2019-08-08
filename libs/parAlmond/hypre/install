@@ -1,22 +1,23 @@
 #!/bin/bash
 set -xe
 
-VER=2.16.0
+VER=2.17.0
 
 if [ "$1" == "clean" ]; then
-  rm -rf hypre lib obj include *.tar.gz *.o 2>/dev/null
+  rm -rf hypre lib obj include *.tgz *.o 2>/dev/null
   exit 0
 fi
 
 if [ ! -f ./lib/libHYPRE.a ]; then
   rm -rf hypre 2>/dev/null
 
-  HYPRE_TAR=${NEKRS_SRC_THIRD_PARTY_DIR}/hypre.tgz
-  if [ -f ${HYPRE_TAR} ]; then
-    tar -xvf ${HYPRE_TAR}
-  else
-    git clone --depth 1 https://github.com/hypre-space/hypre.git
+  HYPRE_TAR=hypre.tgz
+  if [ ! -f ${HYPRE_TAR} ]; then
+    wget --no-check-certificate -O ${HYPRE_TAR} https://github.com/hypre-space/hypre/archive/v${VER}.tar.gz 
   fi
+
+  mkdir -p hypre
+  tar -zxf ${HYPRE_TAR} -C ./hypre --strip-components=1
 
   cd hypre
   mkdir -p build

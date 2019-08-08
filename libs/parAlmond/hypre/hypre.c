@@ -8,6 +8,8 @@
 
 double hypre_param[HYPRE_NPARAM];
 
+#ifdef HYPRE
+
 struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
                  int nz, const long long int *Ai, const long long int *Aj, const double *Av,
                  const int null_space, const MPI_Comm ce, int Nthreads,
@@ -189,3 +191,24 @@ void hypre_blas_xerbla() {
 }
 void hypre_blas_lsame() {
 }
+
+#else
+struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
+                 int nz, const long long int *Ai, const long long int *Aj, const double *Av,
+                 const int null_space, const MPI_Comm ce, int Nthreads,
+                 const double *param)
+{
+  printf("ERROR: Recompile with HYPRE support!\n");
+  exit(EXIT_FAILURE);
+}
+void hypre_solve(double *x, struct hypre_crs_data *data, double *b)
+{
+  printf("ERROR: Recompile with HYPRE support!\n");
+  exit(EXIT_FAILURE);
+}
+void hypre_free(struct hypre_crs_data *data)
+{
+  printf("ERROR: Recompile with HYPRE support!\n");
+  exit(EXIT_FAILURE);
+}
+#endif
