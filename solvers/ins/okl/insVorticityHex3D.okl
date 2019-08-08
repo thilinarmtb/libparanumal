@@ -443,25 +443,25 @@ if (p1 < TOL){
     if(bc.id>0) {               \
       if(bc.id==1){             \
         bc.uP = 0.f;  bc.vP = 0.f; bc.wP = 0.f;          \
+      }else if(bc.id==2){                \
+        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
+        insVelocityDirichletConditions3D(&bc); \
       }else if(bc.id==4){             \
         bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
-      } else if(bc.id==5){              \
+      }else if(bc.id==5){              \
         bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
-      } else if(bc.id==6){              \
+      }else if(bc.id==6){              \
         bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
-      }else{                \
-        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
-      insVelocityDirichletConditions3D(&bc); \
       }                 \
-  bc.uP = 2.f*bc.uP-bc.uM;             \
-  bc.vP = 2.f*bc.vP-bc.vM;             \
-  bc.wP = 2.f*bc.wP-bc.wM;             \
+      bc.uP = 2.f*bc.uP-bc.uM;             \
+      bc.vP = 2.f*bc.vP-bc.vM;             \
+      bc.wP = 2.f*bc.wP-bc.wM;             \
     }                 \
                                                                         \
-  const dfloat sc = invWJ * sJ;                                         \
-  s_fluxVx[m][j][i] = sc*(.5f*( bc.ny*(bc.wP + bc.wM) - bc.nz*(bc.vP + bc.vM) ));         \
-  s_fluxVy[m][j][i] = sc*(.5f*( bc.nz*(bc.uP + bc.uM) - bc.nx*(bc.wP + bc.wM) ));         \
-  s_fluxVz[m][j][i] = sc*(.5f*( bc.nx*(bc.vP + bc.vM) - bc.ny*(bc.uP + bc.uM) ));         \
+    const dfloat sc = invWJ * sJ;                                         \
+    s_fluxVx[m][j][i] = sc*(.5f*( bc.ny*(bc.wP + bc.wM) - bc.nz*(bc.vP + bc.vM) ));         \
+    s_fluxVy[m][j][i] = sc*(.5f*( bc.nz*(bc.uP + bc.uM) - bc.nx*(bc.wP + bc.wM) ));         \
+    s_fluxVz[m][j][i] = sc*(.5f*( bc.nx*(bc.vP + bc.vM) - bc.ny*(bc.uP + bc.uM) ));         \
 }
 
 @kernel void insVorticitySurfaceHex3D(const dlong Nelements,

@@ -49,7 +49,7 @@
     if(bc.id>0) {   							\
       if(bc.id==1 || bc.id == 4 || bc.id == 5 || bc.id == 6){				\
 	      bc.uP = 0.f; bc.vP = 0.f; bc.wP = 0.f;					    \
-      }else{								\
+      }else if (bc.id==2){								\
 	     insVelocityDirichletConditions3D(&bc); \
       }									\
       insVelocityNeumannConditions3D(&bc); \
@@ -458,8 +458,8 @@
     if(bc.id>0) {                 \
       if(bc.id==1 || bc.id == 4 || bc.id == 5 || bc.id == 6){       \
         bc.uP = 0.f; bc.vP = 0.f; bc.wP = 0.f;             \
-      }else{                \
-       insVelocityDirichletConditions3D(&bc); \
+      }else if (bc.id==2){								\
+        insVelocityDirichletConditions3D(&bc); \
       }                 \
       insVelocityNeumannConditions3D(&bc); \
     }                 \
@@ -899,14 +899,14 @@
 	  
           if(bc.id==1){
 	    bc.uP = 0.f; bc.vP = 0.f; bc.wP = 0.f;
+	  }else if(bc.id==2){              
+	    insVelocityDirichletConditions3D(&bc);
 	  }else if(bc.id==4){
 	    bc.uP = 0.f; // vP = vM ; wP = wM;           
 	  }else if(bc.id==5){
 	    bc.vP = 0.f; // uP = vM ; wP = wM;           
 	  }else if(bc.id==6){
 	    bc.wP = 0.f; // vP = vM ; uP = uM;           
-	  }else{              
-	    insVelocityDirichletConditions3D(&bc);
 	  }
 	  UH[bc.idM] = bc.uP;
 	  VH[bc.idM] = bc.vP;

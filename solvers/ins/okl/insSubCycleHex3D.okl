@@ -575,15 +575,15 @@
     if(bc.id>0) {               \
       if(bc.id==1){             \
         bc.uP = 0.f;  bc.vP = 0.f; bc.wP = 0.f;          \
+      }else if(bc.id==2){                \
+        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
+        insVelocityDirichletConditions3D(&bc); \
       }else if(bc.id==4){             \
         bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
-      } else if(bc.id==5){              \
+      }else if(bc.id==5){              \
         bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
-      } else if(bc.id==6){              \
+      }else if(bc.id==6){              \
         bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
-      }else{                \
-        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
-      insVelocityDirichletConditions3D(&bc); \
       }                 \
       bc.uP *= bScale;							\
       bc.vP *= bScale;							\
@@ -1747,21 +1747,21 @@
     if(bc.id>0) {               \
       if(bc.id==1){             \
         bc.uP = 0.f;  bc.vP = 0.f; bc.wP = 0.f;          \
+      }else if(bc.id==2){                \
+        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
+        insVelocityDirichletConditions3D(&bc); \
       }else if(bc.id==4){             \
         bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
-      } else if(bc.id==5){              \
+      }else if(bc.id==5){              \
         bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
-      } else if(bc.id==6){              \
+      }else if(bc.id==6){              \
         bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
-      }else{                \
-        bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
-      insVelocityDirichletConditions3D(&bc); \
       }                 \
-	  bc.uP *= bScale;						\
-	  bc.vP *= bScale;						\
-	  bc.wP *= bScale;						\
-	}								\
-	const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM + bc.nz*bc.wM);     \
+      bc.uP *= bScale;						\
+      bc.vP *= bScale;						\
+      bc.wP *= bScale;						\
+    }								\
+    const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM + bc.nz*bc.wM);     \
     const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP + bc.nz*bc.wP);      \
     const dfloat unMax = (unM > unP) ? unM : unP;     \
                                                                         \
