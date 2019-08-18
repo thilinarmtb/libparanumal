@@ -100,10 +100,10 @@ void coarseSolver::setup(parCSR *A) {
     settings[4]  = 3;    /* SSOR smoother for crs level */
     settings[5]  = 3;    /* number of coarse sweeps     */
     settings[6]  = 0.25; /* strong threshold            */
-    settings[7]  = 0.1;
+    settings[7]  = 0.0;  /* non galerkin tol            */
     settings[8]  = 0.0;
-    settings[9]  = 0.01;
-    settings[10] = 0.05;
+    settings[9]  = 0.0;
+    settings[10] = 0.0;
 
     options.getArgs("BOOMERAMG COARSEN TYPE", settings[1]);
     options.getArgs("BOOMERAMG ITERATIONS", settings[3]);
