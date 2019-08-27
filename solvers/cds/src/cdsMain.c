@@ -71,15 +71,7 @@ int main(int argc, char **argv){
 
   cds_t *cds = cdsSetup(mesh,options);
 
-  //  insPlotWallsVTUHex3D(ins, "walls");
-  
-  // if(ins->readRestartFile){
-  //  printf("Reading restart file..."); 
-  //  insRestartRead(ins, ins->options); 
-  //   printf("done\n");   
-  // }  
-  
-  if (cds->options.compareArgs("TIME INTEGRATOR", "ARK")){
+   if (cds->options.compareArgs("TIME INTEGRATOR", "ARK")){
    printf("ARK is not implemented yet\n");
     exit(EXIT_FAILURE);
   }else if (cds->options.compareArgs("TIME INTEGRATOR", "EXTBDF")){

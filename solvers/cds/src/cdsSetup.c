@@ -373,14 +373,21 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   //make option objects for elliptc solvers
   cds->options = options;
   cds->options.setArgs("KRYLOV SOLVER",        options.getArgs("KRYLOV SOLVER"));
+  cds->options.setArgs("SOLVER TOLERANCE",     options.getArgs("SOLVER TOLERANCE"));
   cds->options.setArgs("DISCRETIZATION",       options.getArgs("DISCRETIZATION"));
   cds->options.setArgs("BASIS",                options.getArgs("BASIS"));
   cds->options.setArgs("PRECONDITIONER",       options.getArgs("PRECONDITIONER"));
   cds->options.setArgs("MULTIGRID COARSENING", options.getArgs("MULTIGRID COARSENING"));
   cds->options.setArgs("MULTIGRID SMOOTHER",   options.getArgs("MULTIGRID SMOOTHER"));
+  cds->options.setArgs("MULTIGRID CHEBYSHEV DEGREE",  options.getArgs("MULTIGRID CHEBYSHEV DEGREE"));
   cds->options.setArgs("PARALMOND CYCLE",      options.getArgs("PARALMOND CYCLE"));
   cds->options.setArgs("PARALMOND SMOOTHER",   options.getArgs("PARALMOND SMOOTHER"));
   cds->options.setArgs("PARALMOND PARTITION",  options.getArgs("PARALMOND PARTITION"));
+  cds->options.setArgs("PARALMOND CHEBYSHEV DEGREE",  options.getArgs("PARALMOND CHEBYSHEV DEGREE"));
+  cds->options.setArgs("PARALMOND AGGREGATION STRATEGY", options.getArgs("PARALMOND AGGREGATION STRATEGY"));
+  
+  cds->options.setArgs("DEBUG ENABLE OGS", "1");
+  cds->options.setArgs("DEBUG ENABLE REDUCTIONS", "1");
 
   if (mesh->rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
@@ -391,12 +398,12 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   int sBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
  
   //Solver tolerances 
-  cds->TOL = 1E-10;
+  // cds->TOL = 1E-10;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
 
-  cds->solver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  cds->solver = new elliptic_t();
   cds->solver->mesh = mesh;
   cds->solver->options = cds->options;
   cds->solver->dim = cds->dim;

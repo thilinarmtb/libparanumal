@@ -4,7 +4,8 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS =
+# define LIBP_OPT_FLAGS
+include ../../make.inp
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -23,15 +24,15 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(INSDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DCDS='"${CURDIR}"'  -D DINS='"${INSDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(INSDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DCDS='"${CURDIR}"'  -D DINS='"${INSDIR}"' $(LIBP_OPT_FLAGS)
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 
 # libraries to be linked in
 LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(INS) -lins -L$(ALMONDDIR) -lparAlmond  \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
-		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
+		   -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
 
 INCLUDES = cds.h
@@ -69,6 +70,12 @@ AOBJS    = \
 
 # library objects
 LOBJS = \
+../../src/meshConnectPeriodicFaceNodes3D.o \
+../../src/meshConnectPeriodicFaceNodes2D.o \
+../../src/meshSetupBoxHex3D.o \
+../../src/meshSetupBoxQuad2D.o \
+../../src/meshRecursiveSpectralBisectionPartition.o \
+../../src/meshApplyElementMatrix.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
