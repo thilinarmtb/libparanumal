@@ -10,7 +10,6 @@ FALSE
 [MESH FILE]
 ../../meshes/cdsGaussHillQuad2D.msh
 
-
 [MESH DIMENSION]
 2
 
@@ -36,7 +35,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 [SUBCYCLING TIME ORDER]
 3

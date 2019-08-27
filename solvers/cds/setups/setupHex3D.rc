@@ -1,6 +1,9 @@
 [FORMAT]
 1.0
 
+[BOX DOMAIN]
+FALSE
+
 [DATA FILE]
 data/cdsGaussHill3D.h
 #data/cdsUCD3D.h
@@ -33,7 +36,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 [SUBCYCLING TIME ORDER]
 3
@@ -98,8 +101,11 @@ PCG
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#IPDG
-CONTINUOUS
+IPDG
+#CONTINUOUS
+
+[SOLVER TOLERANCE]
+1.e-10
 
 # can be NODAL or BERN
 [BASIS]
@@ -124,22 +130,41 @@ HALFDOFS
 [MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
-###########################################
+[CHEBYSHEV DEGREE]
+2
+
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
 
 ########## ParAlmond Options ##############
 
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [VELOCITY PARALMOND CYCLE]
-KCYCLE
+VCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [VELOCITY PARALMOND SMOOTHER]
 CHEBYSHEV
 
 # can be STRONGNODES, DISTRIBUTED, SATURATE
-[VELOCITY PARALMOND PARTITION]
+[PARALMOND PARTITION]
 STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
+[PARALMOND CHEBYSHEV DEGREE]
+2
+###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
@@ -157,3 +182,14 @@ FALSE
 # set to 0 (zero) to disable gather-scatter
 [DEBUG ENABLE OGS]
 1
+
+# bail out iteration count for PCG
+[MAXIMUM ITERATIONS]
+1000
+
+# force PCG to go to MAXIMUM ITERATIONS
+[FIXED ITERATION COUNT]
+FALSE
+
+[USE PRECOMPILED BINARIES]
+FALSE
