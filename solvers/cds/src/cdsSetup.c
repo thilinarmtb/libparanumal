@@ -191,6 +191,8 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_Nstages"]=  cds->Nstages;
   kernelInfo["defines/" "p_SUBCYCLING"]=  cds->Nsubsteps;
 
+// Struct for BC implementation
+  kernelInfo["includes"] += DCDS "/data/cdsBcData.h";
 
   //add boundary data to kernel info
   string boundaryHeaderFileName; 
@@ -358,11 +360,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   //cds->ialf  = 1.0/(cds->k/cds->rho*cds->cp); 
   cds->idt     = 1.0/cds->dt;
   cds->lambda  = cds->g0 / (cds->dt * cds->alf);
-
   kernelInfo["defines/" "p_alf"]     = cds->alf;
-  // kernelInfo["defines/" "p_irhocp"]  = cds->ialf;
-  // kernelInfo["defines/" "p_nu"]      = cds->nu;
-
   
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", cds->outputStep);
   if (mesh->rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", cds->NtimeSteps,cds->outputStep, cds->dt);

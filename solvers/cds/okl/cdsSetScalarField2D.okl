@@ -36,13 +36,18 @@ SOFTWARE.
   for(dlong n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
 
     if(n<p_Np*Nelements){
-      dfloat xn = x[n];
-      dfloat yn = y[n];
-      
-      dfloat s = 0.0;
-      cdsScalarField2D(t, xn, yn,&s);
+      struct bcData bc;
+      bc.time    = t;
+      bc.idM     = n;
 
-      S[n+0*offset] = s;
+      bc.soffset = offset;   
+      bc.x = x[n];
+      bc.y = y[n];
+      
+      bc.sP = 0.f; 
+      cdsScalarField2D(&bc);
+
+      S[n+0*offset] = bc.sP;
     }
   }
 }

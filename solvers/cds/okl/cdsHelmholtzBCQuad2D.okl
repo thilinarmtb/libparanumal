@@ -27,24 +27,27 @@ SOFTWARE.
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
-                                                                        \
-  dfloat dsdxP=0, dsdyP=0, sP=0;                                        \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    const dlong idM = vmapM[sk];                                        \
-    cdsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &sP);\
-    cdsNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dsdxP, &dsdyP);\
+  struct bcData bc;  \
+    bc.idM = vmapM[sk];   bc.time = time;  \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+                                                                      \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
+  bc.sxP=0, bc.syP=0, bc.sP=0;                                        \
+  bc.id = EToB[face+p_Nfaces*e];                                 \
+  if(bc.id>0) {                                                            \
+    cdsDirichletConditions2D(&bc);\
+    cdsNeumannConditions2D(&bc); \
   }                                                                     \
                                                                         \
-  const dfloat ds = sP;                                                 \
-  s_dsdx[j][i] += WsJ*nx*ds;                                            \
-  s_dsdy[j][i] += WsJ*ny*ds;                                            \
+  const dfloat ds = bc.sP;                                                 \
+  s_dsdx[j][i] += WsJ*bc.nx*ds;                                            \
+  s_dsdy[j][i] += WsJ*bc.ny*ds;                                            \
                                                                         \
-  s_rhss[j][i] -= WsJ*(nx*dsdxP + ny*dsdyP+ tau*ds*hinv);               \
+  s_rhss[j][i] -= WsJ*(bc.nx*bc.sxP + bc.ny*bc.syP+ tau*ds*hinv);               \
   }
 
 @kernel void cdsHelmholtzIpdgBCQuad2D(const dlong Nelements,
@@ -148,21 +151,24 @@ SOFTWARE.
 
 #define surfaceTerms(sk,face,i, j)                                      \
 {                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-                                                                        \
-  dfloat dsdxP=0.f, dsdyP=0.f, sP=0.f;                                  \
-                                                                        \
-  const int bc = mapB[idM];                                             \
-  if(bc>0) {                                                            \
-    cdsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &sP);\
-    cdsNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dsdxP, &dsdyP);\
+  struct bcData bc;  \
+    bc.idM = vmapM[sk];   bc.time = time;  \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+                                                                      \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
+  bc.sxP=0, bc.syP=0, bc.sP=0;                                        \
+  bc.id = EToB[face+p_Nfaces*e];                                 \
+  if(bc.id>0) {                                                            \
+    cdsDirichletConditions2D(&bc);\
+    cdsNeumannConditions2D(&bc); \
   }                                                                     \
                                                                         \
-  s_s  [j][i]  = sP;                                                    \
-  s_nds[j][i] -= WsJ*(nx*dsdxP + ny*dsdyP);                             \
+  s_s  [j][i]  = bc.sP;                                                    \
+  s_nds[j][i] -= WsJ*(bc.nx*bc.sxP + bc.ny*bc.syP);                             \
 }
 
 //RHS contributions for continuous solver
@@ -311,24 +317,32 @@ SOFTWARE.
                                    @restrict const  dlong  *  vmapM,
                                    @restrict const  int    *  mapB,
                                          @restrict dfloat *  S){
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
+ for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int f=0; f<p_Nfaces; f++){
+      @barrier("global");
+      for(int m=0;m<p_Nfp;++m;@inner(0)){
+         struct bcData bc;
+         const int n = m + f*p_Nfp;         
+   const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+   bc.id = mapB[idM];
 
-      if(bc>0) {
-        const dfloat sM = S[idM];
-
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-
-        dfloat sP = 0.f;
-        cdsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, sM,&sP);
-        S[idM] = sP;
+     if(bc.id>0) {
+          bc.idM = idM; 
+          bc.time = time; 
+          bc.x  = x[bc.idM]; 
+          bc.y  = y[bc.idM]; 
+          
+          const dlong sid  = e*p_Nfaces*p_Nfp + n;
+         bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
+         bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
+        bc.sM = S[idM];
+        bc.sP = 0.f;
+        cdsDirichletConditions2D(&bc);;
+        S[idM] = bc.sP;
       }    
     }
   }
+}
 }
 
 

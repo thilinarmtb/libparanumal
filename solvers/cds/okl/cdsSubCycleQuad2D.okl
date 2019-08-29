@@ -115,32 +115,41 @@ void surfaceTerms(dlong e, int es, dlong voffset, dlong soffset, dfloat bScale, 
       const dfloat *S,
       @shared dfloat s_fluxNS[p_NblockS][p_Nq][p_Nq]){
   
-  const dlong  idM = vmapM[sk];                                         
-  const dlong  idP = vmapP[sk];                                         
-  
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
+  struct bcData bc; 
+  bc.time = time; 
   
-  const dfloat  uM = U[idM+0*voffset], vM = U[idM+1*voffset];             
-  const dfloat  uP = U[idP+0*voffset], vP = U[idP+1*voffset];             
-  const dfloat  sM = S[idM+0*soffset];             
-        dfloat  sP = S[idP+0*soffset];
+  bc.idM = vmapM[sk];                                         
+  bc.idP = vmapP[sk];  
+  
+  bc.x = x[bc.idM];                                         
+  bc.y = y[bc.idM];                                         
+  bc.nx = sgeo[sk*p_Nsgeo+p_NXID];                            
+  bc.ny = sgeo[sk*p_Nsgeo+p_NYID];
+  
+  bc.voffset = voffset;                            
+  bc.soffset = soffset;                            
 
-  int bc = EToB[face+p_Nfaces*e];                                       
-  if(bc>0) {                                                            
-     cdsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, sM, &sP);
-     sP *= bScale; 
+  bc.uM = U[bc.idM+0*bc.voffset], bc.vM = U[bc.idM+1*bc.voffset];             
+  bc.uP = U[bc.idP+0*bc.voffset], bc.vP = U[bc.idP+1*bc.voffset];             
+  bc.sM = S[bc.idM+0*bc.soffset];             
+  bc.sP = S[bc.idP+0*bc.soffset];
+  // bc.wrk = (dfloat *) W;
+  
+  bc.id = EToB[face+p_Nfaces*e];                                       
+  if(bc.id>0) {                                                            
+     cdsDirichletConditions2D(&bc);
+     bc.sP *= bScale; 
   }                                                                     
   
-  const dfloat unM   = fabs(nx*uM + ny*vM);                         
-  const dfloat unP   = fabs(nx*uP + ny*vP);                         
+  const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM);                         
+  const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP);                         
   const dfloat unMax = (unM > unP) ? unM : unP;                         
                                                                         
   const dfloat sc = invWJ * sJ;                                         
-  s_fluxNS[es][j][i] += sc*(.5f*(nx*(sP*uP + sM*uM)                     
-                               + ny*(sP*vP + sM*vM)  + unMax*(sM-sP) ));
+  s_fluxNS[es][j][i] += sc*(.5f*(bc.nx*(bc.sP*bc.uP + bc.sM*bc.uM)                     
+                               + bc.ny*(bc.sP*bc.vP + bc.sM*bc.vM)  + unMax*(bc.sM-bc.sP) ));
 }
 
 @kernel void cdsSubCycleSurfaceQuad2D(const dlong Nelements,
@@ -579,31 +588,38 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 	if(e<Nelements){
 #pragma unroll p_Nfaces
 	  for (int face=0;face<p_Nfaces;face++) {
+       struct bcData bc; 
 	    const dlong sk = e*p_cubNq*p_Nfaces + face*p_cubNq + i;
-	    const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];
-	    const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];
 	    const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
+      bc.time = time; 
+      bc.idM = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
+      bc.nx  = cubsgeo[sk*p_Nsgeo+p_NXID];
+      bc.ny  = cubsgeo[sk*p_Nsgeo+p_NYID];
+      bc.x   = intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i];
+      bc.y   = inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i];
+      // bc.wrk = (dfloat *)W; 
+      bc.voffset = voffset;
+      bc.soffset = soffset; 
 
-	    const dfloat uM = r_UMn[face], vM = r_VMn[face];
-	    const dfloat uP = r_UPn[face], vP = r_VPn[face];
-      const dfloat sM = r_SMn[face]; 
-            dfloat sP = r_SPn[face]; 
+	    bc.uM = r_UMn[face];
+      bc.vM = r_VMn[face];
+	    bc.uP = r_UPn[face];
+      bc.vP = r_VPn[face];
+      bc.sM = r_SMn[face]; 
+      bc.sP = r_SPn[face]; 
 
-	    int bc = EToB[face+p_Nfaces*e];
-	    if(bc>0) {
-	      const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
-	      cdsDirichletConditions2D(bc, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-					       inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-					       nx, ny, sM, &sP);
-        sP *= bScale; 
+	    bc.id = EToB[face+p_Nfaces*e];
+	    if(bc.id>0) {
+	      cdsDirichletConditions2D(&bc);
+        bc.sP *= bScale; 
 	    }
 
-	    const dfloat unM   = fabs(nx*uM + ny*vM);
-	    const dfloat unP   = fabs(nx*uP + ny*vP);
+	    const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM);
+	    const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP);
 	    const dfloat unMax = (unM > unP) ? unM : unP;
 
-	    s_fluxNS[es][face][i] = sJ*(.5f*(nx*(sP*uP + sM*uM)
-					                           + ny*(sP*vP + sM*vM)  + unMax*(sM-sP) ));
+	    s_fluxNS[es][face][i] = sJ*(.5f*(bc.nx*(bc.sP*bc.uP + bc.sM*bc.uM)
+					                           + bc.ny*(bc.sP*bc.vP + bc.sM*bc.vM)  + unMax*(bc.sM-bc.sP) ));
 	    
 	  }
 	}

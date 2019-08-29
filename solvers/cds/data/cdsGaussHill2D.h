@@ -26,58 +26,55 @@ SOFTWARE.
 
 
 // Initial conditions 
-#define cdsFlowField2D(t,x,y,u,v) \
-  {				       \
-    *(u) = -y;		       \
-    *(v) =  x;		       \
+void cdsFlowField2D(bcData *bc){				       
+    bc->uP = -bc->y;	
+    bc->vP =  bc->x;	
   }   
-#define cdsScalarField2D(t,x,y,s)	\
-  {					\
-    dfloat mtime = t + M_PI; \
-    dfloat cond  = 0.001; \
-    dfloat xc = 0.00f;			\
-    dfloat yc = 0.50f;     \
-    dfloat xt = xc*cos(mtime)  - yc*sin(mtime);      \
-    dfloat yt = -xc*sin(mtime) + yc*cos(mtime);     \
-    dfloat r2 = (x-xt)*(x-xt) + (y-yt)*(y-yt);      \
-    dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));	\
-    *(s) = sExact;				\
+
+void cdsScalarField2D(bcData *bc){					
+    dfloat mtime = bc->time + M_PI; 
+    dfloat cond  = 0.001; 
+    dfloat xc = 0.00f;		
+    dfloat yc = 0.50f;    
+    dfloat xt = xc*cos(mtime)  - yc*sin(mtime);
+    dfloat yt = -xc*sin(mtime) + yc*cos(mtime);
+    dfloat r2 = (bc->x-xt)*(bc->x-xt) + (bc->y-yt)*(bc->y-yt); 
+    dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));
+    bc->sP = sExact;				
   }   
 
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define cdsDirichletConditions2D(bc, t, x, y, nx, ny, sM, sB) \
-{                                   \
-    dfloat mtime = t + M_PI/2; \
-    dfloat cond  = 0.001; \
-    dfloat xc = 0.00f;      \
-    dfloat yc = 0.50f;     \
-    dfloat xt = xc*cos(mtime) - yc*sin(mtime);      \
-    dfloat yt = -xc*sin(mtime) + yc*cos(mtime);     \
-    dfloat r2 = (x-xt)*(x-xt) + (y-yt)*(y-yt);      \
-    dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));  \
-  if(bc==1){                        \
-    *(sB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(sB) = sExact;		    \
-  } else if(bc==3){                 \
-    *(sB) = sM;                     \
-  } else if(bc==4||bc==5||bc==6){   \
-    *(sB) = sM; \
-  }                                 \
+void cdsDirichletConditions2D(bcData *bc){                                   
+    dfloat mtime = bc->time + M_PI/2; 
+    dfloat cond  = 0.001; 
+    dfloat xc = 0.00f;    
+    dfloat yc = 0.50f;    
+    dfloat xt = xc*cos(mtime) - yc*sin(mtime);
+    dfloat yt = -xc*sin(mtime) + yc*cos(mtime);
+    dfloat r2 = (bc->x-xt)*(bc->x-xt) + (bc->y-yt)*(bc->y-yt); 
+    dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));  
+  if(bc->id==1){                        
+    bc->sP = 0.f;                    
+  } else if(bc->id==2){                 
+    bc->sP = sExact;		    
+  } else if(bc->id==3){       
+    bc->sP = bc->sM;           
+  } else if(bc->id==4||bc->id==5||bc->id==6){
+    bc->sP = bc->sM; 
+  }             
 }
 
-#define cdsNeumannConditions2D(bc, t, x, y, nx, ny, sxM, syM, sxB, syB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(sxB) = sxM;                          \
-    *(syB) = syM;                          \
-  } else if(bc==3){                        \
-    *(sxB) = 0.f;                          \
-    *(syB) = 0.f;                          \
-  } else if(bc==4||bc==5||bc==6){          \
-    *(sxB) = nx*nx*sxM;                    \
-    *(syB) = ny*ny*syM;                    \
-  }                                        \
+void cdsNeumannConditions2D(bcData *bc){                                         
+  if(bc->id==1 || bc->id==2){               
+    bc->sxP = bc->sxM;                    
+    bc->syP = bc->syM;                    
+  } else if(bc->id==3){                    
+    bc->sxP = 0.f;                        
+    bc->syP = 0.f;                        
+  } else if(bc->id==4||bc->id==5||bc->id==6){
+    bc->sxP = bc->nx*bc->nx*bc->sxM;      
+    bc->syP = bc->ny*bc->ny*bc->syM;      
+  }                                       
 }
