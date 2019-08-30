@@ -27,27 +27,32 @@
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {									\
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
-    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
+    struct bcData bc;  \
+    bc.idM = vmapM[sk];   bc.time = time;  \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];        \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+    bc.z   = z[bc.idM]; \
+                                                                      \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
                                                                         \
-    dfloat dsdxP=0, dsdyP=0, dsdzP=0, sP=0;				\
+    bc.sxP=0.f; bc.syP=0.f; bc.szP =0.f; bc.sP=0.f;                                        \
+    bc.id = EToB[face+p_Nfaces*e];                                 \
+    if(bc.id>0) {                                                            \
+      cdsDirichletConditions3D(&bc);\
+      cdsNeumannConditions3D(&bc); \
+    }                                                                     \
                                                                         \
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0) {								\
-      cdsDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, &sP); \
-      cdsNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &dsdxP, &dsdyP, &dsdzP); \
-    }									\
+  const dfloat ds = bc.sP;                                                 \
                                                                         \
-    const dfloat ds = sP;						\
+    s_dsdx[j][i] = WsJ*bc.nx*ds;						\
+    s_dsdy[j][i] = WsJ*bc.ny*ds;						\
+    s_dsdz[j][i] = WsJ*bc.nz*ds;						\
                                                                         \
-    s_dsdx[j][i] = WsJ*nx*ds;						\
-    s_dsdy[j][i] = WsJ*ny*ds;						\
-    s_dsdz[j][i] = WsJ*nz*ds;						\
-                                                                        \
-    s_rhsS[j][i] = -WsJ*(nx*dsdxP + ny*dsdyP+ nz*dsdzP+ tau*ds*hinv);	\
+    s_rhsS[j][i] = -WsJ*(bc.nx*bc.sxP + bc.ny*bc.syP+ bc.nz*bc.szP+ tau*ds*hinv);	\
   }
 
 @kernel void cdsHelmholtzIpdgBCHex3D(const dlong Nelements,
@@ -318,22 +323,25 @@
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {									\
-    const dlong idM = vmapM[sk];					\
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    struct bcData bc;  \
+    bc.idM = vmapM[sk];   bc.time = time;  \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];        \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+    bc.z   = z[bc.idM]; \
+                                                                      \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+    bc.sxP=0.f; bc.syP=0.f; bc.szP =0.f; bc.sP=0.f;                                        \
+    bc.id = mapB[bc.idM];                                 \
+    if(bc.id>0) {                                                            \
+      cdsDirichletConditions3D(&bc);\
+      cdsNeumannConditions3D(&bc); \
+    }                                                                     \
                                                                         \
-    dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;			\
-                                                                        \
-    const int bc = mapB[idM];						\
-    if(bc>0) {								\
-      cdsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &uP); \
-      cdsNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP); \
-    }									\
-                                                                        \
-    s_U  [j][i] =  uP;							\
-    s_ndU[j][i] = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);		\
+    s_U  [j][i] =  bc.sP;							\
+    s_ndU[j][i] = -WsJ*(bc.nx*bc.sxP + bc.ny*bc.syP + bc.nz*bc.szP);		\
   }
 
 //RHS contributions for continuous solver
@@ -635,26 +643,36 @@
 				   @restrict const  dfloat *  z,
 				   @restrict const  dlong  *  vmapM,
 				   @restrict const  int    *  mapB,
-				   @restrict dfloat *  U){
+				   @restrict dfloat *  S){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
+    for(int f=0; f<p_Nfaces; f++){
+      @barrier("global");
+      for(int m=0;m<p_Nfp;++m;@inner(0)){
+         struct bcData bc;
+         const int n = m + f*p_Nfp;         
+        const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+        bc.id = mapB[idM];
 
-      if(bc>0) {
-        const dfloat uM = U[idM];
+      if(bc.id>0) {
+          bc.idM = idM; 
+          bc.time = time; 
+          bc.x  = x[bc.idM]; 
+          bc.y  = y[bc.idM]; 
+          bc.z  = z[bc.idM]; 
+          bc.sM = S[idM];
 
         const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+        bc.nx = sgeo[sk*p_Nsgeo+p_NXID];
+        bc.ny = sgeo[sk*p_Nsgeo+p_NYID];
+        bc.nz = sgeo[sk*p_Nsgeo+p_NZID];
 
-        dfloat uP = 0.f;
-        cdsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, &uP);
-        U[idM] = uP;
+        bc.sP = 0.f;
+        cdsDirichletConditions3D(&bc) ;
+        S[idM] = bc.sP;
       }    
     }
   }
+}
 }
 

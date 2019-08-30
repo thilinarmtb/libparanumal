@@ -36,19 +36,24 @@ SOFTWARE.
   for(dlong n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
 
     if(n<p_Np*Nelements){
-      dfloat xn = x[n];
-      dfloat yn = y[n];
-      dfloat zn = z[n];
-      
-      dfloat u = 0.0;
-      dfloat v = 0.0;
-      dfloat w = 0.0;
-      
-      cdsFlowField3D(t, xn, yn, zn, &u, &v, &w);
+      struct bcData bc;
+      bc.time    = t;
+      bc.idM     = n;
+      bc.voffset = offset;   
 
-      U[n+0*offset] = u;
-      U[n+1*offset] = v;
-      U[n+2*offset] = w;
+      bc.x = x[n];
+      bc.y = y[n];
+      bc.z = z[n];
+     
+      bc.uP = 0.f;
+      bc.vP = 0.f;
+      bc.wP = 0.f;
+      
+      cdsFlowField3D(&bc);
+
+      U[n+0*offset] = bc.uP;
+      U[n+1*offset] = bc.vP;
+      U[n+2*offset] = bc.wP;
     }
   }
 }

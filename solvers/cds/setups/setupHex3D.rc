@@ -5,8 +5,8 @@
 FALSE
 
 [DATA FILE]
-data/cdsGaussHill3D.h
-#data/cdsUCD3D.h
+#data/cdsGaussHill3D.h
+data/cdsUCD3D.h
 
 [MESH FILE]
 ../../meshes/cdsUCDHex3D.msh
@@ -36,15 +36,15 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+4
 
 [SUBCYCLING TIME ORDER]
 3
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-COLLOCATION
-#CUBATURE
+#COLLOCATION
+CUBATURE
 
 [VISCOSITY]
 1
@@ -169,8 +169,8 @@ MAX
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-GAUSS
-#UCD
+#GAUSS
+UCD
 
 [VERBOSE]
 FALSE
