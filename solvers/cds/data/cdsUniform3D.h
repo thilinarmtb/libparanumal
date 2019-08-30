@@ -26,46 +26,42 @@ SOFTWARE.
 
 
 // Initial conditions 
-#define cdsFlowField3D(t,x,y,z, u,v,w) \
-  {                                   \
-    *(u) = p_ubar;                    \
-    *(v) = p_vbar;                    \
-    *(w) = p_wbar;                    \
-  }   
+void cdsFlowField3D(bcData *bc){                                   
+    bc->uP = p_ubar;                    
+    bc->vP = p_vbar;                    
+    bc->wP = p_wbar;                    
+}   
 
-#define cdsScalarField3D(t,x,y,z,s)	\
-  {                                   \
-    *(s) = p_sbar;                    \
-  }   
+void cdsScalarField3D(bcData *bc){                                   
+    bc->sP = p_sbar;                    
+}   
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define cdsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, sM, sB) \
-{                                   \
-  if(bc==1){                        \
-    *(sB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(sB) = p_sbar;                 \
-  } else if(bc==3){                 \
-    *(sB) = sM;                     \
-  } else if(bc==4||bc==5||bc==6){   \
-    *(sB) = sM; \
-  }                                 \
+void cdsDirichletConditions3D(bcData *bc){                                   
+  if(bc->id==1){                        
+    bc->sP = 0.f;                    
+  } else if(bc->id==2){                 
+    bc->sP = p_sbar;                 
+  } else if(bc->id==3){                 
+    bc->sP = bc->sM;                     
+  } else if(bc->id==4||bc->id==5||bc->id==6){   
+    bc->sP = bc->sM; 
+  }                                 
 }
 
-#define cdsNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, sxM, syM, szM, sxB, syB, szB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(sxB) = sxM;                          \
-    *(syB) = syM;                          \
-    *(szB) = szM;                          \
-  } else if(bc==3){                        \
-    *(sxB) = 0.f;                          \
-    *(syB) = 0.f;                          \
-    *(szB) = 0.f;                          \
-  } else if(bc==4||bc==5||bc==6){          \
-    *(sxB) = nx*nx*sxM;                    \
-    *(syB) = nx*nx*syM;                    \
-    *(szB) = nx*nx*szM;                    \
-  }                                        \
+void cdsNeumannConditions3D(bcData *bc){                                          
+  if(bc->id==1||bc->id==2){                      
+    bc->sxP = bc->sxM;                          
+    bc->syP = bc->syM;                          
+    bc->szP = bc->szM;                          
+  } else if(bc->id==3){                        
+    bc->sxP = 0.f;                          
+    bc->syP = 0.f;                          
+    bc->szP = 0.f;                          
+  } else if(bc->id==4||bc->id==5||bc->id==6){          
+    bc->sxP = bc->nx*bc->nx*bc->sxM;                    
+    bc->syP = bc->nx*bc->nx*bc->syM;                    
+    bc->szP = bc->nx*bc->nx*bc->szM;                    
+  }                                        
 }

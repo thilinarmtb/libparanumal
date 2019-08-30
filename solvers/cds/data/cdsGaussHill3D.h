@@ -26,74 +26,70 @@ SOFTWARE.
 
 
 // Initial conditions 
-#define cdsFlowField3D(t,x,y,z,u,v,w) \
-  {				       \
-    *(u) = 0.5;		       \
-    *(v) = 0.5;           \
-    *(w) = 0.5;           \
-  } 
+void cdsFlowField3D(bcData *bc){				      
+    bc->uP = 0.5;	
+    bc->vP = 0.5; 
+    bc->wP = 0.5; 
+} 
 
 // initial width = 0.05; diffusion coeff = 0.001  
-#define cdsScalarField3D(t,x,y,z,s)	\
-  {					\
-    dfloat sigma_0 = 0.05; \
-    dfloat sigma_d = 2.f*0.01*t; \
-    dfloat u = 0.5f; \
-    dfloat v = 0.5f; \
-    dfloat w = 0.5f; \
-    dfloat xc = 0.50f;			\
-    dfloat yc = 0.50f;     \
-    dfloat zc = 0.50f;     \
-    dfloat xt = xc + u*t;      \
-    dfloat yt = yc + v*t;      \
-    dfloat zt = zc + w*t;      \
-    dfloat r2 = (x-xt)*(x-xt) + (y-yt)*(y-yt) + (z-zt)*(z-zt);      \
-    dfloat sExact =  sigma_0/(sigma_0 + sigma_d) * exp(- r2 / (2.f*(sigma_0 + sigma_d)));	\
-    *(s) = sExact;				\
+void cdsScalarField3D(bcData *bc){					
+    dfloat sigma_0 = 0.05; 
+    dfloat sigma_d = 2.f*0.01*bc->time; 
+    dfloat u = 0.5f; 
+    dfloat v = 0.5f; 
+    dfloat w = 0.5f; 
+    dfloat xc = 0.50f;
+    dfloat yc = 0.50f;
+    dfloat zc = 0.50f;
+    dfloat xt = xc + u*bc->time;
+    dfloat yt = yc + v*bc->time;
+    dfloat zt = zc + w*bc->time;
+    dfloat r2 = (bc->x-xt)*(bc->x-xt) + (bc->y-yt)*(bc->y-yt) + (bc->z-zt)*(bc->z-zt);   
+    dfloat sExact =  sigma_0/(sigma_0 + sigma_d) * exp(- r2 / (2.f*(sigma_0 + sigma_d)));	
+    bc->sP = sExact;				
   }   
 
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define cdsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, sM,sB) \
-{                                   \
-    dfloat sigma_0 = 0.05; \
-    dfloat sigma_d = 2.f*0.01*t; \
-    dfloat u = 0.5f; \
-    dfloat v = 0.5f; \
-    dfloat w = 0.5f; \
-    dfloat xc = 0.50f;      \
-    dfloat yc = 0.50f;     \
-    dfloat zc = 0.50f;     \
-    dfloat xt = xc + u*t;      \
-    dfloat yt = yc + v*t;      \
-    dfloat zt = zc + w*t;      \
-    dfloat r2 = (x-xt)*(x-xt) + (y-yt)*(y-yt) + (z-zt)*(z-zt);      \
-    dfloat sExact =  sigma_0/(sigma_0 + sigma_d) * exp(- r2 / (2.f*(sigma_0 + sigma_d))); \
-  if(bc==1){                        \
-    *(sB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(sB) = sExact;		    \
-  } else if(bc==3){                 \
-    *(sB) = sM;                     \
-  } else if(bc==4||bc==5||bc==6){   \
-    *(sB) = sM; \
-  }                                 \
+void cdsDirichletConditions3D(bcData *bc){                                   
+    dfloat sigma_0 = 0.05; 
+    dfloat sigma_d = 2.f*0.01*bc->time;
+    dfloat u = 0.5f; 
+    dfloat v = 0.5f; 
+    dfloat w = 0.5f; 
+    dfloat xc = 0.50f;
+    dfloat yc = 0.50f;
+    dfloat zc = 0.50f;
+    dfloat xt = xc + u*bc->time;
+    dfloat yt = yc + v*bc->time;
+    dfloat zt = zc + w*bc->time;
+    dfloat r2 = (bc->x-xt)*(bc->x-xt) + (bc->y-yt)*(bc->y-yt) + (bc->z-zt)*(bc->z-zt);
+    dfloat sExact =  sigma_0/(sigma_0 + sigma_d) * exp(- r2 / (2.f*(sigma_0 + sigma_d)));
+  if(bc.id==1){                        
+    bc->sP = 0.f;                    
+  } else if(bc.id==2){                 
+    bc->sP = sExact;		    
+  } else if(bc.id==3){                
+    bc->sP = bc->sM;                    
+  } else if(bc.id==4 || bc.id==5 || bc.id==6){  
+    bc->sP = bc->sM; 
+  }             
 }
 
-#define cdsNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, sxM, syM,szM, sxB, syB, szB) \
-{                                          \
- if(bc==1 || bc==2){                      \
-    *(sxB) = sxM;                          \
-    *(syB) = syM;                          \
-    *(szB) = szM;                          \
-  } else if(bc==3){                        \
-    *(sxB) = 0.f;                          \
-    *(syB) = 0.f;                          \
-    *(szB) = 0.f;                          \
-  } else if(bc==4||bc==5||bc==6){          \
-    *(sxB) = nx*nx*sxM;                    \
-    *(syB) = nx*nx*syM;                    \
-    *(szB) = nx*nx*szM;                    \
-  }                                        \                    \
+void cdsNeumannConditions3D(bcData *bc){                                      
+ if(bc.id==1 || bc.id==2){             
+    bc->sxP = bc->sxM;                      
+    bc->syP = bc->syM;                      
+    bc->szP = bc->szM;                      
+  } else if(bc.id==3){                 
+    bc->sxP = 0.f;                      
+    bc->syP = 0.f;                      
+    bc->szP = 0.f;                      
+  } else if(bc.id==4||bc.id==5||bc.id==6){
+    bc->sxP = bc->nx*bc->nx*bc->sxM;                   
+    bc->syP = bc->nx*bc->nx*bc->syM;                   
+    bc->szP = bc->nx*bc->nx*bc->szM;                   
+  }                                       
 }
