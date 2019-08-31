@@ -77,33 +77,33 @@
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat JW   = vgeo[gid + p_JWID*p_Np];
 
-           // const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+	    // const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
             dfloat df11dr = 0.f, df11ds = 0.f;
             dfloat df12dr = 0.f, df12ds = 0.f;
             dfloat df22dr = 0.f, df22ds = 0.f;
             
-            #pragma unroll p_Nq
-            	    for(int n=0;n<p_Nq;++n){
-            	      const dfloat Dr = s_D[i][n];
-            	      const dfloat Ds = s_D[j][n];
+#pragma unroll p_Nq
+	    for(int n=0;n<p_Nq;++n){
+	      const dfloat Dr = s_D[i][n];
+	      const dfloat Ds = s_D[j][n];
 
-            	      df11dr += Dr*s_F11[es][j][n];
-            		    df11ds += Ds*s_F11[es][n][i];
+	      df11dr += Dr*s_F11[es][j][n];
+	      df11ds += Ds*s_F11[es][n][i];
 
-                    df12dr += Dr*s_F12[es][j][n];
-                    df12ds += Ds*s_F12[es][n][i];
+	      df12dr += Dr*s_F12[es][j][n];
+	      df12ds += Ds*s_F12[es][n][i];
 
-                    df22dr += Dr*s_F22[es][j][n];
-                    df22ds += Ds*s_F22[es][n][i];
-            	    }
+	      df22dr += Dr*s_F22[es][j][n];
+	      df22ds += Ds*s_F22[es][n][i];
+	    }
 
-          const dlong id = e*p_Np + j*p_Nq + i;
-              // NU = del(u1xu1)/ dx + del(u1xu2)/dy
-          const dfloat nu = drdx*df11dr + dsdx*df11ds 
-                          + drdy*df12dr + dsdy*df12ds;
-          // NV = del(u2xu1)/ dx + del(u2xu2)/dy
-          const dfloat nv = drdx*df12dr + dsdx*df12ds 
-                          + drdy*df22dr + dsdy*df22ds;
+	    const dlong id = e*p_Np + j*p_Nq + i;
+	    // NU = del(u1xu1)/ dx + del(u1xu2)/dy
+	    const dfloat nu = drdx*df11dr + dsdx*df11ds 
+	      + drdy*df12dr + dsdy*df12ds;
+	    // NV = del(u2xu1)/ dx + del(u2xu2)/dy
+	    const dfloat nv = drdx*df12dr + dsdx*df12ds 
+	      + drdy*df22dr + dsdy*df22ds;
             NU[id+0*offset] = nu;
             NU[id+1*offset] = nv;
           }
@@ -120,40 +120,52 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
 		  const dlong *vmapM,
 		  const dlong *vmapP,
 		  const dlong *EToB,
+		  const dfloat *W,
 		  const dfloat *U,
 		  @shared dfloat s_fluxNU[p_NblockS][p_Nq][p_Nq],
 		  @shared dfloat s_fluxNV[p_NblockS][p_Nq][p_Nq]){
   
+  struct bcData bc;
   const dlong  idM = vmapM[sk];                                         
-  const dlong  idP = vmapP[sk];                                         
+  const dlong  idP = vmapP[sk]; 
+
+  bc.time = time; 
+  bc.nx  = sgeo[sk*p_Nsgeo+p_NXID];       
+  bc.ny  = sgeo[sk*p_Nsgeo+p_NYID];       
+  bc.x   = x[idM]; 
+  bc.y   = y[idM]; 
+  bc.idM = idM; 
+  bc.fieldOffset = offset; 
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];        
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                                              
+                 
+  bc.uM = U[idM+0*offset]; bc.vM = U[idM+1*offset];             
+  bc.uP = U[idP+0*offset]; bc.vP = U[idP+1*offset];             
+  bc.wrk = (dfloat *) W;
+
+  bc.id = EToB[face+p_Nfaces*e];        
+  if(bc.id>0) {               
+    if(bc.id==1){             
+      bc.uP = 0.f;  bc.vP = 0.f; 
+    }else if(bc.id==4){             
+      bc.uP = 0.f; bc.vP = bc.vM; 
+    } else if(bc.id==5){              
+      bc.uP = bc.uM; bc.vP = 0.f; 
+    }else if(bc.id==2){                
+      bc.uP = bc.uM;  bc.vP = bc.vM;          
+      insVelocityDirichletConditions2D(&bc); 
+    }                 
+  }                                                                           
   
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
-  
-  const dfloat  uM = U[idM+0*offset], vM = U[idM+1*offset];             
-  dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset];             
-  
-  int bc = EToB[face+p_Nfaces*e];                                       
-  if(bc>0) { 
-    if(bc ==1){ // moving solid wall to here
-      uP = 0.f;  vP = 0.f;     
-    }else{
-      uP = uM; vP = vM; // make it explicitly i.e. idM = idP already
-      insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); 
-    }
-  }                                                                     
-  
-  const dfloat unM   = fabs(nx*uM + ny*vM);                         
-  const dfloat unP   = fabs(nx*uP + ny*vP);                         
-  const dfloat unMax = (unM > unP) ? unM : unP;                         
+  const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM);     
+  const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP);      
+  const dfloat unMax = (unM > unP) ? unM : unP;                           
                                                                         
   const dfloat sc = invWJ * sJ;                                         
-  s_fluxNU[es][j][i] += sc*(.5f*(nx*(uP*uP - uM*uM)                     
-				 + ny*(uP*vP - uM*vM)  + unMax*(uM-uP) ));
-  s_fluxNV[es][j][i] += sc*(.5f*(nx*(vP*uP - vM*uM)                     
-				 + ny*(vP*vP - vM*vM)  + unMax*(vM-vP) ));
+  s_fluxNU[es][j][i] += sc*(.5f*(bc.nx*(bc.uP*bc.uP - bc.uM*bc.uM)                     
+				 + bc.ny*(bc.uP*bc.vP - bc.uM*bc.vM)  + unMax*(bc.uM-bc.uP) ));
+  s_fluxNV[es][j][i] += sc*(.5f*(bc.nx*(bc.vP*bc.uP - bc.vM*bc.uM)                     
+				 + bc.ny*(bc.vP*bc.vP - bc.vM*bc.vM)  + unMax*(bc.vM-bc.vP) ));
 }
 
 @kernel void insAdvectionSurfaceQuad2D(const dlong Nelements,
@@ -167,9 +179,9 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
 				       @restrict const  dfloat *  y,
 				       @restrict const  dfloat *  z,
 				       const dlong offset,
-				       @restrict const  dfloat *  U,
+				       @restrict const  dfloat *  W,  // user scratch
+				       @restrict const  dfloat *  U, 
 				       @restrict dfloat *  NU){
-
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     // @shared storage for flux terms
@@ -199,11 +211,11 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
 	  
 	  //          surfaceTerms(sk0,0,i,0     );
 	  surfaceTerms(e, es, offset, sk0, 0, i, 0,
-		       time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
 
           // surfaceTerms(sk2,2,i,p_Nq-1);
 	  surfaceTerms(e, es, offset, sk2, 2, i, p_Nq-1,
-		       time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
         }
       }
     }
@@ -220,11 +232,11 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
 
 	  //          surfaceTerms(sk1,1,p_Nq-1,j);
 	  surfaceTerms(e, es, offset, sk1, 1, p_Nq-1, j,
-		       time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
 
 	  //          surfaceTerms(sk3,3,0     ,j);
 	  surfaceTerms(e, es, offset, sk3, 3, 0, j,
-		       time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
         }
       }
     }
@@ -253,11 +265,11 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
 
 // compute div(NU)  = div(uxu) in collocation way (weak form)
 @kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
-              @restrict const  dfloat *  vgeo,
-              @restrict const  dfloat *  D,
-              const dlong offset,
-              @restrict const  dfloat *  U,
-              @restrict dfloat *  NU){
+				      @restrict const  dfloat *  vgeo,
+				      @restrict const  dfloat *  D,
+				      const dlong offset,
+				      @restrict const  dfloat *  U,
+				      @restrict dfloat *  NU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -313,16 +325,16 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
             dfloat nu = 0.f, nv = 0.f;
             
 #pragma unroll p_Nq
-      for(int n=0;n<p_Nq;++n){
-        const dfloat Dr = s_D[n][i];
-        const dfloat Ds = s_D[n][j];
+	    for(int n=0;n<p_Nq;++n){
+	      const dfloat Dr = s_D[n][i];
+	      const dfloat Ds = s_D[n][j];
 
-        nu += Dr*s_F11[es][j][n]
-    +Ds*s_F12[es][n][i];
+	      nu += Dr*s_F11[es][j][n]
+		+Ds*s_F12[es][n][i];
 
-        nv += Dr*s_F21[es][j][n]
-    +Ds*s_F22[es][n][i];
-      }
+	      nv += Dr*s_F21[es][j][n]
+		+Ds*s_F22[es][n][i];
+	    }
 
             const dlong id = e*p_Np + j*p_Nq + i;
             NU[id+0*offset] = -invJW*nu;
@@ -335,61 +347,74 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
 }
 
 void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j, dfloat time,
-      @global const dfloat *x,
-      @global const dfloat *y, 
-      @global const dfloat *sgeo,
-      @global const dlong *vmapM,
-      @global const dlong *vmapP,
-      @global const dlong *EToB,
-      @global const dfloat *U,
-      @shared dfloat s_fluxNU[p_NblockS][p_Nq][p_Nq],
-      @shared dfloat s_fluxNV[p_NblockS][p_Nq][p_Nq]){
+		  const dfloat *x,
+		  const dfloat *y, 
+		  const dfloat *sgeo,
+		  const dlong *vmapM,
+		  const dlong *vmapP,
+		  const dlong *EToB,
+		  const dfloat *W,
+		  const dfloat *U,
+		  @shared dfloat s_fluxNU[p_NblockS][p_Nq][p_Nq],
+		  @shared dfloat s_fluxNV[p_NblockS][p_Nq][p_Nq]){
   
+  struct bcData bc;
   const dlong  idM = vmapM[sk];                                         
-  const dlong  idP = vmapP[sk];                                         
-  
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
-  
-  const dfloat  uM = U[idM+0*offset], vM = U[idM+1*offset];             
-  dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset];             
-  
-  int bc = EToB[face+p_Nfaces*e];                                       
-  if(bc>0) { 
-    if(bc ==1){ // moving solid wall to here
-      uP = 0.f;  vP = 0.f;     
-    }else{
-      uP = uM; vP = vM; // make it explicitly i.e. idM = idP already
-      insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); 
-    }
-  }                                                                     
-  
-  const dfloat unM   = fabs(nx*uM + ny*vM);                         
-  const dfloat unP   = fabs(nx*uP + ny*vP);                         
-  const dfloat unMax = (unM > unP) ? unM : unP;                         
-                                                                        
-  const dfloat sc = invWJ * sJ;                                         
-  s_fluxNU[es][j][i] += sc*(.5f*(nx*(uP*uP + uM*uM)                     
-         + ny*(uP*vP + uM*vM)  + unMax*(uM-uP) ));
-  s_fluxNV[es][j][i] += sc*(.5f*(nx*(vP*uP + vM*uM)                     
-         + ny*(vP*vP + vM*vM)  + unMax*(vM-vP) ));
-}
+  const dlong  idP = vmapP[sk]; 
+  bc.time = time; 
+  bc.nx  = sgeo[sk*p_Nsgeo+p_NXID];       
+  bc.ny  = sgeo[sk*p_Nsgeo+p_NYID];       
+  bc.x   = x[idM]; 
+  bc.y   = y[idM]; 
+  bc.idM = idM; 
+  bc.fieldOffset = offset; 
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];        
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                                              
+                 
+  bc.uM = U[idM+0*offset]; bc.vM = U[idM+1*offset];             
+  bc.uP = U[idP+0*offset]; bc.vP = U[idP+1*offset];             
+  bc.wrk = (dfloat *) W;
 
+  bc.id = EToB[face+p_Nfaces*e];        
+  if(bc.id>0) {               
+    if(bc.id==1){             
+      bc.uP = 0.f;  bc.vP = 0.f; 
+    }else if(bc.id==4){             
+      bc.uP = 0.f; bc.vP = bc.vM; 
+    } else if(bc.id==5){              
+      bc.uP = bc.uM; bc.vP = 0.f; 
+   }else if(bc.id==2){                  
+      bc.uP = bc.uM;  bc.vP = bc.vM;          
+      insVelocityDirichletConditions2D(&bc); 
+    }                 
+  }                                                                           
+  
+  const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM);     
+  const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP);      
+  const dfloat unMax = (unM > unP) ? unM : unP;       
+
+  const dfloat sc = invWJ * sJ;                                         
+  s_fluxNU[es][j][i] += sc*(.5f*(bc.nx*(bc.uP*bc.uP + bc.uM*bc.uM)                     
+				 + bc.ny*(bc.uP*bc.vP + bc.uM*bc.vM)  + unMax*(bc.uM-bc.uP) ));
+  s_fluxNV[es][j][i] += sc*(.5f*(bc.nx*(bc.vP*bc.uP + bc.vM*bc.uM)                     
+				 + bc.ny*(bc.vP*bc.vP + bc.vM*bc.vM)  + unMax*(bc.vM-bc.vP) ));
+}                   
+                                                                        
+  
 @kernel void insAdvectionSurfaceQuad2D(const dlong Nelements,
-               @restrict const  dfloat *  sgeo,
-               @restrict const  dfloat *  LIFTT,
-               @restrict const  dlong  *  vmapM,
-               @restrict const  dlong  *  vmapP,
-               @restrict const  int   *  EToB,
-               const dfloat time,
-               @restrict const  dfloat *  x,
-               @restrict const  dfloat *  y,
-               @restrict const  dfloat *  z,
-               const dlong offset,
-               @restrict const  dfloat *  U,
-               @restrict dfloat *  NU){
+				       @restrict const  dfloat *  sgeo,
+				       @restrict const  dfloat *  LIFTT,
+				       @restrict const  dlong  *  vmapM,
+				       @restrict const  dlong  *  vmapP,
+				       @restrict const  int   *  EToB,
+				       const dfloat time,
+				       @restrict const  dfloat *  x,
+				       @restrict const  dfloat *  y,
+				       @restrict const  dfloat *  z,
+				       const dlong offset,
+				       @restrict const  dfloat *  W,  // user scratch
+				       @restrict const  dfloat *  U, 
+				       @restrict dfloat *  NU){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -415,16 +440,16 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
-    const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
-    const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+	  const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+	  const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
     
-    //          surfaceTerms(sk0,0,i,0     );
-    surfaceTerms(e, es, offset, sk0, 0, i, 0,
-           time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+	  //          surfaceTerms(sk0,0,i,0     );
+	  surfaceTerms(e, es, offset, sk0, 0, i, 0,
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
 
           // surfaceTerms(sk2,2,i,p_Nq-1);
-    surfaceTerms(e, es, offset, sk2, 2, i, p_Nq-1,
-           time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+	  surfaceTerms(e, es, offset, sk2, 2, i, p_Nq-1,
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
         }
       }
     }
@@ -439,13 +464,13 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-    //          surfaceTerms(sk1,1,p_Nq-1,j);
-    surfaceTerms(e, es, offset, sk1, 1, p_Nq-1, j,
-           time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+	  //          surfaceTerms(sk1,1,p_Nq-1,j);
+	  surfaceTerms(e, es, offset, sk1, 1, p_Nq-1, j,
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
 
-    //          surfaceTerms(sk3,3,0     ,j);
-    surfaceTerms(e, es, offset, sk3, 3, 0, j,
-           time, x, y, sgeo, vmapM, vmapP, EToB, U, s_fluxNU, s_fluxNV);
+	  //          surfaceTerms(sk3,3,0     ,j);
+	  surfaceTerms(e, es, offset, sk3, 3, 0, j,
+		       time, x, y, sgeo, vmapM, vmapP, EToB, W, U, s_fluxNU, s_fluxNV);
         }
       }
     }
@@ -715,6 +740,7 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 					       @restrict const  dfloat *  inty,
 					       @restrict const  dfloat *  intz,
 					       const dlong offset,
+					       @restrict const  dfloat *  W,
 					       @restrict const  dfloat *  U,
 					       @restrict dfloat *  NU){
   
@@ -815,34 +841,43 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 #pragma unroll p_Nfaces
 	  for (int face=0;face<p_Nfaces;face++) {
 	    const dlong sk = e*p_cubNq*p_Nfaces + face*p_cubNq + i;
-	    const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];
-	    const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];
+	    struct bcData bc;
+
+	    bc.time = time; 
+	    bc.nx  = cubsgeo[sk*p_Nsgeo+p_NXID];     
+	    bc.ny  = cubsgeo[sk*p_Nsgeo+p_NYID];      
+	    bc.x   = intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i]; 
+	    bc.y   = inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i]; 
+	    bc.idM =  e*p_cubNq*p_Nfaces + face*p_cubNq+ i; 
+	    bc.fieldOffset = offset; 
+	    bc.uM = r_UMn[face];  bc.vM = r_VMn[face]; 
+	    bc.uP = r_UPn[face];  bc.vP = r_VPn[face]; 
+	    bc.wrk = (dfloat *)W; 
+       
 	    const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
 
-	    const dfloat uM = r_UMn[face], vM = r_VMn[face];
-	    dfloat uP = r_UPn[face], vP = r_VPn[face];
+	    bc.id = EToB[face+p_Nfaces*e];        
+	    if(bc.id>0) {               
+	      if(bc.id==1){             
+		bc.uP = 0.f;  bc.vP = 0.f; 
+	      }else if(bc.id==4){             
+		bc.uP = 0.f; bc.vP = bc.vM; 
+	      } else if(bc.id==5){              
+		bc.uP = bc.uM; bc.vP = 0.f; 
+	      }else if(bc.id==2){                
+		bc.uP = bc.uM;  bc.vP = bc.vM; 
+		insVelocityDirichletConditions2D(&bc); 
+	      }                 
+	    }                 
+	  
+	    const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM);     
+	    const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP);      
+	    const dfloat unMax = (unM > unP) ? unM : unP;       
 
-	    int bc = EToB[face+p_Nfaces*e];
-	    if(bc>0) {
-	      if(bc==1){ // iplementing solid wall here
-		uP = 0.f;  vP = 0.f;   
-	      }else{
-		uP = uM;  vP = vM;   
-		const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
-		insVelocityDirichletConditions2D(bc, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-						 inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-						 nx, ny, uM, vM, &uP, &vP);
-	      }
-	    }
-
-	    const dfloat unM   = fabs(nx*uM + ny*vM);
-	    const dfloat unP   = fabs(nx*uP + ny*vP);
-	    const dfloat unMax = (unM > unP) ? unM : unP;
-
-	    s_fluxNU[es][face][i] = sJ*(.5f*(nx*(uP*uP + uM*uM)
-					     + ny*(uP*vP + uM*vM)  + unMax*(uM-uP) ));
-	    s_fluxNV[es][face][i] = sJ*(.5f*(nx*(vP*uP + vM*uM)
-					     + ny*(vP*vP + vM*vM)  + unMax*(vM-vP) ));
+	    s_fluxNU[es][face][i]  = sJ*(.5f*(bc.nx*(bc.uP*bc.uP + bc.uM*bc.uM)                     
+					      + bc.ny*(bc.uP*bc.vP + bc.uM*bc.vM)  + unMax*(bc.uM-bc.uP) ));
+	    s_fluxNV[es][face][i]  = sJ*(.5f*(bc.nx*(bc.vP*bc.uP + bc.vM*bc.uM)                     
+					      + bc.ny*(bc.vP*bc.vP + bc.vM*bc.vM)  + unMax*(bc.vM-bc.vP) ));
 	  }
 	}
       }
@@ -958,7 +993,7 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 	    for(int n=0;n<p_Nq;++n){
 	      const dfloat Dr = s_D[i][n];
 	      const dfloat Ds = s_D[j][n];
-        //
+	      //
 	      dudr += Dr*s_U[es][j][n];
 	      duds += Ds*s_U[es][n][i];
 
@@ -989,79 +1024,67 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 
 
 
-// Compute Divergence in weak Form :::: fix later AK   
 @kernel void insStrongAdvectionCubatureVolumeQuad2D(const dlong Nelements,
-                 @restrict const  dfloat *  vgeo,
-                 @restrict const  dfloat *  cubvgeo,
-                 @restrict const  dfloat *  cubD,
-                 @restrict const  dfloat *  cubInterpT,
-                 @restrict const  dfloat *  cubProjectT,
-                 const dlong offset,
-                 @restrict const  dfloat *  U,
-                 @restrict dfloat *  cU, //storage for interpolated fields
-                 @restrict dfloat *  NU){
+						    @restrict const  dfloat *  vgeo,
+						    @restrict const  dfloat *  cubvgeo,
+						    @restrict const  dfloat *  cubDT,
+						    @restrict const  dfloat *  cubInterpT,
+						    @restrict const  dfloat *  cubProjectT,
+						    const dlong offset,
+						    @restrict const  dfloat *  U,
+						    @restrict dfloat *  cU, //storage for interpolated fields
+						    @restrict dfloat *  NU){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
-
-    @shared dfloat s_U[p_cubNblockV][p_cubNq][p_cubNq];
-    @shared dfloat s_V[p_cubNblockV][p_cubNq][p_cubNq];
-
-    @shared dfloat s_cU[p_cubNblockV][p_cubNq][p_cubNq];
-    @shared dfloat s_cV[p_cubNblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_U[p_cubNq][p_cubNq];
+    @shared dfloat s_V[p_cubNq][p_cubNq];
+    @shared dfloat s_Ur[p_cubNq][p_cubNq];
+    @shared dfloat s_Vr[p_cubNq][p_cubNq];
+    @shared dfloat s_NU[p_cubNq][p_cubNq];
+    @shared dfloat s_NV[p_cubNq][p_cubNq];
 
     @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+    @shared dfloat s_cubDT[p_Nq][p_cubNq];
 
-    @exclusive dfloat r_Un, r_Vn;
-    // @exclusive dfloat r_cUn, r_cVn;
-    // #define s_cU = s_U
-    // #define s_cV = s_V
+    @exclusive dfloat r_U, r_V, r_Ur, r_Vr, r_Us, r_Vs;
 
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        dlong id;
+        if((i<p_Nq) && (j<p_Nq)){
+          id = e*p_Np + j*p_Nq+i;
 
-   //fetch the U and V values and store in flux arrays in @shared
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){    
-          const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
-            
-            if((i<p_Nq) && (j<p_Nq)){ 
-            const dlong id = e*p_Np + j*p_Nq+i;
+          s_U[j][i] = U[id+0*offset];
+          s_V[j][i] = U[id+1*offset];
+        }
 
-            s_U[es][j][i] = U[id+0*offset];
-            s_V[es][j][i] = U[id+1*offset];
-            }
-
-          const int id = i+j*p_cubNq;
-          if ((es==0) && (id<p_Nq*p_cubNq)) {
-            s_cubInterpT[0][id] = cubInterpT[id];
-            s_cubProjectT[0][id] = cubProjectT[id];
-           }
-           
-          if (es==0) 
-           s_cubD[0][id] = cubD[id];
-
-
+        id = i + j*p_cubNq;
+        if (id<p_Nq*p_cubNq) {
+          s_cubDT[0][id] = cubDT[id];
+          s_cubInterpT[0][id] = cubInterpT[id];
         }
       }
     }
-  }
 
     @barrier("local");
 
     //interpolate in i, store in register
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-            r_Un = 0.f; r_Vn = 0.f;
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq) {
+          r_U = 0.; r_V = 0.; r_Ur = 0; r_Vr = 0;
+
 #pragma unroll p_Nq
-            for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][i];
-              r_Un  += Ini*s_U[es][j][n];
-              r_Vn  += Ini*s_V[es][j][n];
-            }
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ini = s_cubInterpT[n][i];
+            const dfloat Dni = s_cubDT[n][i];
+            dfloat Ujn = s_U[j][n];
+            dfloat Vjn = s_V[j][n];
+            r_U  += Ini*Ujn;
+            r_V  += Ini*Vjn;
+            r_Ur += Dni*Ujn;
+            r_Vr += Dni*Vjn;
           }
         }
       }
@@ -1069,14 +1092,14 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 
     @barrier("local");
 
-   //write register back to @shared
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-            s_U[es][j][i] = r_Un;
-            s_V[es][j][i] = r_Vn;
-          }
+    //write register back to @shared
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq) {
+          s_U[j][i] = r_U;
+          s_V[j][i] = r_V;
+          s_Ur[j][i] = r_Ur;
+          s_Vr[j][i] = r_Vr;
         }
       }
     }
@@ -1084,30 +1107,26 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
     @barrier("local");
 
     //interpolate in j and store flux in register
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          r_Un  = 0.f; r_Vn  = 0.f;
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        r_U  = 0.; r_V  = 0.; r_Ur = 0; r_Vr = 0; r_Us = 0; r_Vs = 0;
 
 #pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            const dfloat Inj = s_cubInterpT[n][j];
-            r_Un  += Inj*s_U[es][n][i];
-            r_Vn  += Inj*s_V[es][n][i];
-          }
-        }
-      }
-    }
+        for (int n=0;n<p_Nq;n++) {
+          const dfloat Inj = s_cubInterpT[n][j];
+          const dfloat Dnj = s_cubDT[n][j];
 
-    @barrier("local");
+          dfloat Uni = s_U[n][i];
+          dfloat Vni = s_V[n][i];
+          dfloat Urni = s_Ur[n][i];
+          dfloat Vrni = s_Vr[n][i];
 
-
-    //write register back to @shared
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-            s_U[es][j][i] = r_Un;
-            s_V[es][j][i] = r_Vn;
+          r_U  += Inj*Uni;
+          r_V  += Inj*Vni;
+          r_Ur += Inj*Urni;
+          r_Vr += Inj*Vrni;
+          r_Us += Dnj*Uni;
+          r_Vs += Dnj*Vni;
         }
       }
     }
@@ -1115,131 +1134,71 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
     @barrier("local");
 
     //construct flux from registers
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
-            const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
-            const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
-            const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
-            const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
-            const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
-            const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
 
-            dfloat dudr = 0.f, duds = 0.f; 
-            dfloat dvdr = 0.f, dvds = 0.f; 
+        const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
+        const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
+        const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
+        const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
+        const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
+        const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
 
-            #pragma unroll p_cubNq
-            for(int n=0;n<p_cubNq;++n){
-              const dfloat Dr = s_cubD[i][n];
-              const dfloat Ds = s_cubD[j][n];
-              //
-              dudr += Dr*s_U[es][j][n];
-              duds += Ds*s_U[es][n][i];
+        dfloat dUdx = drdx*r_Ur + dsdx*r_Us;
+        dfloat dVdx = drdx*r_Vr + dsdx*r_Vs;
+        dfloat dUdy = drdy*r_Ur + dsdy*r_Us;
+        dfloat dVdy = drdy*r_Vr + dsdy*r_Vs;
 
-              dvdr += Dr*s_V[es][j][n];
-              dvds += Ds*s_V[es][n][i];
-            }
-
-            const dfloat dudx = drdx*dudr + dsdx*duds;
-            const dfloat dudy = drdy*dudr + dsdy*duds;
-
-            const dfloat dvdx = drdx*dvdr + dsdx*dvds;
-            const dfloat dvdy = drdy*dvdr + dsdy*dvds;
-
-            s_cU[es][j][i] =  JW*(r_Un*dudx + r_Vn*dudy);
-            s_cV[es][j][i] =  JW*(r_Un*dvdx + r_Vn*dvdy);
-
-            // r_cUn =  JW*(r_uN*dudx + r_Vn*dudy);
-            // r_cVn =  JW*(r_uN*dvdx + r_Vn*dvdy);
-
-          }
-        }
+        s_NU[j][i] = JW*(r_U*dUdx + r_V*dUdy);
+        s_NV[j][i] = JW*(r_U*dVdx + r_V*dVdy);
       }
     }
 
     @barrier("local");
 
-    // //write register back to @shared
-    // for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-    //   for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-    //     for(int i=0;i<p_cubNq;++i;@inner(0)){
-    //         s_U[es][j][i] = r_cUn;
-    //         s_U[es][j][i] = r_cVn;
-    //     }
-    //   }
-    // }
-    //
-   //  @barrier("local");
+    //project/differentiate in j
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        dfloat r_NU  = 0., r_NV  = 0.;
 
-// Here .....AK
-
-
-    // project in r
-
-
-     //interpolate in i, store in register
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-            r_Un = 0.f; r_Vn = 0.f;
-          #pragma unroll p_cubNq
-            for (int n=0;n<p_cubNq;n++) {
-             // const dfloat Ini = s_cubProjectT[n][j];
-              const dfloat Ini = s_cubInterpT[j][n];
-              r_Un  += Ini*s_cU[es][n][i];
-              r_Vn  += Ini*s_cV[es][n][i];
-            }
-            s_cU[es][j][i] = r_Un;
-            s_cV[es][j][i] = r_Vn;
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-
-    //write register back to @shared
-    // for(int es=0;es<p_cubNblockV;++es;@inner(2)){   
-    //   for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-    //     for(int i=0;i<p_cubNq;++i;@inner(0)){
-    //       if (j<p_Nq) {
-    //         s_cU[es][j][i] = r_Un;
-    //         s_cV[es][j][i] = r_Vn;
-    //       }
-    //     }
-    //   }
-    // }
-
-    // @barrier("local");    
-
-    //project/differentiate in i and write back 
-    for(int es=0;es<p_cubNblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){  
-          const dlong e = eo+es; // element in block
-          if((e<Nelements) && (i<p_Nq) && (j<p_Nq)){ 
-            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
-            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
-            
-            dfloat nu = 0.f, nv = 0.f;
-            
+        if (j<p_Nq) {
 #pragma unroll p_cubNq
-      for(int n=0;n<p_cubNq;++n){
-       // const dfloat Pni = s_cubProjectT[n][i];
-         const dfloat Pni = s_cubInterpT[i][n];
-        nu += Pni*s_cU[es][j][n];
-        nv += Pni*s_cV[es][j][n];
-      }
-            const dlong id = e*p_Np + j*p_Nq + i;
-            NU[id+0*offset] = invJW*nu;
-            NU[id+1*offset] = invJW*nv;
+          for (int n=0;n<p_cubNq;n++) {
+            const dfloat Inj = s_cubInterpT[j][n];
+            r_NU += Inj*s_NU[n][i];
+            r_NV += Inj*s_NV[n][i];
           }
+
+          s_U[j][i] = r_NU;
+          s_V[j][i] = r_NV;
         }
       }
     }
-  }  
-} 
+
+    @barrier("local");
+
+    //project/differentiate in i and write back
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if((i<p_Nq) && (j<p_Nq)){
+          dfloat nu = 0.f, nv = 0.f;
+
+#pragma unroll p_cubNq
+          for(int n=0;n<p_cubNq;++n){
+            const dfloat Ini = s_cubInterpT[i][n];
+
+            nu += Ini*s_U[j][n];
+            nv += Ini*s_V[j][n];
+          }
+          const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+          const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+          const dlong id = e*p_Np + j*p_Nq + i;
+	  NU[id+0*offset] = invJW*nu;
+	  NU[id+1*offset] = invJW*nv;
+        }
+      }
+    }
+  }
+}
+

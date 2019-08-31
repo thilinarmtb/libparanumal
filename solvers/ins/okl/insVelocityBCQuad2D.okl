@@ -28,53 +28,61 @@
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
-    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
+    struct bcData bc;  \
+    bc.idM = vmapM[sk];   bc.time = time;  \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+    bc.fieldOffset = offset; \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
                                                                         \
-    dfloat dudxP=0, dudyP=0, uP=0;					\
-    dfloat dvdxP=0, dvdyP=0, vP=0;					\
+    bc.uM = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset]; \
+    bc.uxP = 0.f;  bc.uyP = 0.f;  bc.uP = 0.f;        \
+    bc.vxP = 0.f;  bc.vyP = 0.f;  bc.vP = 0.f;        \
+    bc.wrk = (dfloat *) W; \
                                                                         \
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0) {								\
-      const dlong idM = vmapM[sk];					\
-      if(bc==1){							\
-	uP = 0.f; vP = 0.f;						\
-      }else{								\
-	insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);	\
-      }									\
-      insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP); \
-    }									\
+    bc.id = EToB[face+p_Nfaces*e];        \
+    if(bc.id>0) {                 \
+      if(bc.id==1 || bc.id == 4 || bc.id == 5){       \
+        bc.uP = 0.f; bc.vP = 0.f;    \
+      }else if(bc.id==2){                \
+       insVelocityDirichletConditions2D(&bc); \
+      }                 \
+      insVelocityNeumannConditions2D(&bc); \
+    }                 \
                                                                         \
-    const dfloat du = uP;						\
-    const dfloat dv = vP;						\
+    const dfloat du = bc.uP;            \
+    const dfloat dv = bc.vP;            \
+    s_dudx[j][i] += WsJ*bc.nx*du;            \
+    s_dudy[j][i] += WsJ*bc.ny*du;            \
+    s_dvdx[j][i] += WsJ*bc.nx*dv;            \
+    s_dvdy[j][i] += WsJ*bc.ny*dv;            \
                                                                         \
-    s_dudx[j][i] += WsJ*nx*du;						\
-    s_dudy[j][i] += WsJ*ny*du;						\
-    s_dvdx[j][i] += WsJ*nx*dv;						\
-    s_dvdy[j][i] += WsJ*ny*dv;						\
-                                                                        \
-    s_rhsu[j][i] -= WsJ*(nx*dudxP + ny*dudyP+ tau*du*hinv);		\
-    s_rhsv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP+ tau*dv*hinv);		\
+    s_rhsu[j][i] -= WsJ*(bc.nx*bc.uxP + bc.ny*bc.uyP+tau*du*hinv); \
+    s_rhsv[j][i] -= WsJ*(bc.nx*bc.vxP + bc.ny*bc.vyP+tau*dv*hinv); \
   }
 
 @kernel void insVelocityIpdgBCQuad2D(const dlong Nelements,
-				     @restrict const  dlong  *  vmapM,
-				     const dfloat tau,
-				     const dfloat time,
-				     @restrict const  dfloat *  x,
-				     @restrict const  dfloat *  y,
-				     @restrict const  dfloat *  z,
-				     @restrict const  dfloat *  vgeo,
-				     @restrict const  dfloat *  sgeo,
-				     @restrict const  int    *  EToB,
-				     @restrict const  dfloat *  D,
-				     @restrict const  dfloat *  LIFTT,
-				     @restrict const  dfloat *  MM,
-				     @restrict dfloat *  rhsU,
-				     @restrict dfloat *  rhsV,
-				     @restrict dfloat *  rhsW){
+            const dlong offset, 
+            @restrict const  dlong  *  vmapM,
+            const dfloat tau,
+            const dfloat time,
+            @restrict const  dfloat *  x,
+            @restrict const  dfloat *  y,
+            @restrict const  dfloat *  z,
+            @restrict const  dfloat *  vgeo,
+            @restrict const  dfloat *  sgeo,
+            @restrict const  int    *  EToB,
+            @restrict const  dfloat *  D,
+            @restrict const  dfloat *  LIFTT,
+            @restrict const  dfloat *  MM,
+            @restrict const  dfloat *  W,
+            @restrict const  dfloat *  U,
+            @restrict dfloat *  rhsU,
+            @restrict dfloat *  rhsV,
+            @restrict dfloat *  rhsW){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -176,51 +184,61 @@
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {									\
-    const dlong idM = vmapM[sk];					\
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    struct bcData bc;  \
+    bc.idM = vmapM[sk];   bc.time = time;  \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+    bc.fieldOffset = offset; \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
                                                                         \
-    dfloat dudxP=0.f, dudyP=0.f, uP=0.f;				\
-    dfloat dvdxP=0.f, dvdyP=0.f, vP=0.f;				\
+    bc.uM     = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset]; \
+    bc.uxP = 0.f;  bc.uyP = 0.f; bc.uP = 0.f;        \
+    bc.vxP = 0.f;  bc.vyP = 0.f; bc.vP = 0.f;        \
+    bc.wrk = (dfloat *) W; \
                                                                         \
-    const int bc = mapB[idM];						\
-    if(bc>0) {								\
-      if(bc==1){							\
-	uP = 0.f; vP= 0.f;						\
-      }else{								\
-	insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);	\
-      }									\
-      insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP); \
-    }									\
-                                                                        \
-    s_u  [j][i]  = uP;							\
-    s_v  [j][i]  = vP;							\
-    s_ndu[j][i] -= WsJ*(nx*dudxP + ny*dudyP);				\
-    s_ndv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP);				\
+    bc.id = mapB[bc.idM];           \
+    if(bc.id>0) {                 \
+      if(bc.id==1 || bc.id == 4 || bc.id == 5 ){       \
+        bc.uP = 0.f; bc.vP = 0.f;           \
+      }else if(bc.id==2){                \
+       insVelocityDirichletConditions2D(&bc); \
+      }                 \
+      insVelocityNeumannConditions2D(&bc); \
+    }                 \
+    \
+    s_u  [j][i] =  bc.uP;             \
+    s_v  [j][i] =  bc.vP;             \
+    s_ndu[j][i]-= WsJ*(bc.nx*bc.uxP + bc.ny*bc.uyP);    \
+    s_ndv[j][i]-= WsJ*(bc.nx*bc.vxP + bc.ny*bc.vyP);    \
   }
 
 
 //RHS contributions for continuous solver
 @kernel void insVelocityBCQuad2D(const dlong Nelements,
-				 @restrict const  dfloat *  ggeo,
-				 @restrict const  dfloat *  sgeo,
-				 @restrict const  dfloat *  D,
-				 @restrict const  dfloat *  S,
-				 @restrict const  dfloat *  MM,
-				 @restrict const  dlong  *  vmapM,
-				 @restrict const  int    *  EToB,
-				 @restrict const  dfloat *  sMT,
-				 const dfloat lambda,
-				 const dfloat time,
-				 @restrict const  dfloat *  x,
-				 @restrict const  dfloat *  y,
-				 @restrict const  dfloat *  z,
-				 @restrict const  int    *  mapB,
-				 @restrict dfloat *  rhsU,
-				 @restrict dfloat *  rhsV,
-				 @restrict dfloat *  rhsW){
-  
+        const dlong offset, 
+        @restrict const  dfloat *  ggeo,
+        @restrict const  dfloat *  sgeo,
+        @restrict const  dfloat *  D,
+        @restrict const  dfloat *  S,
+        @restrict const  dfloat *  MM,
+        @restrict const  dlong  *  vmapM,
+        @restrict const  int    *  EToB,
+        @restrict const  dlong  *  sMT,
+        const dfloat lambda,
+        const dfloat time,
+        @restrict const  dfloat *  x,
+        @restrict const  dfloat *  y,
+        @restrict const  dfloat *  z,
+        @restrict const  int    *  mapB,
+        @restrict const  dfloat *  W,
+        @restrict const  dfloat *  U,
+        @restrict dfloat *  rhsU,
+        @restrict dfloat *  rhsV,
+        @restrict dfloat *  rhsW){
+
+
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_u[p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq];
@@ -362,104 +380,54 @@
 }
 
 @kernel void insVelocityAddBCQuad2D(const dlong Nelements,
-                                    const dfloat time,
-                                    @restrict const  dfloat *  sgeo,
-                                    @restrict const  dfloat *  x,
-                                    @restrict const  dfloat *  y,
-                                    @restrict const  dfloat *  z,
-                                    @restrict const  dlong  *  vmapM,
-                                    @restrict const  int    *  mapB,
-				    @restrict dfloat *  U,
-				    @restrict dfloat *  V,
-				    @restrict dfloat *  W){
+           const dlong offset, 
+           const dfloat time,
+           @restrict const  dfloat *  sgeo,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  z,
+           @restrict const  dlong  *  vmapM,
+           @restrict const  int    *  mapB,
+           @restrict const  dfloat *  W,
+           @restrict const  dfloat *  U,
+           @restrict dfloat *  UH,
+           @restrict dfloat *  VH,
+           @restrict dfloat *  WH){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
+         struct bcData bc;    
+        bc.id = mapB[idM];
 
-      if(bc>0) {
-        const dfloat uM = U[idM];
-        const dfloat vM = V[idM];
+        if(bc.id>0) {
+          bc.idM = idM; 
+          bc.time = time; 
+          bc.x  = x[bc.idM]; 
+          bc.y  = y[bc.idM]; 
+          
+          const dlong sid  = e*p_Nfaces*p_Nfp + n;
+          bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
+          bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
 
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+          bc.uM = U[bc.idM + 0*offset]; 
+          bc.vM = U[bc.idM + 1*offset]; 
 
-        dfloat uP = uM;
-        dfloat vP = vM;
-
-        if(bc==1){
-	         uP = 0.f; vP = 0.f; 
-        }else{
-          insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
-        }
-        //
-        U[idM] = uP;
-        V[idM] = vP;
-      }    
+          bc.uP = UH[bc.idM]; bc.vP = VH[bc.idM];  
+          bc.pP = 0.f;  bc.wrk = (dfloat *) W; 
+          
+          if(bc.id==1){
+            bc.uP = 0.f; bc.vP = 0.f; 
+          }else if(bc.id==4){
+            bc.uP = 0.f;           
+          }else if(bc.id==5){
+            bc.vP = 0.f;            
+          }else if(bc.id==2){               
+            insVelocityDirichletConditions2D(&bc);
+          }
+          UH[bc.idM] = bc.uP;
+          VH[bc.idM] = bc.vP;
+        }    
+      }
     }
   }
-}
-
-
-@kernel void insVelocityAddBCTOMBOQuad2D(const dlong Nelements,
-                                        const dfloat time,
-                                        const dfloat dt,
-                                        const int stage,
-                                        @restrict const  dfloat *  c,
-                                        @restrict const  dfloat *  prkB,
-                                        @restrict const  dfloat *  x,
-                                        @restrict const  dfloat *  y,
-                                        @restrict const  dfloat *  z,
-                                        @restrict const  dfloat *  sgeo,
-                                          @restrict const  dlong  *  vmapM,
-                                          @restrict const  int    *  mapB,
-                                          @restrict dfloat *  U,
-                                          @restrict dfloat *  V,
-                                          @restrict dfloat *  W){
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
-
-      if(bc>0 && bc!=3) {
-        const dfloat uM = U[idM];
-        const dfloat vM = V[idM];
-
-        const dlong sk = e*p_Nfp*p_Nfaces + n;
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-
-        dfloat uP = uM;
-        dfloat vP = vM;
-
-        if(bc==1){
-           uP = 0.f; vP = 0.f; 
-        }else{
-          insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
-           
-          // dfloat ctime = 0.f;
-          //  // extrapolate for BC difference
-          // for (int s=0;s<stage;s++) {
-          //   ctime = time-(s+1)*dt;
-          //   dfloat uPm, vPm; 
-          //   insVelocityDirichletConditions2D(bc, ctime, x[idM], y[idM], nx, ny, uM, vM, &uPm, &vPm);
-          //   uP -= prkB[s]*uPm;  
-          //   vP -= prkB[s]*vPm;  
-          // }
-         if(bc==2){
-          uP = 0.f; 
-          vP = 0.f; 
-         }
-         
-          // printf("%d %g \n", bc, uP);
-        }
-        //
-        U[idM] = uP;
-        V[idM] = vP;
-      }    
-    }
-  }
-}

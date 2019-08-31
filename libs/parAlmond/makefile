@@ -7,6 +7,11 @@ include ../../make.inp
 
 include ${OCCA_DIR}/scripts/Makefile
 
+#dummy stuff to remove NEKRS_INSTALL_DIR, it is not defined on libP side
+ifndef NEKRS_INSTALL_DIR
+	NEKRS_INSTALL_DIR=../../libs
+endif
+
 # define variables
 HDRDIR = ../../
 OGSDIR  = ../gatherScatter
@@ -25,11 +30,11 @@ CC	= mpicc
 CXX	= mpic++
 LD	= mpic++
 
-# compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(OGSDIR) -I$(GSDIR)/src -D DPARALMOND='"${CURDIR}"' $(LIBP_OPT_FLAGS)
+# compiler flags to be used (set to compile with debugging on)   
+CFLAGS = -I. -fPIC -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(HYPREDIR) -I$(HYPREDIR)/include -I$(OGSDIR) -I$(GSDIR)/src -D DPARALMOND='"${CURDIR}"' $(LIBP_OPT_FLAGS)
 
 # link flags to be used
-LDFLAGS	= $(compilerFlags) $(flags) 
+LDFLAGS	= $(compilerFlags) $(flags)
 
 # libraries to be linked in
 LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs $(HYPRELIB) \
