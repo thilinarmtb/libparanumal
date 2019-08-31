@@ -38,11 +38,7 @@ SOFTWARE.
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
 #define insVelocityDirichletConditions3D(bcData *bc)
 {                                   
-  if(bc->id==1){                        
-    bc->uP = 0.f;                    
-    bc->vP = 0.f;                    
-    bc->wP = 0.f;                    
-  } else if(bc->id==2){                 
+ if(bc->id==2){                 
     bc->uP = p_ubar;                 
     bc->vP = p_vbar;                 
     bc->wP = p_wbar;                 
@@ -50,11 +46,7 @@ SOFTWARE.
     bc->uP = bc->uM;                     
     bc->vP = bc->vM;                     
     bc->wP = bc->wM;                     
-  } else if(bc->id==4||bc->id==5||bc->id==6){   
-    bc->uP = bc->uM - (bc->nx*bc->uM+bc->ny*bc->vM+bc->nz*bc->wM)*bc->nx;
-    bc->vP = bc->vM - (bc->nx*bc->uM+bc->ny*bc->vM+bc->nz*bc->wM)*bc->ny;
-    bc->wP = bc->wM - (bc->nx*bc->uM+bc->ny*bc->vM+bc->nz*bc->wM)*bc->nz;
-  }                                 
+  }                              
 }
 
 #define insVelocityNeumannConditions3D(bcData *bc)
@@ -95,28 +87,16 @@ SOFTWARE.
 
 #define insPressureDirichletConditions3D(bcData *bc) 
 {                                   
-  if(bc->id==1 || bc->id==2){               
-    bc->pP = bc->pM;                     
-  } else if(bc->id==3){                 
+  if(bc->id==3){                 
     bc->pP = p_pbar;                 
-  } else if(bc->id==4||bc->id==5||bc->id==6){   
-    bc->pP = bc->pM;                     
-  }                                 
+  }                            
 }
 
 #define insPressureNeumannConditions3D(bcData *bc)
 {                                          
-  if(bc->id==1 || bc->id==2){                      
-    bc->pxP = 0.f;                          
-    bc->pyP = 0.f;                          
-    bc->pzP = 0.f;                          
-  } else if(bc->id==3){                        
+  if(bc->id==3){                        
     bc->pxP = bc->pxM;                          
     bc->pyP = bc->pyM;                          
     bc->pzP = bc->pzM;                          
-  } else if(bc->id==4||bc->id==5||bc->id==6){          
-    bc->pxP = 0.f;                          
-    bc->pyP = 0.f;                          
-    bc->pzP = 0.f;                          
-  }                                        
+  }                                      
 }

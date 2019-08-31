@@ -1246,13 +1246,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 	sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
 	ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
   
-	if(ins->elementType==HEXAHEDRA){
-	  sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
-	  ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-	  sprintf(kernelName, "insSubCycleNekVolume%s", suffix);
-	  ins->subCycleNekVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-	}
-
+	  sprintf(kernelName, "insSubCycleStrongCubatureVolume%s", suffix);
+	  ins->subCycleStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	  sprintf(kernelName, "insSubCycleStrongVolume%s", suffix);
+	  ins->subCycleStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 	sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
 	ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -1276,10 +1273,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       ins->setScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // CFL related Kernels
-      sprintf(fileName, DINS "/okl/insCfl.okl");
+      sprintf(fileName, DINS "/okl/insCfl%s.okl", suffix);
       sprintf(kernelName, "insCfl%s", suffix);
       ins->cflKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
+      sprintf(fileName, DINS "/okl/insMax.okl");
       sprintf(kernelName, "insMax", suffix);
       ins->maxKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 

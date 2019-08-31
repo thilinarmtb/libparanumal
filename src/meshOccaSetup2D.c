@@ -382,12 +382,14 @@ void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kern
     }
 
     dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+    dfloat *cubDiffInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     for(int n=0;n<mesh->Nq;++n){
       for(int m=0;m<mesh->cubNq;++m){
         cubDWT[n+m*mesh->Nq] = mesh->cubDW[n*mesh->cubNq+m];
         cubProjectT[n+m*mesh->Nq] = mesh->cubProject[n*mesh->cubNq+m];
+        cubDiffInterpT[m+n*mesh->cubNq] = mesh->cubDiffInterp[m*mesh->Nq+n];
         cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
       }
     }
@@ -448,6 +450,10 @@ void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kern
     mesh->o_cubDWT =
       mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
           cubDWT);
+
+    mesh->o_cubDiffInterpT =
+      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+          cubDiffInterpT);
 
     mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubDWT);
 

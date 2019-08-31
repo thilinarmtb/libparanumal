@@ -24,142 +24,41 @@ SOFTWARE.
 
 */
 
-#if 1
 // Initial conditions 
-#define insFlowField2D(t,x,y,u,v,p)   \
-  {                                   \
-    *(u) = -sin(2.f*M_PI*y)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(v) =  sin(2.f*M_PI*x)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(p) = -cos(2.f*M_PI*y)*cos(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);   \
+void insFlowField2D(bcData *bc) 
+  {                             
+    bc->uP = -sin(2.f*M_PI*bc->y)*exp(-p_nu*4.f*M_PI*M_PI*bc->time);
+    bc->vP =  sin(2.f*M_PI*bc->x)*exp(-p_nu*4.f*M_PI*M_PI*bc->time);
+    bc->pP = -cos(2.f*M_PI*bc->y)*cos(2.f*M_PI*bc->x)*exp(-p_nu*8.f*M_PI*M_PI*bc->time); 
   }   
-
-// Boundary conditions
-// BC == 1 is already handled in the solver...  
 // Default u+ = u-, modify if it is different  
-#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-{                                                       \
-  if(bc==2){                                            \
-    *(uB) = -sin(2.f*M_PI*y)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(vB) =  sin(2.f*M_PI*x)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-  }else if(bc==4){                  \
-    *(uB) = 0.f;                    \
-  } else if(bc==5){                 \
-    *(vB) = 0.f;                    \
-  }                                 \
+void insVelocityDirichletConditions2D(bcData *bc)
+{                                                       
+  if(bc->id==2){                                            
+    bc->uP = -sin(2.f*M_PI*bc->y)*exp(-p_nu*4.f*M_PI*M_PI*bc->time);
+    bc->vP =  sin(2.f*M_PI*bc->x)*exp(-p_nu*4.f*M_PI*M_PI*bc->time);
+  }
 }
 
-// default dudx = 0.0; modify only if you have a specific outflow bc 
-#define insVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
-{                                          \
-  if(bc==3){                               \
-    *(uxB) = 0.f;                          \
-    *(uyB) = -2.f*M_PI*cos(2.f*M_PI*y)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(vxB) =  2.f*M_PI*cos(2.f*M_PI*x)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(vyB) = 0.f;                          \
-  }                                        \
+void insVelocityNeumannConditions2D(bcData *bc)
+{                                         
+  if(bc->id==3){                               
+    bc->uxP = 0.f;                          
+    bc->uyP =-2.f*M_PI*cos(2.f*M_PI*bc->y)*exp(-p_nu*4.f*M_PI*M_PI*bc->time);
+    bc->vxP = 2.f*M_PI*cos(2.f*M_PI*bc->x)*exp(-p_nu*4.f*M_PI*M_PI*bc->time);
+    bc->vyP = 0.f;                          
+  }                                        
 }
 
-// default is pB = pM; modify only if you have a specific outflow bc
-#define insPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
-{                                   \
-  if(bc==3){                        \
-    *(pB) = -cos(2.f*M_PI*y)*cos(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);\
-   } \
+void insPressureDirichletConditions2D(bcData *bc)
+{                                  
+  if(bc->id==3){                        
+    bc->pP = -cos(2.f*M_PI*bc->y)*cos(2.f*M_PI*bc->x)*exp(-p_nu*8.f*M_PI*M_PI*bc->time);
+   } 
 }
 
-
-// default is dPdx = 0.0; I think we dont need that....  
-#define insPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
-{                                          \
-  if(bc==3){                               \
-  }                                        \
+void insPressureNeumannConditions2D(bcData *bc)
+{                                          
+  if(bc->id==3){                               
+  }                                        
 }
-
-#else
-// Initial conditions 
-#define insFlowField2D(t,x,y,u,v,p)   \
-  {                                   \
-    *(u) = -sin(2.f*M_PI*y)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(v) =  sin(2.f*M_PI*x)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(p) = -cos(2.f*M_PI*y)*cos(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);   \
-  }   
-
-// Boundary conditions
-// wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 
-#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-{                                   \
-  if(bc==1){                        \
-    *(uB) = 0.f;                    \
-    *(vB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(uB) = -sin(2.f*M_PI*y)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(vB) =  sin(2.f*M_PI*x)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-  } else if(bc==3){                 \
-    *(uB) = uM;                     \
-    *(vB) = vM;                     \
-  } else if(bc==4){                 \
-    *(uB) = 0.f;                    \
-    *(vB) = vM;                     \
-  } else if(bc==5){                 \
-    *(uB) = uM;                     \
-    *(vB) = 0.f;                    \
-  }                                 \
-}
-
-#define insVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  } else if(bc==3){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = -2.f*M_PI*cos(2.f*M_PI*y)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(vxB) =  2.f*M_PI*cos(2.f*M_PI*x)*exp(-p_nu*4.f*M_PI*M_PI*t);\
-    *(vyB) = 0.f;                          \
-  } else if(bc==4){                        \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==5){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  }                                        \
-}
-
-
-#define insPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
-{                                   \
-  if(bc==1 || bc==2){               \
-    *(pB) = pM;                     \
-  } else if(bc==3){                 \
-    *(pB) = -cos(2.f*M_PI*y)*cos(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);\
-  } else if(bc==4){                 \
-    *(pB) = pM;                     \
-  } else if(bc==5){                 \
-    *(pB) = pM;                     \
-  }                                 \
-}
-
-
-#define insPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(pxB) = 2.f*M_PI*cos(2.f*M_PI*y)*sin(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);\
-    *(pyB) = 2.f*M_PI*sin(2.f*M_PI*y)*cos(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);\
-  } else if(bc==3){                        \
-    *(pxB) = pxM;                          \
-    *(pyB) = pyM;                          \
-  } else if(bc==4){                        \
-    *(pxB) = 0.f;                          \
-    *(pyB) = 0.f;                          \
-  } else if(bc==5){                        \
-    *(pxB) = 0.f;                          \
-    *(pyB) = 0.f;                          \
-  }                                        \
-}
-#endif

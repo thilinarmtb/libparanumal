@@ -588,6 +588,9 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
 			  mesh->cubD);
 
     mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), cubDWT);
+    
+    // just neeeded to combine quad and hex cub kernels
+    mesh->o_cubDiffInterpT = mesh->o_cubDWmatrices; 
 
     //    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after geofactors ");
     

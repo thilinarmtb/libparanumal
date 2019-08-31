@@ -34,23 +34,25 @@ SOFTWARE.
 			       @restrict dfloat *  U,
 			       @restrict dfloat *  P){
   
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-    for(int n=0;n<p_Np;++n;@inner(0)){
+  for(dlong n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
+
+    if(n<p_Np*Nelements){
+      struct bcData bc;
+      bc.time   = t;
+      bc.idM    = n;
+      bc.fieldOffset = offset;   
+      bc.x = x[n];
+      bc.y = y[n];
       
-      const int id = n + e*p_Np;
-      
-      dfloat xn = x[id];
-      dfloat yn = y[id];
-      
-      dfloat u = 0.0;
-      dfloat v = 0.0;
-      dfloat p = 0.0;
-      
-      insFlowField2D(t, xn, yn, &u, &v, &p);
-      
-      U[id+0*offset] = u;
-      U[id+1*offset] = v;
-      P[id] = p;
+      bc.uP = 0.f;
+      bc.vP = 0.f;
+      bc.pP = 0.f;
+
+      insFlowField2D(&bc);
+
+      U[n+0*offset] = bc.uP;
+      U[n+1*offset] = bc.vP;
+      P[n]          = bc.pP;
     }
   }
 }

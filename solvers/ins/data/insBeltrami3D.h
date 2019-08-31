@@ -50,21 +50,11 @@ void insVelocityDirichletConditions3D(bcData *bc)
     dfloat x = bc->x; 
     dfloat y = bc->y; 
     dfloat z = bc->z;                  
-  if(bc->id==1){                        
-    bc->uP = 0.f;                    
-    bc->vP = 0.f;                    
-    bc->wP = 0.f;                    
-  } else if(bc->id==2){                     
+ if(bc->id==2){                     
     bc->uP = -a*exp(-p_nu*d*d*time)*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y));
     bc->vP = -a*exp(-p_nu*d*d*time)*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z));
     bc->wP = -a*exp(-p_nu*d*d*time)*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x));
-  }else if(bc->id==4){         
-    bc->uP = 0.f;       
-  }else if(bc->id==5){         
-    bc->vP = 0.f;       
-  }else if(bc->id==6){         
-    bc->wP  = 0.f;       
-  }                        
+  }
 }
 
 void insPressureDirichletConditions3D(bcData *bc)
