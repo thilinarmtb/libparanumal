@@ -25,7 +25,7 @@
 */
 
 // Trying to find difference between enstrophy generation in libP and Nek5K
-@kernel void insSubCycleNekCubatureVolumeHex3D(const dlong Nelements,
+@kernel void insSubCycleStrongCubatureVolumeHex3D(const dlong Nelements,
 					       @restrict const  dfloat *  vgeo,
 					       @restrict const  dfloat *  cubvgeo,
 					       @restrict const  dfloat *  cubD,
@@ -314,7 +314,7 @@
 
 
 
-@kernel void insSubCycleNekVolumeHex3D(const dlong Nelements,
+@kernel void insSubCycleStrongVolumeHex3D(const dlong Nelements,
 				       @restrict const  dfloat *  vgeo,
 				       @restrict const  dfloat *  D,
 				       const dlong offset,
@@ -578,20 +578,20 @@
       }else if(bc.id==2){                \
         bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
         insVelocityDirichletConditions3D(&bc); \
-      }else if(bc.id==4){             \
-        bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
-      }else if(bc.id==5){              \
-        bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
-      }else if(bc.id==6){              \
-        bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
-      }                 \
       bc.uP *= bScale;							\
       bc.vP *= bScale;							\
       bc.wP *= bScale;							\
+      }else if(bc.id==4){             \
+        bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
+      } else if(bc.id==5){              \
+        bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
+      } else if(bc.id==6){              \
+        bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
+      }                 \
     }									\
 	                                                                    \
-    const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM + bc.nz*bc.wM);     \
-    const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP + bc.nz*bc.wP);      \
+    const dfloat unM   = fabs(bc.nx*uM + bc.ny*vM + bc.nz*wM);     \
+    const dfloat unP   = fabs(bc.nx*uP + bc.ny*vP + bc.nz*wP);      \
     const dfloat unMax = (unM > unP) ? unM : unP;     \
                                                                         \
                                                                         \
@@ -761,480 +761,6 @@
 }
 #undef surfaceTerms
 
-#if 0
-/* ------------------Quadrature @kernels ----------------------------------*/
-@kernel void insSubCycleCubatureVolumeHex3D(const dlong Nelements,
-					    @restrict const  dfloat *  vgeo,
-					    @restrict const  dfloat *  cubvgeo,
-					    @restrict const  dfloat *  cubD,
-					    @restrict const  dfloat *  cubInterpT,
-					    @restrict const  dfloat *  cubProjectT,
-					    const dlong offset,
-					    @restrict const  dfloat *  U,
-					    @restrict const  dfloat *  Ud,
-					    @restrict dfloat *  cU, //storage for interpolated fields
-					    @restrict dfloat *  cUd, //storage for interpolated fields
-					    @restrict dfloat *  NU){
-
-  //----------------------------@kernel 1 interpolate velocity fields to quadrature points
-  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
-
-    @shared dfloat s_U[p_Nq][p_cubNq];
-    @shared dfloat s_V[p_Nq][p_cubNq];
-    @shared dfloat s_W[p_Nq][p_cubNq];
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-
-    @exclusive dfloat r_U[p_cubNq], r_V[p_cubNq], r_W[p_cubNq];
-
-    for(int j=0;j<p_cubNq;++j;@inner(1)){
-      for(int i=0;i<p_cubNq;++i;@inner(0)){
-        const int id = i+j*p_cubNq;
-        if (id<p_Nq*p_cubNq) {
-          s_cubInterpT[0][id] = cubInterpT[id];
-        }
-
-#pragma unroll p_cubNq
-	for(int k=0;k<p_cubNq;++k){         
-	  r_U[k] = 0.;
-	  r_V[k] = 0.;
-	  r_W[k] = 0.;
-	}
-      }
-    }
-
-    @barrier("local");
-
-    //read in and interpolate in k
-    for(int j=0;j<p_cubNq;++j;@inner(1)){
-      for(int i=0;i<p_cubNq;++i;@inner(0)){
-        if (i<p_Nq && j<p_Nq) {
-#pragma unroll p_Nq
-          for(int k=0;k<p_Nq;++k){
-            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            const dfloat uc = U[id+0*offset];
-            const dfloat vc = U[id+1*offset];
-            const dfloat wc = U[id+2*offset];
-
-#pragma unroll p_cubNq
-            for(int n=0;n<p_cubNq;++n){
-              const dfloat Ik = s_cubInterpT[k][n];
-              r_U[n] += Ik*uc;
-              r_V[n] += Ik*vc;
-              r_W[n] += Ik*wc;
-            }
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-#pragma unroll p_cubNq
-    for(int k=0;k<p_cubNq;++k){ 
-      //load slice to @shared
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (i<p_Nq && j<p_Nq) {
-            s_U[j][i] = r_U[k];
-            s_V[j][i] = r_V[k];
-            s_W[j][i] = r_W[k];
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if(j<p_Nq){
-            r_U[k] = 0; r_V[k] = 0; r_W[k] = 0;
-
-#pragma unroll p_Nq
-            for (int n=0;n<p_Nq;n++) {
-              const dfloat Ii = s_cubInterpT[n][i];
-              r_U[k] += Ii*s_U[j][n];
-              r_V[k] += Ii*s_V[j][n];
-              r_W[k] += Ii*s_W[j][n];
-            }
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if(j<p_Nq){
-            s_U[j][i] = r_U[k];
-            s_V[j][i] = r_V[k];
-            s_W[j][i] = r_W[k];
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          r_U[k] = 0; r_V[k] = 0; r_W[k] = 0;
-
-#pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            const dfloat Ij = s_cubInterpT[n][j];
-            r_U[k] += Ij*s_U[n][i];
-            r_V[k] += Ij*s_V[n][i];
-            r_W[k] += Ij*s_W[n][i];
-          }
-
-          const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-          cU[id+0*offset] = r_U[k];
-          cU[id+1*offset] = r_V[k];
-          cU[id+2*offset] = r_W[k];
-        }
-      }
-      @barrier("local");      
-    }
-
-    //read in and interpolate in k
-    for(int j=0;j<p_cubNq;++j;@inner(1)){
-      for(int i=0;i<p_cubNq;++i;@inner(0)){
-#pragma unroll p_cubNq
-	for(int k=0;k<p_cubNq;++k){         
-	  r_U[k] = 0.;
-	  r_V[k] = 0.;
-	  r_W[k] = 0.;
-	}
-
-        if (i<p_Nq && j<p_Nq) {
-#pragma unroll p_Nq
-          for(int k=0;k<p_Nq;++k){
-            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            const dfloat uc = Ud[id+0*offset];
-            const dfloat vc = Ud[id+1*offset];
-            const dfloat wc = Ud[id+2*offset];
-
-#pragma unroll p_cubNq
-            for(int n=0;n<p_cubNq;++n){
-              const dfloat Ik = s_cubInterpT[k][n];
-              r_U[n] += Ik*uc;
-              r_V[n] += Ik*vc;
-              r_W[n] += Ik*wc;
-            }
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-#pragma unroll p_cubNq
-    for(int k=0;k<p_cubNq;++k){ 
-      //load slice to @shared
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (i<p_Nq && j<p_Nq) {
-            s_U[j][i] = r_U[k];
-            s_V[j][i] = r_V[k];
-            s_W[j][i] = r_W[k];
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if(j<p_Nq){
-            r_U[k] = 0; r_V[k] = 0; r_W[k] = 0;
-
-#pragma unroll p_Nq
-            for (int n=0;n<p_Nq;n++) {
-              const dfloat Ii = s_cubInterpT[n][i];
-              r_U[k] += Ii*s_U[j][n];
-              r_V[k] += Ii*s_V[j][n];
-              r_W[k] += Ii*s_W[j][n];
-            }
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if(j<p_Nq){
-            s_U[j][i] = r_U[k];
-            s_V[j][i] = r_V[k];
-            s_W[j][i] = r_W[k];
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          r_U[k] = 0; r_V[k] = 0; r_W[k] = 0;
-
-#pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            const dfloat Ij = s_cubInterpT[n][j];
-            r_U[k] += Ij*s_U[n][i];
-            r_V[k] += Ij*s_V[n][i];
-            r_W[k] += Ij*s_W[n][i];
-          }
-
-          const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-          cUd[id+0*offset] = r_U[k];
-          cUd[id+1*offset] = r_V[k];
-          cUd[id+2*offset] = r_W[k];
-        }
-      }
-      @barrier("local");
-    }
-  }
-
-  @barrier("global");
-
-  //-----------------------------@kernel 2 do the reference divergence
-  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
-
-    @shared dfloat s_F11[p_cubNq][p_cubNq];
-    @shared dfloat s_F12[p_cubNq][p_cubNq];
-    @shared dfloat s_F13[p_cubNq][p_cubNq];
-    @shared dfloat s_F21[p_cubNq][p_cubNq];
-    @shared dfloat s_F22[p_cubNq][p_cubNq];
-    @shared dfloat s_F23[p_cubNq][p_cubNq];
-    @shared dfloat s_F31[p_cubNq][p_cubNq];
-    @shared dfloat s_F32[p_cubNq][p_cubNq];
-    @shared dfloat s_F33[p_cubNq][p_cubNq];
-
-    @shared dfloat s_cubD[p_cubNq][p_cubNq];
-
-    @exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
-
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-      for(int i=0;i<p_cubNq;++i;@inner(0)){
-        const int id = i+j*p_cubNq;
-        s_cubD[0][id] = cubD[id];
-
-#pragma unroll p_cubNq
-	for(int k=0;k<p_cubNq;++k){         
-	  r_NU[k] = 0.;
-	  r_NV[k] = 0.;
-	  r_NW[k] = 0.;
-	}
-      }
-    }
-
-    @barrier("local");
-
-#pragma unroll p_cubNq
-    for(int k=0;k<p_cubNq;++k){ 
-
-      //fetch slice
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          const dlong gid = e*p_cubNp*p_Nvgeo+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
-          const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
-          const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
-          const dfloat drdz = cubvgeo[gid + p_RZID*p_cubNp];
-          const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
-          const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
-          const dfloat dsdz = cubvgeo[gid + p_SZID*p_cubNp];
-          const dfloat dtdx = cubvgeo[gid + p_TXID*p_cubNp];
-          const dfloat dtdy = cubvgeo[gid + p_TYID*p_cubNp];
-          const dfloat dtdz = cubvgeo[gid + p_TZID*p_cubNp];
-          const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
-
-          const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-          const dfloat Un = cU[id+0*offset];
-          const dfloat Vn = cU[id+1*offset];
-          const dfloat Wn = cU[id+2*offset];
-          const dfloat Udn = cUd[id+0*offset];
-          const dfloat Vdn = cUd[id+1*offset];
-          const dfloat Wdn = cUd[id+2*offset];
-
-          const dfloat cUn = JW*(drdx*Un+drdy*Vn+drdz*Wn);
-          const dfloat cVn = JW*(dsdx*Un+dsdy*Vn+dsdz*Wn);
-          const dfloat cWn = JW*(dtdx*Un+dtdy*Vn+dtdz*Wn);
-
-          s_F11[j][i] = cUn*Udn;
-          s_F12[j][i] = cVn*Udn;
-          s_F13[j][i] = cWn*Udn;
-          s_F21[j][i] = cUn*Vdn;
-          s_F22[j][i] = cVn*Vdn;
-          s_F23[j][i] = cWn*Vdn;
-          s_F31[j][i] = cUn*Wdn;
-          s_F32[j][i] = cVn*Wdn;
-          s_F33[j][i] = cWn*Wdn;
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-#pragma unroll p_cubNq
-	  for (int n=0;n<p_cubNq;n++) {
-	    const dfloat Dr = s_cubD[n][i];
-	    const dfloat Ds = s_cubD[n][j];
-	    const dfloat Dt = s_cubD[k][n];
-	    r_NU[k] += Dr*s_F11[j][n];
-	    r_NV[k] += Dr*s_F21[j][n];
-	    r_NW[k] += Dr*s_F31[j][n];
-
-	    r_NU[k] += Ds*s_F12[n][i];
-	    r_NV[k] += Ds*s_F22[n][i];
-	    r_NW[k] += Ds*s_F32[n][i];
-
-	    r_NU[n] += Dt*s_F13[j][i];
-	    r_NV[n] += Dt*s_F23[j][i];
-	    r_NW[n] += Dt*s_F33[j][i];
-	  }
-        }
-      }
-
-      @barrier("local");
-    } //k loop
-
-    //write out
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-      for(int i=0;i<p_cubNq;++i;@inner(0)){
-#pragma unroll p_cubNq
-	for(int k=0;k<p_cubNq;++k){
-	  const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-	  cU[id+0*offset] = r_NU[k];
-	  cU[id+1*offset] = r_NV[k];
-	  cU[id+2*offset] = r_NW[k];
-	}
-      }
-    }
-  }
-
-  @barrier("global");
-
-  //---------------------------@kernel 3 project fluxes back to GLL grid
-  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
-    @shared dfloat s_NU[p_cubNq][p_cubNq];
-    @shared dfloat s_NV[p_cubNq][p_cubNq];
-    @shared dfloat s_NW[p_cubNq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-
-    @exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
-
-    for(int j=0;j<p_cubNq;++j;@inner(1)){
-      for(int i=0;i<p_cubNq;++i;@inner(0)){
-        const int id = i+j*p_cubNq;
-        if (id<p_Nq*p_cubNq) {
-          s_cubProjectT[0][id] = cubProjectT[id];
-        }
-        
-#pragma unroll p_Nq
-	for(int k=0;k<p_Nq;++k){         
-	  r_NU[k] = 0.;
-	  r_NV[k] = 0.;
-	  r_NW[k] = 0.;
-	}
-      }
-    }
-
-    @barrier("local");
-
-    //read in and project in k
-    for(int j=0;j<p_cubNq;++j;@inner(1)){
-      for(int i=0;i<p_cubNq;++i;@inner(0)){
-#pragma unroll p_cubNq
-        for(int k=0;k<p_cubNq;++k){
-          const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-          const dfloat NUn = cU[id+0*offset];
-          const dfloat NVn = cU[id+1*offset];
-          const dfloat NWn = cU[id+2*offset];
-
-#pragma unroll p_Nq
-          for(int n=0;n<p_Nq;++n){
-            const dfloat Pk = s_cubProjectT[k][n];
-            r_NU[n] += Pk*NUn;
-            r_NV[n] += Pk*NVn;
-            r_NW[n] += Pk*NWn;
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-#pragma unroll p_Nq
-    for(int k=0;k<p_Nq;++k){ 
-      //load slice to @shared
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          s_NU[j][i] = r_NU[k];
-          s_NV[j][i] = r_NV[k];
-          s_NW[j][i] = r_NW[k];
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if(j<p_Nq){
-            r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
-
-#pragma unroll p_cubNq
-            for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pj = s_cubProjectT[n][j];
-              r_NU[k] += Pj*s_NU[n][i];
-              r_NV[k] += Pj*s_NV[n][i];
-              r_NW[k] += Pj*s_NW[n][i];
-            }
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if(j<p_Nq){
-            s_NU[j][i] = r_NU[k];
-            s_NV[j][i] = r_NV[k];
-            s_NW[j][i] = r_NW[k];
-          }
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (i<p_Nq && j<p_Nq) {
-            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
-            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
-
-            r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
-
-#pragma unroll p_cubNq
-            for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pi = s_cubProjectT[n][i];
-              r_NU[k] += Pi*s_NU[j][n];
-              r_NV[k] += Pi*s_NV[j][n];
-              r_NW[k] += Pi*s_NW[j][n];
-            }
-
-            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            NU[id+0*offset] = -invJW*r_NU[k];
-            NU[id+1*offset] = -invJW*r_NV[k];
-            NU[id+2*offset] = -invJW*r_NW[k];
-          }
-        }
-      }
-      @barrier("local");
-    }
-  }
-}
-#else 
 
 //unified @kernel, but might use too much memory
 @kernel void insSubCycleCubatureVolumeHex3D(const dlong Nelements,
@@ -1576,7 +1102,6 @@
     }
   }
 }
-#endif 
 
 
 #define quadSurfaceTerms(face)						\
@@ -1750,19 +1275,19 @@
       }else if(bc.id==2){                \
         bc.uP = bc.uM;  bc.vP = bc.vM; bc.wP = bc.wM;          \
         insVelocityDirichletConditions3D(&bc); \
+	  bc.uP *= bScale;						\
+	  bc.vP *= bScale;						\
+	  bc.wP *= bScale;						\
       }else if(bc.id==4){             \
         bc.uP = 0.f; bc.vP = bc.vM; bc.wP = bc.wM;         \
-      }else if(bc.id==5){              \
+      } else if(bc.id==5){              \
         bc.uP = bc.uM; bc.vP = 0.f; bc.wP = bc.wM;         \
-      }else if(bc.id==6){              \
+      } else if(bc.id==6){              \
         bc.uP = bc.uM; bc.vP = bc.vM; bc.wP = 0.f;         \
       }                 \
-      bc.uP *= bScale;						\
-      bc.vP *= bScale;						\
-      bc.wP *= bScale;						\
-    }								\
-    const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM + bc.nz*bc.wM);     \
-    const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP + bc.nz*bc.wP);      \
+	}								\
+	const dfloat unM   = fabs(bc.nx*uM + bc.ny*vM + bc.nz*wM);     \
+    const dfloat unP   = fabs(bc.nx*uP + bc.ny*vP + bc.nz*wP);      \
     const dfloat unMax = (unM > unP) ? unM : unP;     \
                                                                         \
                                                                         \
@@ -2052,7 +1577,7 @@
 
 
 
-
+#if 0
 
 // Trying to find difference between enstrophy generation in libP and Nek5K
 @kernel void insSubCycleNekCubatureVolumeHex3D_v01(const dlong Nelements,
@@ -2490,4 +2015,4 @@
   }
 }
 
-
+#endif

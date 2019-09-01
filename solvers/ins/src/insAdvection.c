@@ -39,7 +39,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
       ins->advectionStrongCubatureVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,
                                        mesh->o_cubvgeo,
-                                       mesh->o_cubDWmatrices,
+                                       mesh->o_cubDiffInterpT, // mesh->o_cubDWmatrices,
                                        mesh->o_cubInterpT,
                                        mesh->o_cubProjectT,
                                        ins->fieldOffset,

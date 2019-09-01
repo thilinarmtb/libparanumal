@@ -27,67 +27,78 @@ SOFTWARE.
 
 #define surfaceTermsIpdg(sk,face,i, j)                                  \
 {                                                                       \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+  struct bcData bc;  \
+    bc.idM = vmapM[sk];         \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.time = time; \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+    bc.fieldOffset = offset; \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
+                                                      \
+    bc.pxP=0.f; bc.pyP=0.f; bc.pP=0.f;      \
+    bc.uM    = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset]; \
+    bc.wrk = (dfloat *) W; \
+                    \
+    dfloat pP = 0.f, pxP = 0.f, pyP = 0.f; \
+    bc.id = EToB[face+p_Nfaces*e];        \
+    if(bc.id==3) {                \
+      insPressureDirichletConditions2D(&bc); \
+      insPressureNeumannConditions2D(&bc); \
+      pP = bc.pP; pxP = bc.pxP;  pyP = bc.pyP;   \
+      for (int s=0;s<stage;s++) {         \
+  dfloat prkBn;           \
+  if (ARKswitch) {            \
+    prkBn = prkB[stage*(p_Nstages+1)+s];        \
+    bc.time = time-(c[stage]-c[s])*dt;        \
+  } else {              \
+    prkBn = prkB[s];            \
+    bc.time = time-(s+1)*dt;          \
+  }               \
+                  \
+  insPressureDirichletConditions2D(&bc); \
+  insPressureNeumannConditions2D(&bc); \
+                  \
+                  \
+  pP     -= prkBn*bc.pP;            \
+  pxP    -= prkBn*bc.pxP;           \
+  pyP    -= prkBn*bc.pyP;           \
+      }                 \
+    }                 \
+                  \
+    const dfloat dp = pP;           \
                                                                         \
-  dfloat dpdxP=0.f, dpdyP=0.f, pP=0.f;                                  \
+    s_dpdx[j][i] += WsJ*bc.nx*dp;         \
+    s_dpdy[j][i] += WsJ*bc.ny*dp;         \
                                                                         \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc==3) {                                                           \
-    const dlong idM = vmapM[sk];                                        \
-    insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
-    insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
-    for (int s=0;s<stage;s++) {\
-      dfloat prkBn, ctime;\
-      if (ARKswitch) {\
-        prkBn = prkB[stage*(p_Nstages+1)+s];\
-        ctime = time-(c[stage]-c[s])*dt;\
-      } else {\
-        prkBn = prkB[s];\
-        ctime = time-(s+1)*dt;\
-      }\
-      \
-      dfloat pPm, dpdxPm, dpdyPm;\
-      insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);\
-      insPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);\
-      \
-\
-      pP    -= prkBn*pPm;\
-      dpdxP -= prkBn*dpdxPm;\
-      dpdyP -= prkBn*dpdyPm;\
-    } \
-  }                                                                     \
-                                                                        \
-  const dfloat dp = pP;                                                 \
-                                                                        \
-  s_dpdx[j][i] += WsJ*nx*dp;                                            \
-  s_dpdy[j][i] += WsJ*ny*dp;                                            \
-                                                                        \
-  s_rhsp[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP+ tau*dp*hinv);               \
-}
+    s_rhsp[j][i] -=WsJ*(bc.nx*pxP + bc.ny*pyP + tau*dp*hinv); \
+  }
 
 // Actually solves for Pr increamnet not presssure
 @kernel void insPressureIpdgBCQuad2D(const dlong Nelements,
-                                      @restrict const  dlong  *  vmapM,
-                                      const dfloat tau,
-                                      const dfloat time,
-                                      const dfloat dt,
-                                      const int stage,
-                                      const int ARKswitch,
-                                      @restrict const  dfloat *  c,
-                                      @restrict const  dfloat *  prkB,
-                                      @restrict const  dfloat *  x,
-                                      @restrict const  dfloat *  y,
-                                      @restrict const  dfloat *  z,
-                                      @restrict const  dfloat *  vgeo,
-                                      @restrict const  dfloat *  sgeo,
-                                      @restrict const  int    *  EToB,
-                                      @restrict const  dfloat *  D,
-                                      @restrict const  dfloat *  LIFTT,
-                                      @restrict const  dfloat *  MM,
-                                            @restrict dfloat *  rhsP){
+             const dlong offset,
+            @restrict const  dlong  *  vmapM,
+            const dfloat tau,
+            const dfloat time,
+            const dfloat dt,
+            const int stage,
+            const int ARKswitch,
+            @restrict const  dfloat *  c,
+            @restrict const  dfloat *  prkB,
+            @restrict const  dfloat *  x,
+            @restrict const  dfloat *  y,
+            @restrict const  dfloat *  z,
+            @restrict const  dfloat *  vgeo,
+            @restrict const  dfloat *  sgeo,
+            @restrict const  int    *  EToB,
+            @restrict const  dfloat *  D,
+            @restrict const  dfloat *  LIFTT,
+            @restrict const  dfloat *  MM,
+            @restrict const  dfloat *  W,
+            @restrict const  dfloat *  U,
+            @restrict dfloat *  rhsP){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -173,62 +184,73 @@ SOFTWARE.
 
 #define surfaceTerms(sk,face,i, j)                                      \
 {                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-                                                                        \
-  dfloat dpdxP=0.f, dpdyP=0.f, pP=0.f;                                  \
-                                                                        \
-  const int bc = mapB[idM];                                             \
-  if(bc==3) {                                                            \
-    insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
-    insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
-    for (int s=0;s<stage;s++) {\
-      dfloat prkBn, ctime;\
-      if (ARKswitch) {\
-        prkBn = prkB[stage*(p_Nstages+1)+s];\
-        ctime = time-(c[stage]-c[s])*dt;\
-      } else {\
-        prkBn = prkB[s];\
-        ctime = time-(s+1)*dt;\
-      }\
-      \
-      dfloat pPm, dpdxPm, dpdyPm;\
-      insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);\
-      insPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);\
-      \
-\
-      pP    -= prkBn*pPm;\
-      dpdxP -= prkBn*dpdxPm;\
-      dpdyP -= prkBn*dpdyPm;\
-    } \
-  }                                                                     \
-                                                                        \
-  s_p  [j][i]  = pP;                                                    \
-  s_ndp[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP);                             \
-}
+  struct bcData bc;  \
+    bc.idM = vmapM[sk];         \
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
+    bc.time = time; \
+    bc.x   = x[bc.idM]; \
+    bc.y   = y[bc.idM]; \
+    bc.fieldOffset = offset; \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+                                                      \
+    bc.pxP=0.f; bc.pyP=0.f; bc.pP=0.f;      \
+    bc.uM    = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset]; \
+    bc.wrk = (dfloat *) W; \
+                    \
+    dfloat pP = 0.f, pxP = 0.f, pyP = 0.f;       \
+    bc.id = EToB[face+p_Nfaces*e];        \
+    if(bc.id==3) {                \
+      insPressureDirichletConditions2D(&bc); \
+      insPressureNeumannConditions2D(&bc); \
+      pP = bc.pP; pxP = bc.pxP;  pyP = bc.pyP;   \
+      for (int s=0;s<stage;s++) {         \
+      dfloat prkBn;           \
+      if (ARKswitch) {            \
+        prkBn = prkB[stage*(p_Nstages+1)+s];        \
+        bc.time = time-(c[stage]-c[s])*dt;        \
+      } else {              \
+        prkBn = prkB[s];            \
+        bc.time = time-(s+1)*dt;          \
+      }               \
+                  \
+      insPressureDirichletConditions2D(&bc); \
+      insPressureNeumannConditions2D(&bc); \
+                  \
+                  \
+        pP     -= prkBn*bc.pP;           \
+        pxP    -= prkBn*bc.pxP;            \
+        pyP    -= prkBn*bc.pyP;            \
+      }                 \
+    }                 \
+    s_p  [j][i] = pP;            \
+    s_ndp[j][i]-= WsJ*(bc.nx*pxP + bc.ny*pyP);    \
+  }
 
+  
 //RHS contributions for continuous solver
 @kernel void insPressureBCQuad2D(const dlong Nelements,
-                              @restrict const  dfloat *  ggeo,
-                              @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  D,
-                              @restrict const  dfloat *  S,
-				 @restrict const  dlong  *  vmapM,
-				 @restrict const  int  *  EToB,		
-                              @restrict const  dfloat *  sMT,
-                              const dfloat time,
-                              const dfloat dt,
-                              const int stage,
-                              const int ARKswitch,
-                              @restrict const  dfloat *  c,
-                              @restrict const  dfloat *  prkB,
-                              @restrict const  dfloat *  x,
-                              @restrict const  dfloat *  y,
-                              @restrict const  dfloat *  z,
-                              @restrict const  int    *  mapB,
-                                   @restrict dfloat  *  rhsP){
+        const dlong offset,
+        @restrict const  dfloat *  ggeo,
+        @restrict const  dfloat *  sgeo,
+        @restrict const  dfloat *  D,
+        @restrict const  dfloat *  S,
+        @restrict const  dlong  *  vmapM,
+        @restrict const  int  *  EToB,
+        @restrict const  dlong  *  sMT,
+        const dfloat time,
+        const dfloat dt,
+        const int stage,
+        const int ARKswitch,
+        @restrict const  dfloat *  c,
+        @restrict const  dfloat *  prkB,
+        @restrict const  dfloat *  x,
+        @restrict const  dfloat *  y,
+        @restrict const  dfloat *  z,
+        @restrict const  int    *  mapB,
+        @restrict const  dfloat *  W,
+        @restrict const  dfloat *  U,
+        @restrict dfloat  *  rhsP){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_p[p_Nq][p_Nq];
@@ -347,87 +369,109 @@ SOFTWARE.
   }
 }
 
+// need to fix race condition on that also AK....
 @kernel void insPressureAddBCQuad2D(const dlong Nelements,
-                                  const dfloat time,
-                                  const dfloat dt,
-                                  const int stage,
-                                  const int ARKswitch,
-                                  @restrict const  dfloat *  c,
-                                  @restrict const  dfloat *  prkB,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  int    *  mapB,
-                                        @restrict dfloat *  P){
+           const dfloat time,
+           const dfloat dt,
+           const dlong offset,
+           const int stage,
+           const int ARKswitch,
+           @restrict const  dfloat *  c,
+           @restrict const  dfloat *  prkB,
+           @restrict const  dfloat *  sgeo, 
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  z,
+           @restrict const  dlong  *  vmapM,
+           @restrict const  int    *  mapB,
+           @restrict const  dfloat *  W,
+           @restrict const  dfloat *  U,
+           @restrict dfloat *  P){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
+      struct bcData bc;
+      bc.idM  = vmapM[e*p_Nfp*p_Nfaces + n];
+      bc.id   = mapB[bc.idM];
+      bc.time = time; 
 
-      if(bc==3) {
+      if(bc.id==3) {
+        bc.x  = x[bc.idM]; 
+        bc.y  = y[bc.idM]; 
+    
+        const dlong sid  = e*p_Nfaces*p_Nfp + n;
+        bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
+        bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
+        // Get Current Solution i.e. Un
+        bc.uM = U[bc.idM + 0*offset]; 
+        bc.vM = U[bc.idM + 1*offset]; 
         // dfloat pP = 0.f;
-        dfloat pP = P[idM];
-        insPressureDirichletConditions2D(bc,time, x[idM], y[idM], 0.f, 0.f, 0.f, &pP);
-
+        bc.pP = P[bc.idM]; bc.wrk = (dfloat *) W; 
+        insPressureDirichletConditions2D(&bc);
+        dfloat pP = bc.pP; 
+        
         for (int s=0;s<stage;s++) {
-          dfloat prkBn, ctime;
+          dfloat prkBn;
           if (ARKswitch) {
             prkBn = prkB[stage*(p_Nstages+1)+s];
-            ctime = time-(c[stage]-c[s])*dt;
+            bc.time = time-(c[stage]-c[s])*dt;
           } else {
             prkBn = prkB[s];
-            ctime = time-(s+1)*dt;
+            bc.time = time-(s+1)*dt;
           }
-          
-          dfloat pPm;
-          insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], 0.f, 0.f, 0.f, &pPm);
-         
-          pP    -= prkBn*pPm;
+          insPressureDirichletConditions2D(&bc);
+          pP    -= prkBn*bc.pP;
         }
 
-        P[idM] = pP;
+        P[bc.idM] = pP;
       }    
     }
   }
 }
 
 
+// We are solving for Pressure Difference
 @kernel void insPressureAddBCTOMBOQuad2D(const dlong Nelements,
-                                  const dfloat time,
-                                  const dfloat dt,
-                                  const int stage,
-                                  const int ARKswitch,
-                                  @restrict const  dfloat *  c,
-                                  @restrict const  dfloat *  prkB,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  int    *  mapB,
-                                        @restrict dfloat *  P){
+          const dfloat time,
+          const dfloat dt,
+          const dlong offset,
+          @restrict const  dfloat *  sgeo, 
+          @restrict const  dfloat *  x,
+          @restrict const  dfloat *  y,
+          @restrict const  dfloat *  z,
+          @restrict const  dlong  *  vmapM,
+          @restrict const  int    *  mapB,
+          @restrict const  int    *  EToB,
+          @restrict const  dfloat *  W,
+          @restrict const  dfloat *  U,
+          @restrict dfloat *  P){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int f=0; f<p_Nfaces; f++){
-      @barrier("global");
-      for(int m=0;m<p_Nfp;++m;@inner(0)){
-        const int n = m + f*p_Nfp;       
-        const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-        const int bc = mapB[idM];
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+      const int f = n/p_Nfp; 
+      struct bcData bc;
+      const dlong sid  = e*p_Nfaces*p_Nfp + n;
+      bc.idM  = vmapM[e*p_Nfp*p_Nfaces + n];
+      // bc.id   = EToB[f + p_Nfaces*e]; 
+      bc.id   =  mapB[bc.idM];; 
+      bc.time = time;
+      bc.fieldOffset = offset; 
+      //  
+      if(bc.id==3) {
+        bc.x  = x[bc.idM]; 
+        bc.y  = y[bc.idM]; 
+        bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
+        bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
+        // Get Current Solution i.e. Un
+        bc.uM = U[bc.idM + 0*offset]; 
+        bc.vM = U[bc.idM + 1*offset]; 
 
-      if(bc==3) {
-        // dfloat pP = 0.f;
-        dfloat pP = P[idM];
-        insPressureDirichletConditions2D(bc,time, x[idM], y[idM], 0.f, 0.f, 0.f, &pP);
-
-        // dfloat ctime = time-dt;
-        // dfloat pPm = 0.f;
-        // insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], 0.f, 0.f, 0.f, &pPm); 
-        // pP    -= pPm;
-        P[idM] = pP;
+        bc.pP  = 0.f; 
+        bc.wrk = (dfloat *) W; 
+        //
+        insPressureDirichletConditions2D(&bc);
+        P[bc.idM] = bc.pP;         
       }    
     }
-  }
   }
 }

@@ -125,6 +125,8 @@ void insError(ins_t *ins, dfloat time){
 
     // Compute exact solution in cubature nodes
     const dlong offset = mesh->Nelements*mesh->cubNp; 
+
+      printf("cubNp = %d \n", mesh->cubNp);
       ins->setFlowFieldCubKernel(mesh->Nelements, 
                               time, 
                               mesh->o_cubInterpT,
@@ -161,7 +163,7 @@ void insError(ins_t *ins, dfloat time){
     ins->o_Pex.copyTo(ins->Per);
 
 
-    #if 1
+    #if 0
      for(dlong e=0;e<mesh->Nelements;++e){
         for(int n=0;n<mesh->Np;++n){
           dlong id = n+e*mesh->Np;
@@ -192,6 +194,34 @@ void insError(ins_t *ins, dfloat time){
 
     }
     } 
+    #endif
+
+
+     #if 1
+    ins->o_U.copyTo(ins->U);
+    ins->o_P.copyTo(ins->P);
+    dfloat umax=0, vmax=0, pmax=0; 
+     for(dlong e=0;e<mesh->Nelements;++e){
+        for(int n=0;n<mesh->Np;++n){
+          dlong id = n+e*mesh->Np;
+          dfloat x = mesh->x[id];
+          dfloat y = mesh->y[id];
+
+          dfloat a = M_PI/4.f;
+          dfloat d = M_PI/2.f;
+
+          dfloat uExact = -sin(2.f*M_PI*y)*exp(-ins->nu*4.f*M_PI*M_PI*time);
+          dfloat vExact =  sin(2.f*M_PI*x)*exp(-ins->nu*4.f*M_PI*M_PI*time);
+          dfloat pExact = -cos(2.f*M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*time);
+
+          umax = mymax(umax, fabs(ins->U[id + 0*ins->fieldOffset] -uExact)); 
+          vmax = mymax(vmax, fabs(ins->U[id + 1*ins->fieldOffset] -vExact)); 
+          pmax = mymax(pmax, fabs(ins->P[id + 0*ins->fieldOffset] -pExact));
+
+    }
+    } 
+
+    printf("umax = %.4e, vmax = %.4e, pmax = %.4e\n", umax, vmax, pmax);
     #endif
 
    
@@ -243,7 +273,7 @@ dfloat insL2Norm(ins_t *ins, dlong offset, dfloat *U){
 mesh_t *mesh = ins->mesh; 
 dfloat l2norm = 0.0; 
 
-if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA){
+if(ins->elementType==QUADRILATERALS ){
 
  for(dlong e=0;e<mesh->Nelements;++e){
       dfloat sum = 0.0;  
@@ -259,7 +289,7 @@ if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA){
 
       l2norm += sum; 
   }
-}else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA){
+}else if(ins->elementType==HEXAHEDRA){
 for(dlong e=0;e<mesh->Nelements;++e){
       dfloat sum = 0.0;  
   for(int k=0;k<mesh->cubNq;++k){

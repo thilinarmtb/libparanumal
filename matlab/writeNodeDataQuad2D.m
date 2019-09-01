@@ -218,6 +218,7 @@ writeFloatMatrix(fid, P, 'IPDG overlapping patch backward matrix');
 cV1d = Vandermonde1D(N, z);
 cVr = GradVandermonde1D(N, z);
 cInterp = cV1d/V1d;
+cDiff = cVr/V1d;
 cubProject = (cV1d/V1d)'*diag(w);
 cubDT = (cVr/V1d)'*diag(w);
 Nqc = length(z);
@@ -226,6 +227,7 @@ writeFloatMatrix(fid, z, 'Quadrature r-coordinates');
 writeFloatMatrix(fid, w, 'Quadrature weights');
 
 writeFloatMatrix(fid, cInterp, 'Quadrature Interpolation Matrix');
+writeFloatMatrix(fid, cDiff,   'Quadrature Differentiation Interpolation Matrix');
 writeFloatMatrix(fid, cubDT, 'Quadrature Weak D Differentiation Matrix');
 writeFloatMatrix(fid, cubProject, 'Quadrature Projection Matrix');
 
