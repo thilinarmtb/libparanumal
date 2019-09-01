@@ -15,6 +15,7 @@ GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../../libs/parAlmond
 ELLIPTICDIR = ../elliptic
+CDSDIR = ../cds
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -23,7 +24,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"' $(LIBP_OPT_FLAGS) 
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(ALMONDDIR) -I$(CDSDIR) -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"' -D DCDS='"${CURDIR}/../cds"' $(LIBP_OPT_FLAGS) 
 
 # -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis
 
@@ -34,7 +35,7 @@ LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 #METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
 
 # libraries to be linked in
-LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond  \
+LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(CDSDIR) -lcds -L$(ALMONDDIR) -lparAlmond  \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
 		   -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
@@ -50,7 +51,9 @@ $(OGSDIR)/ogs.hpp \
 $(ALMONDDIR)/parAlmond.hpp \
 $(ELLIPTICDIR)/elliptic.h \
 $(ELLIPTICDIR)/ellipticPrecon.h \
-$(ELLIPTICDIR)/ellipticMultiGrid.h
+$(ELLIPTICDIR)/ellipticMultiGrid.h \
+$(CDSDIR)/cds.h
+
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c
@@ -172,7 +175,7 @@ LOBJS = \
 ../../src/timer.o
 
 
-insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic
+insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic libcds
 	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
@@ -190,15 +193,20 @@ libparAlmond:
 libelliptic:
 	cd ../elliptic; make -j lib; cd ../ins
 
+libcds:
+	cd ../cds; make -j lib; cd ../ins
+
 all: lib insMain
 
 # what to do if user types "make clean"
 clean:
 	cd ../elliptic; make clean; cd ../ins
+	cd ../cds; make clean; cd ../ins
 	cd ../../src; rm *.o; cd ../solvers/ins
 	rm ./src/*.o insMain libins.a
 
 realclean:
 	cd ../elliptic; make realclean; cd ../ins
+	cd ../cds; make realclean; cd ../ins
 	cd ../../src; rm *.o; cd ../solvers/ins
 	rm ./src/*.o insMain libins.a

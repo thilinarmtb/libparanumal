@@ -32,6 +32,7 @@ SOFTWARE.
 #include "mesh2D.h"
 #include "mesh3D.h"
 #include "elliptic.h"
+#include "cds.h"
 
 extern "C" { // Begin C Linkage
 typedef struct {
@@ -43,7 +44,9 @@ typedef struct {
   elliptic_t *vSolver;
   elliptic_t *wSolver;
   elliptic_t *pSolver;
+  cds_t      *sSolver;
 
+  int scalarSolver; 
   setupAide options;
   setupAide vOptions, pOptions; 	
 
@@ -278,6 +281,7 @@ typedef struct {
   occa::memory o_Uex, o_Pex; 
 
   occa::properties *kernelInfo;
+  // occa::properties *kernelInfoS; // hold for scalar 
 
 }ins_t;
 
@@ -286,6 +290,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options);
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
 void insRunTOMBO(ins_t *ins);
+
+void insSetScalarSolver(ins_t *ins, setupAide options, occa::properties &kernelInfoBase); 
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, dfloat time,  int tstep);

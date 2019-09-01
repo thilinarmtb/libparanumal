@@ -25,7 +25,11 @@ SOFTWARE.
 */
 
 //    
-
+// Initial conditions 
+void cdsScalarField3D(bcData *bc) {                               
+    bc->sP = 0.f;                
+  }  
+  
 // Initial conditions 
 void insFlowField3D(bcData *bc) 
   {                                  
