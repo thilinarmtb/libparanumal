@@ -43,7 +43,7 @@ void insFlowField3D(bcData *bc)
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
 void insVelocityDirichletConditions3D(bcData *bc) 
 {                                   
-  if(bc0>id==2){                 
+  if(bc->id==2){                 
     bc->uP = 1.f - 4.f*y*y/1.f ;    
     bc->vP = 0.f;                    
     bc->wP = 0.f;                    

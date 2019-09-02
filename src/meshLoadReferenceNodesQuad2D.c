@@ -79,6 +79,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   mesh->cubNp = mesh->cubNq*mesh->cubNq;
 
   readDfloatArray(fp, "Quadrature Interpolation Matrix", &(mesh->cubInterp),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature Differentiation Interpolation Matrix", &(mesh->cubDiffInterp),&Nrows,&Ncols);
   readDfloatArray(fp, "Quadrature Weak D Differentiation Matrix", &(mesh->cubDW),&Nrows,&Ncols);
   readDfloatArray(fp, "Quadrature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
 

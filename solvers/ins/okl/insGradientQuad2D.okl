@@ -31,7 +31,7 @@ SOFTWARE.
 @kernel void insGradientVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  D,
-                                    const dlong fieldOffset,
+                                    const dlong offset,
                                     @restrict const  dfloat *  P,
                                           @restrict dfloat *  GP){
 
@@ -83,8 +83,8 @@ SOFTWARE.
               }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-            GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds;
-            GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds;
+            GP[id+0*offset] = drdx*dpdr + dsdx*dpds;
+            GP[id+1*offset] = drdy*dpdr + dsdy*dpds;
           }
         }
       }
@@ -94,29 +94,37 @@ SOFTWARE.
 
 #define surfaceTerms(sk,face,i, j)                                      \
 {                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dlong idP = vmapP[sk];                                          \
+  struct bcData bc;                                                     \
+  const dlong  idM = vmapM[sk];                                         \
+  const dlong  idP = vmapP[sk];                                         \
                                                                         \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
+    bc.time = time;                                                     \
+    bc.nx  = sgeo[sk*p_Nsgeo+p_NXID];                                   \
+    bc.ny  = sgeo[sk*p_Nsgeo+p_NYID];                                   \
+    bc.x   = x[idM];                                                    \
+    bc.y   = y[idM];                                                    \
+    bc.idM = idM;                                                       \
+    bc.fieldOffset = offset;                                            \
+    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                          \
+    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                      \
                                                                         \
-  const dfloat  PM = P[idM];                                            \
-        dfloat  PP = P[idP];                                            \
+    bc.uM  = U[idM+0*offset];  bc.vM   = U[idM+1*offset];               \
+    bc.pM  = P[idM];                                                    \
+    bc.pP  = P[idP];                                                    \
+    bc.wrk = (dfloat *) W;                                              \
                                                                         \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    PP = PM;                                                            \
-    insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
-    PP = 2.f*PP - PM;                                                   \
+  bc.id = EToB[face+p_Nfaces*e];                                        \
+  if(bc.id>0) {                                                         \
+    bc.pP = bc.pM;                                                      \
+    insPressureDirichletConditions2D(&bc);                              \
+    bc.pP = 2.f*bc.pP - bc.pM;                                          \
   }                                                                     \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
-  s_fluxPx[es][j][i]  = sc*(.5f*nx*(PP-PM));                            \
-  s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP-PM));                            \
+  s_fluxPx[es][j][i]  = sc*(.5f*bc.nx*(bc.pP-bc.pM));                    \
+  s_fluxPy[es][j][i]  = sc*(.5f*bc.ny*(bc.pP-bc.pM));                    \
 }
-
+  
 @kernel void insGradientSurfaceQuad2D(const dlong Nelements,
                                      @restrict const  dfloat *  sgeo,
                                      @restrict const  dfloat *  LIFTT,
@@ -127,7 +135,9 @@ SOFTWARE.
                                      @restrict const  dfloat *  y,
                                      @restrict const  dfloat *  z,
                                      const dfloat time,
-                                     const dlong fieldOffset,
+                                     const dlong offset,
+                                      @restrict const  dfloat *  W,
+                                     @restrict const  dfloat *  U,
                                      @restrict const  dfloat *  P,
                                            @restrict dfloat *  GP){
 
@@ -189,8 +199,8 @@ SOFTWARE.
           if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq + i;
 
-            GP[id+0*fieldOffset] += s_fluxPx[es][j][i];
-            GP[id+1*fieldOffset] += s_fluxPy[es][j][i];
+            GP[id+0*offset] += s_fluxPx[es][j][i];
+            GP[id+1*offset] += s_fluxPy[es][j][i];
           }
         }
       }
@@ -204,7 +214,7 @@ SOFTWARE.
 @kernel void insGradientVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  D,
-                                    const dlong fieldOffset,
+                                    const dlong offset,
                                     @restrict const  dfloat *  P,
                                           @restrict dfloat *  GP){
 
@@ -259,10 +269,8 @@ SOFTWARE.
               }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-            // GP[id+0*fieldOffset] = -(drdx*dpdr + dsdx*dpds);
-            // GP[id+1*fieldOffset] = -(drdy*dpdr + dsdy*dpds);
-            GP[id+0*fieldOffset] = -invJW*(drdx*dpdr + dsdx*dpds);
-            GP[id+1*fieldOffset] = -invJW*(drdy*dpdr + dsdy*dpds);
+            GP[id+0*offset] = -invJW*(drdx*dpdr + dsdx*dpds);
+            GP[id+1*offset] = -invJW*(drdy*dpdr + dsdy*dpds);
           }
         }
       }
@@ -272,27 +280,35 @@ SOFTWARE.
 
 #define surfaceTerms(sk,face,i, j)                                      \
 {                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dlong idP = vmapP[sk];                                          \
+  struct bcData bc;                                                     \
+  const dlong  idM = vmapM[sk];                                         \
+  const dlong  idP = vmapP[sk];                                         \
                                                                         \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
+    bc.time = time;                                                     \
+    bc.nx  = sgeo[sk*p_Nsgeo+p_NXID];                                   \
+    bc.ny  = sgeo[sk*p_Nsgeo+p_NYID];                                   \
+    bc.x   = x[idM];                                                    \
+    bc.y   = y[idM];                                                    \
+    bc.idM = idM;                                                       \
+    bc.fieldOffset = offset;                                            \
+    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                          \
+    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                      \
                                                                         \
-  const dfloat  PM = P[idM];                                            \
-        dfloat  PP = P[idP];                                            \
+    bc.uM  = U[idM+0*offset];  bc.vM   = U[idM+1*offset];               \
+    bc.pM  = P[idM];                                                    \
+    bc.pP  = P[idP];                                                    \
+    bc.wrk = (dfloat *) W;                                              \
                                                                         \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    PP = PM;                                                            \
-    insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
-    PP = 2.f*PP - PM;                                                   \
+  bc.id = EToB[face+p_Nfaces*e];                                        \
+  if(bc.id>0) {                                                         \
+    bc.pP = bc.pM;                                                      \
+    insPressureDirichletConditions2D(&bc);                              \
+    bc.pP = 2.f*bc.pP - bc.pM;                                          \
   }                                                                     \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
-  s_fluxPx[es][j][i]  = sc*(.5f*nx*(PP+PM));                            \
-  s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP+PM));                            \
+  s_fluxPx[es][j][i]  = sc*(.5f*bc.nx*(bc.pP+bc.pM));                   \
+  s_fluxPy[es][j][i]  = sc*(.5f*bc.ny*(bc.pP+bc.pM));                   \
 }
 
 @kernel void insGradientSurfaceQuad2D(const dlong Nelements,
@@ -305,10 +321,11 @@ SOFTWARE.
                                      @restrict const  dfloat *  y,
                                      @restrict const  dfloat *  z,
                                      const dfloat time,
-                                     const dlong fieldOffset,
+                                     const dlong offset,
+                                     @restrict const  dfloat *  W,
+                                     @restrict const  dfloat *  U,
                                      @restrict const  dfloat *  P,
                                            @restrict dfloat *  GP){
-
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     // @shared storage for flux terms
@@ -367,17 +384,12 @@ SOFTWARE.
           if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq + i;
 
-            GP[id+0*fieldOffset] += s_fluxPx[es][j][i];
-            GP[id+1*fieldOffset] += s_fluxPy[es][j][i];
+            GP[id+0*offset] += s_fluxPx[es][j][i];
+            GP[id+1*offset] += s_fluxPy[es][j][i];
           }
         }
       }
     }
   }
 }
-
-
-
-
-
 #endif

@@ -135,7 +135,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
         // Extrapolate velocity to subProblem stage time
         dfloat t = tstage +  ins->sdt*ins->Srkc[rk]; 
 
-        switch(ins->ExplicitOrder){
+       switch(ins->ExplicitOrder){
 	case 1:
 	  ins->extC[0] = 1.f; ins->extC[1] = 0.f; ins->extC[2] = 0.f;
 	  break;
@@ -334,7 +334,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 
 
 // complete a time step 
-void insNekSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud){
+void insStrongSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh_t *mesh = ins->mesh;
@@ -403,10 +403,10 @@ void insNekSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa
         // Compute Volume Contribution
         occaTimerTic(mesh->device,"AdvectionVolume");
 	if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){        
-	  ins->subCycleNekCubatureVolumeKernel(mesh->Nelements,
+	  ins->subCycleStrongCubatureVolumeKernel(mesh->Nelements,
 					       mesh->o_vgeo,
 					       mesh->o_cubvgeo,
-					       mesh->o_cubDWmatrices,
+					       mesh->o_cubDiffInterpT, //mesh->o_cubDWmatrices,
 					       mesh->o_cubInterpT,
 					       mesh->o_cubProjectT,
 					       ins->o_invLumpedMassMatrix,
@@ -417,7 +417,7 @@ void insNekSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa
 					       ins->o_cUd,     
 					       ins->o_rhsUd);
 	}else{
-	  ins->subCycleNekVolumeKernel(mesh->Nelements,
+	  ins->subCycleStrongVolumeKernel(mesh->Nelements,
 				       mesh->o_vgeo,
 				       mesh->o_Dmatrices,
 				       ins->fieldOffset,

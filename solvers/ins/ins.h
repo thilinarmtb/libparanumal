@@ -175,8 +175,8 @@ typedef struct {
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
-  occa::kernel subCycleNekCubatureVolumeKernel;
-  occa::kernel subCycleNekVolumeKernel;
+  occa::kernel subCycleStrongCubatureVolumeKernel;
+  occa::kernel subCycleStrongVolumeKernel;
 
   occa::memory o_invLumpedMassMatrix;
   
@@ -355,5 +355,5 @@ void simpleRayTracer(int     plotNelements,
 		     const char *fileBaseName,
 		     const int fileIndex);
 
-void insNekSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud);
+void insStrongSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud);
 } // end C Linkage
