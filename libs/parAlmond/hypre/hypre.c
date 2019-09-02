@@ -86,7 +86,7 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
   HYPRE_BoomerAMGSetCycleRelaxType(solver, 16, 1);
   HYPRE_BoomerAMGSetCycleRelaxType(solver, 16, 2);
   HYPRE_BoomerAMGSetCycleRelaxType(solver,  9, 3);
-  HYPRE_BoomerAMGSetChebyFraction(solver, 1./20); 
+  HYPRE_BoomerAMGSetChebyFraction(solver, 1./10); 
 
   if (null_space) {
     HYPRE_BoomerAMGSetCycleRelaxType(solver, hypre_param[3], 3);
