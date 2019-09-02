@@ -281,7 +281,7 @@ typedef struct {
   occa::memory o_Uex, o_Pex; 
 
   occa::properties *kernelInfo;
-  // occa::properties *kernelInfoS; // hold for scalar 
+ // occa::properties *kernelInfoS; // hold for scalar 
 
 }ins_t;
 

@@ -26,14 +26,9 @@ SOFTWARE.
 
 //    
 // Initial conditions 
-void cdsScalarField3D(bcData *bc) {                               
-    bc->sP = 0.f;                
-  }  
-  
-// Initial conditions 
 void insFlowField3D(bcData *bc) 
   {                                  
-    bc->uP = 1.f - 4.f*y*y/1.f ;    
+    bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
     bc->vP = 0.f;                   
     bc->wP = 0.f;                    
     bc->pP = 0.f;                   
@@ -44,7 +39,7 @@ void insFlowField3D(bcData *bc)
 void insVelocityDirichletConditions3D(bcData *bc) 
 {                                   
   if(bc->id==2){                 
-    bc->uP = 1.f - 4.f*y*y/1.f ;    
+    bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
     bc->vP = 0.f;                    
     bc->wP = 0.f;                    
   } 
@@ -69,10 +64,47 @@ void insVelocityNeumannConditions3D(bcData *bc)
 void insPressureDirichletConditions3D(bcData *bc) 
 {                                   
   if(bc->id==3){                 
-    bc->pB = 0.f;                 
+    bc->pP = 0.f;                 
   } 
 }
 
 void insPressureNeumannConditions3D(bcData *bc)
 {                                          
 }
+
+// Initial conditions 
+void cdsScalarField3D(bcData *bc) {                               
+    bc->sP = 0.f;                
+  }  
+  
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
+void cdsDirichletConditions3D(bcData *bc) 
+{                                   
+  if(bc->id==1){                        
+    bc->sP = 1.f;                    
+  } else if(bc->id==2){                 
+    bc->sP = 0.f;                 
+  } else if(bc->id==3){                 
+    bc->sP = bc->sM;                     
+  } else if(bc->id==4||bc->id==5||bc->id==6){   
+    bc->sP = bc->sM; 
+  }                                 
+}
+
+void cdsNeumannConditions3D(bcData *bc) 
+{                                          
+  if(bc->id==1 || bc->id==2){                      
+    bc->sxP = bc->sxM;                          
+    bc->syP = bc->syM;                          
+    bc->szP = bc->szM;                          
+  } else if(bc->id==3){                        
+    bc->sxP = 0.f;                          
+    bc->syP = 0.f;                          
+    bc->szP = 0.f;                          
+  } else if(bc->id==4||bc->id==5||bc->id==6){          
+    bc->sxP = bc->nx*bc->nx*bc->sxM;                    
+    bc->syP = bc->nx*bc->nx*bc->syM;                    
+    bc->szP = bc->nx*bc->nx*bc->szM;                    
+  }                                        
+}
+

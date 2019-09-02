@@ -95,7 +95,8 @@ AOBJS    = \
 ./src/insExtBdfCoefficents.o \
 ./src/insFilterSetup.o \
 ./src/insAddVelocityRhs.o \
-./src/insComputeCfl.o
+./src/insComputeCfl.o \
+./src/insSetScalarSolver.o
 
 # library objects
 LOBJS = \

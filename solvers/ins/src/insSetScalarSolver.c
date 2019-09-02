@@ -43,7 +43,7 @@ cds->options     = options;
 cds->elementType = ins->elementType; 
 cds->dim         = ins->dim; 
 cds->NVfields    = ins->NVfields;
-// Number of scalar field is hard coded 
+// Number of scalar field is hard coded for now
 cds->NSfields    = 1; 
 
 if(mesh->rank==0) printf("Setting Time Stepper Info.....\n");
@@ -135,10 +135,10 @@ if(cds->Nsubsteps){
   //kernelInfo["defines/" "p_SUBCYCLING"]=  cds->Nsubsteps;
 
 
-   //add boundary data to kernel info
-  string boundaryHeaderFileName; 
-  options.getArgs("DATA FILE", boundaryHeaderFileName);
-  kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
+  //  //add boundary data to kernel info
+  // string boundaryHeaderFileName; 
+  // options.getArgs("DATA FILE", boundaryHeaderFileName);
+  // kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
 
   cds->o_U = ins->o_U; // point to INS velocity very important !!!!!
   cds->o_S = mesh->device.malloc(cds->NSfields*(cds->Nstages+0)*Ntotal*sizeof(dfloat), cds->S);
@@ -199,7 +199,8 @@ if(cds->Nsubsteps){
   // SetUp Boundary Flags types for Elliptic Solve
   // bc = 1 -> wall bc = 2 -> inflow bc = 3 -> outflow
   // bc = 4 -> x-aligned slip, bc = 5 -> y-aligned slip, bc = 6 -> z-aligned slip
-
+  
+  // This tricky!!!!! we need to set different BCmaps for scalar solvers here!!!!!
   int sBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
  
   // //Solver tolerances 
@@ -316,8 +317,6 @@ for (int e=0;e<mesh->Nelements;e++) {
       dlong sgatherBytes = (cds->NSfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
       cds->o_shaloBuffer = mesh->device.malloc(shaloBytes);
 
-      //occa::memory o_ssendBuffer, o_srecvBuffer,o_sgatherTmpPinned;
-
       cds->ssendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, shaloBytes, NULL, cds->o_ssendBuffer, cds->h_ssendBuffer);
       cds->srecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, shaloBytes, NULL, cds->o_srecvBuffer, cds->h_srecvBuffer);
       cds->shaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, sgatherBytes, NULL, cds->o_sgatherTmpPinned, cds->h_sgatherTmpPinned);
@@ -347,20 +346,6 @@ for (int e=0;e<mesh->Nelements;e++) {
     if (r==mesh->rank) {
       
       sprintf(fileName, DCDS "/okl/cdsHaloExchange.okl");
-
-      // sprintf(kernelName, "cdsHaloExtract");
-      // cds->haloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      
-      // sprintf(kernelName, "cdsHaloScatter");
-      // cds->haloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      
-      // if(cds->Nsubsteps){
-      //   sprintf(kernelName, "cdsScalarHaloExtract");
-      //   cds->scalarHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
-        
-      //   sprintf(kernelName, "cdsScalarHaloScatter");
-      //   cds->scalarHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);    
-      // } 
 
       sprintf(kernelName, "cdsHaloGet");
       cds->haloGetKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
@@ -452,15 +437,10 @@ for (int e=0;e<mesh->Nelements;e++) {
 
  #if 1
  if(mesh->rank==0){
-  printf(" Solver Parameters......\n");
+  printf("... CDS Solver Parameters after built by INS ...\n");
   printf("alfa\t:\t %.8e \n", cds->alf);
   printf("invalfa\t:\t %.8e \n", cds->ialf);
-  printf("k\t:\t %.8e \n", cds->k);
-  printf("cp\t:\t %.8e \n", cds->cp);
-  printf("rho\t:\t %.8e \n", cds->rho);
   printf("nu\t:\t %.8e \n", cds->nu);
-  printf("Re\t:\t %.8e \n", cds->Re);
-  printf("Pr\t:\t %.8e \n", cds->Pr);
   printf("dt\t:\t %.8e \n", cds->dt);
   printf("sdt\t:\t %.8e \n", cds->sdt);
   printf("invdt\t:\t %.8e \n", cds->idt);
@@ -468,7 +448,7 @@ for (int e=0;e<mesh->Nelements;e++) {
   printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);
   printf("Nstages\t:\t %02d \n", cds->Nstages);
   printf("SNrk\t:\t %02d \n", cds->SNrk); 
-  printf("ExplicitOrder\t:\t %02d \n", cds->ExplicitOrder);       
+  printf("ExplicitOrder\t:\t %02d \n", cds->temporalOrder);       
 }
 #endif
 

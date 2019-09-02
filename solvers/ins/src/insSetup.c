@@ -360,6 +360,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   occa::properties kernelInfoV  = kernelInfo;
   occa::properties kernelInfoP  = kernelInfo;
+  occa::properties kernelInfoS  = kernelInfo;
 
   // ADD-DEFINES
   kernelInfo["defines/" "p_pbar"]= ins->pbar;
@@ -791,9 +792,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->VmapB);
   ins->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->PmapB);
 
-  // TW: this code needs to be re-evaluated to here <======
-  // and the kernels that use VmapB, PmapB
-  
 
   kernelInfo["defines/" "p_blockSize"]= blockSize;
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
@@ -848,8 +846,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   if (mesh->rank==0) {
   //   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
   //   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
-
-    printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
+  //  printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
   }
   
   if (options.compareArgs("TIME INTEGRATOR", "ARK")) {
@@ -968,6 +965,17 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->pRecvBuffer = (dfloat*) malloc(pHaloBytes);
 #endif
   }
+
+
+
+  ins->scalarSolver = 0; 
+  options.getArgs("NUMBER of SCALAR FIELD", ins->scalarSolver);
+    // ins->scalarSolver = 1; 
+
+  // Now set the scalar Solver, make sure time step size etc are set before.... 
+  if(ins->scalarSolver)
+    insSetScalarSolver(ins, options, kernelInfoS); 
+
 
   // set kernel name suffix
   char *suffix;
