@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -30,61 +30,61 @@ SOFTWARE.
 
 void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelInfoH){
 
-mesh_t *mesh = ins->mesh; 
-ins->sSolver = new cds_t();
-cds_t *cds = ins->sSolver; 
+  mesh_t *mesh = ins->mesh; 
+  ins->sSolver = new cds_t();
+  cds_t *cds = ins->sSolver; 
 
-if(mesh->rank==0) printf("......Setting Scalar Solver........ \n");
+  if(mesh->rank==0) printf("......Setting Scalar Solver........ \n");
 
-if(mesh->rank==0) printf("Setting Primitives.....\n");
-// set mesh, options
-cds->mesh        = mesh; 
-//cds->options     = options; 
-cds->elementType = ins->elementType; 
-cds->dim         = ins->dim; 
-cds->NVfields    = ins->NVfields;
-// Number of scalar field is hard coded for now
-cds->NSfields    = 1; 
+  if(mesh->rank==0) printf("Setting Primitives.....\n");
+  // set mesh, options
+  cds->mesh        = mesh; 
+  //cds->options     = options; 
+  cds->elementType = ins->elementType; 
+  cds->dim         = ins->dim; 
+  cds->NVfields    = ins->NVfields;
+  // Number of scalar field is hard coded for now
+  cds->NSfields    = 1; 
 
-if(mesh->rank==0) printf("Setting Time Stepper Info.....\n");
-cds->extbdfA = ins->extbdfA;
-cds->extbdfB = ins->extbdfB;
-cds->extbdfC = ins->extbdfC;
-cds->extC    = ins->extC   ;
+  if(mesh->rank==0) printf("Setting Time Stepper Info.....\n");
+  cds->extbdfA = ins->extbdfA;
+  cds->extbdfB = ins->extbdfB;
+  cds->extbdfC = ins->extbdfC;
+  cds->extC    = ins->extC   ;
 
-cds->Nstages       = ins->Nstages; 
-cds->temporalOrder = ins->temporalOrder; 
-cds->g0            = ins->g0; 
-cds->nu            = ins->nu; 
-
-
-dlong Nlocal = mesh->Np*mesh->Nelements;
-dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
-
-cds->Ntotal      = Ntotal;
-cds->vOffset     = Ntotal; // keep it different for now.....b
-cds->sOffset     = Ntotal;
-cds->Nblock      = (Nlocal+blockSize-1)/blockSize;
-
-// Solution storage at interpolation nodes
-// cds->U     = (dfloat*) calloc(cds->NVfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
-cds->S     = (dfloat*) calloc(cds->NSfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
-cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
-cds->rkS   = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
+  cds->Nstages       = ins->Nstages; 
+  cds->temporalOrder = ins->temporalOrder; 
+  cds->g0            = ins->g0; 
+  cds->nu            = ins->nu; 
 
 
-cds->U     = ins->U; // Point to INS side Velocity
-cds->S     = (dfloat*) calloc(cds->NSfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
-cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
-cds->rkS   = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
-cds->rhsS  = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
+  dlong Nlocal = mesh->Np*mesh->Nelements;
+  dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
-// Use Nsubsteps if INS does to prevent stability issues
-cds->Nsubsteps = ins->Nsubsteps; 
+  cds->Ntotal      = Ntotal;
+  cds->vOffset     = Ntotal; // keep it different for now.....b
+  cds->sOffset     = Ntotal;
+  cds->Nblock      = (Nlocal+blockSize-1)/blockSize;
+
+  // Solution storage at interpolation nodes
+  // cds->U     = (dfloat*) calloc(cds->NVfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
+  cds->S     = (dfloat*) calloc(cds->NSfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
+  cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
+  cds->rkS   = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
 
 
-if(cds->Nsubsteps){
-	// This memory can be reduced, check later......!!!!!!!
+  cds->U     = ins->U; // Point to INS side Velocity
+  cds->S     = (dfloat*) calloc(cds->NSfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
+  cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
+  cds->rkS   = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
+  cds->rhsS  = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
+
+  // Use Nsubsteps if INS does to prevent stability issues
+  cds->Nsubsteps = ins->Nsubsteps; 
+
+
+  if(cds->Nsubsteps){
+    // This memory can be reduced, check later......!!!!!!!
     cds->Sd      = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
     cds->resS    = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
     cds->rhsSd   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));        
@@ -108,7 +108,7 @@ if(cds->Nsubsteps){
   cds->Re = ins->Re; 
   // occa::properties& kernelInfoH = *ins->kernelInfoS;
   occa::properties& kernelInfo  = *ins->kernelInfo; 
-   // ADD-DEFINES
+  // ADD-DEFINES
   kernelInfo["defines/" "p_sbar"]= cds->sbar;
   kernelInfo["defines/" "p_NSfields"]= cds->NSfields;
   kernelInfo["defines/" "p_NTSfields"]= (cds->NVfields+cds->NSfields + 1);
@@ -119,8 +119,8 @@ if(cds->Nsubsteps){
 
   if(mesh->rank==0) printf("Compiling CDS kernels.....\n");
 
-   for (int r=0;r<2;r++){
-      if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
+  for (int r=0;r<2;r++){
+    if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
       if (cds->dim==2){ 
         cds->setScalarFieldKernel =  mesh->device.buildKernel(DCDS "/okl/cdsSetScalarField2D.okl", "cdsSetScalarField2D", kernelInfo);
       }else{
@@ -137,14 +137,14 @@ if(cds->Nsubsteps){
   cds->NtimeSteps = ins->NtimeSteps; 
 
   cds->setScalarFieldKernel(mesh->Nelements,
-          cds->startTime,
-          mesh->o_x,
-          mesh->o_y,
-          mesh->o_z,
-          cds->sOffset,
-          cds->o_S);
+			    cds->startTime,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    cds->sOffset,
+			    cds->o_S);
 
-   if (cds->Nsubsteps && mesh->rank==0) 
+  if (cds->Nsubsteps && mesh->rank==0) 
     printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", cds->dt, cds->sdt, cds->dt/cds->sdt);
 
   cds->idt     = 1.0/cds->dt;
@@ -223,23 +223,23 @@ if(cds->Nsubsteps){
   // time stepper
   dfloat rkC[4] = {1.0, 0.0, -1.0, -2.0};
 
-	cds->o_rkC     = ins->o_rkC    ;
-	cds->o_extbdfA = ins->o_extbdfA;
-	cds->o_extbdfB = ins->o_extbdfB;
-	cds->o_extbdfC = ins->o_extbdfC; 
+  cds->o_rkC     = ins->o_rkC    ;
+  cds->o_extbdfA = ins->o_extbdfA;
+  cds->o_extbdfB = ins->o_extbdfB;
+  cds->o_extbdfC = ins->o_extbdfC; 
 
-	cds->o_extC = ins->o_extC;
-	cds->o_prkA = ins->o_extbdfC;
-	cds->o_prkB = ins->o_extbdfC;
+  cds->o_extC = ins->o_extC;
+  cds->o_prkA = ins->o_extbdfC;
+  cds->o_prkB = ins->o_extbdfC;
 
-// MEMORY ALLOCATION
+  // MEMORY ALLOCATION
   cds->o_rhsS  = mesh->device.malloc(cds->NSfields*                 Ntotal*sizeof(dfloat), cds->rhsS);
   cds->o_NS    = mesh->device.malloc(cds->NSfields*(cds->Nstages+1)*Ntotal*sizeof(dfloat), cds->NS);
   cds->o_rkS   = mesh->device.malloc(                               Ntotal*sizeof(dfloat), cds->rkS);  
 
- if(mesh->totalHaloPairs){//halo setup
+  if(mesh->totalHaloPairs){//halo setup
     // Define new variable nodes per element (npe) to test thin halo; 
-//    int npe = mesh->Np; // will be changed 
+    //    int npe = mesh->Np; // will be changed 
     int npe = mesh->Nfp; 
     dlong haloBytes   = mesh->totalHaloPairs*npe*(cds->NSfields + cds->NVfields)*sizeof(dfloat);
     dlong gatherBytes = (cds->NSfields+cds->NVfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
@@ -260,7 +260,7 @@ if(cds->Nsubsteps){
       cds->srecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, shaloBytes, NULL, cds->o_srecvBuffer, cds->h_srecvBuffer);
       cds->shaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, sgatherBytes, NULL, cds->o_sgatherTmpPinned, cds->h_sgatherTmpPinned);
       cds->o_shaloGatherTmp = mesh->device.malloc(sgatherBytes,  cds->shaloGatherTmp);
-   }
+    }
   }
 
 
@@ -337,7 +337,6 @@ if(cds->Nsubsteps){
     
       if(cds->Nsubsteps){
         // Note that resU and resV can be replaced with already introduced buffer
-        // cds->o_Ue     = cds->Ue;
         cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
         // Can use previous memories
         cds->o_Sd     = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->Sd);
@@ -373,23 +372,23 @@ if(cds->Nsubsteps){
     MPI_Barrier(mesh->comm);
   }
 
-if(mesh->rank==0) printf("......Scalar Solver is set........ \n");
+  if(mesh->rank==0) printf("......Scalar Solver is set........ \n");
 
- #if 0
- if(mesh->rank==0){
-  printf("... CDS Solver Parameters after built by INS ...\n");
-  printf("alfa\t:\t %.8e \n", cds->alf);
-  printf("invalfa\t:\t %.8e \n", cds->ialf);
-  printf("nu\t:\t %.8e \n", cds->nu);
-  printf("dt\t:\t %.8e \n", cds->dt);
-  printf("sdt\t:\t %.8e \n", cds->sdt);
-  printf("invdt\t:\t %.8e \n", cds->idt);
-  printf("ialf\t:\t %.8e \n", cds->ialf);
-  printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);
-  printf("Nstages\t:\t %02d \n", cds->Nstages);
-  printf("SNrk\t:\t %02d \n", cds->SNrk); 
-  printf("ExplicitOrder\t:\t %02d \n", cds->temporalOrder);       
-}
+#if 0
+  if(mesh->rank==0){
+    printf("... CDS Solver Parameters after built by INS ...\n");
+    printf("alfa\t:\t %.8e \n", cds->alf);
+    printf("invalfa\t:\t %.8e \n", cds->ialf);
+    printf("nu\t:\t %.8e \n", cds->nu);
+    printf("dt\t:\t %.8e \n", cds->dt);
+    printf("sdt\t:\t %.8e \n", cds->sdt);
+    printf("invdt\t:\t %.8e \n", cds->idt);
+    printf("ialf\t:\t %.8e \n", cds->ialf);
+    printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);
+    printf("Nstages\t:\t %02d \n", cds->Nstages);
+    printf("SNrk\t:\t %02d \n", cds->SNrk); 
+    printf("ExplicitOrder\t:\t %02d \n", cds->temporalOrder);       
+  }
 #endif
 
 
