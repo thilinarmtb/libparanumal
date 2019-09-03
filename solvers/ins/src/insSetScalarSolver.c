@@ -106,7 +106,6 @@ if(cds->Nsubsteps){
 
   //Reynolds number
   cds->Re = ins->Re; 
-
   // occa::properties& kernelInfoH = *ins->kernelInfoS;
   occa::properties& kernelInfo  = *ins->kernelInfo; 
    // ADD-DEFINES
@@ -114,16 +113,12 @@ if(cds->Nsubsteps){
   kernelInfo["defines/" "p_NSfields"]= cds->NSfields;
   kernelInfo["defines/" "p_NTSfields"]= (cds->NVfields+cds->NSfields + 1);
   kernelInfo["defines/" "p_alf"]     = cds->alf;
-  //kernelInfo["defines/" "p_EXTBDF"]= 1;
-  //  //add boundary data to kernel info
-  // string boundaryHeaderFileName; 
-  // options.getArgs("DATA FILE", boundaryHeaderFileName);
-  // kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
-
+ 
   cds->o_U = ins->o_U; // point to INS velocity very important !!!!!
   cds->o_S = mesh->device.malloc(cds->NSfields*(cds->Nstages+0)*Ntotal*sizeof(dfloat), cds->S);
 
-  printf("Compiling CDS kernels.....\n");
+  if(mesh->rank==0) printf("Compiling CDS kernels.....\n");
+
    for (int r=0;r<2;r++){
       if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
       if (cds->dim==2){ 
@@ -134,8 +129,8 @@ if(cds->Nsubsteps){
     }
     MPI_Barrier(mesh->comm);
   }
-
-
+  
+  // start time and time step size have to be same with flow solver
   cds->startTime =ins->startTime;
   cds->dt  = ins->dt; 
   cds->sdt = ins->sdt; 
@@ -249,16 +244,6 @@ if(cds->Nsubsteps){
     dlong haloBytes   = mesh->totalHaloPairs*npe*(cds->NSfields + cds->NVfields)*sizeof(dfloat);
     dlong gatherBytes = (cds->NSfields+cds->NVfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
     cds->o_haloBuffer = mesh->device.malloc(haloBytes);
-#if 0
-    occa::memory o_sendBuffer = mesh->device.mappedAlloc(haloBytes, NULL);
-    occa::memory o_recvBuffer = mesh->device.mappedAlloc(haloBytes, NULL);
-    occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc(gatherBytes, NULL);
-    
-    cds->sendBuffer    = (dfloat*) o_sendBuffer.getMappedPointer();
-    cds->recvBuffer    = (dfloat*) o_recvBuffer.getMappedPointer();
-    cds->haloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer();
-#endif
-    //occa::memory o_sendBuffer, o_recvBuffer,o_gatherTmpPinned;
 
     cds->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, cds->o_sendBuffer, cds->h_sendBuffer);
     cds->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, cds->o_recvBuffer, cds->h_recvBuffer);
@@ -270,8 +255,6 @@ if(cds->Nsubsteps){
       dlong shaloBytes   = mesh->totalHaloPairs*npe*(cds->NSfields)*sizeof(dfloat);
       dlong sgatherBytes = (cds->NSfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
       cds->o_shaloBuffer = mesh->device.malloc(shaloBytes);
-
-      //occa::memory o_ssendBuffer, o_srecvBuffer,o_sgatherTmpPinned;
 
       cds->ssendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, shaloBytes, NULL, cds->o_ssendBuffer, cds->h_ssendBuffer);
       cds->srecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, shaloBytes, NULL, cds->o_srecvBuffer, cds->h_srecvBuffer);
@@ -390,9 +373,9 @@ if(cds->Nsubsteps){
     MPI_Barrier(mesh->comm);
   }
 
- if(mesh->rank==0) printf("INS + CDS Setup is done \n");
+if(mesh->rank==0) printf("......Scalar Solver is set........ \n");
 
- #if 1
+ #if 0
  if(mesh->rank==0){
   printf("... CDS Solver Parameters after built by INS ...\n");
   printf("alfa\t:\t %.8e \n", cds->alf);
