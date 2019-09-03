@@ -49,7 +49,7 @@ void cdsRunEXTBDF(cds_t *cds){
 
     dfloat time = cds->startTime + tstep*cds->dt;
 
-#if 1  
+#if 0  
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
     if(cds->Nsubsteps) {
       cdsSubCycle(cds, time, cds->Nstages, cds->o_U, cds->o_S,  cds->o_NS);

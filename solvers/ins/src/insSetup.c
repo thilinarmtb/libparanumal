@@ -968,12 +968,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
 
 
-  ins->scalarSolver = 0; 
-  options.getArgs("NUMBER of SCALAR FIELD", ins->scalarSolver);
+  ins->Nscalar = 0; 
+  options.getArgs("NUMBER of SCALAR FIELD", ins->Nscalar);
     // ins->scalarSolver = 1; 
 
   // Now set the scalar Solver, make sure time step size etc are set before.... 
-  if(ins->scalarSolver)
+  if(ins->Nscalar)
     insSetScalarSolver(ins, options, kernelInfoS); 
 
 

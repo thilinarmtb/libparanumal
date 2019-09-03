@@ -19,7 +19,7 @@ data/insChannel3D.h
 12
 
 [POLYNOMIAL DEGREE]
-7
+4
 
 
 [ELEMENT MAP]
@@ -44,6 +44,7 @@ CUDA
 #EXTBDF2
 TOMBO2
 
+#currently one only
 [NUMBER of SCALAR FIELD]
 1
 
@@ -61,8 +62,8 @@ TOMBO2
 [ADVECTION TYPE]
 #NODAL+CONVECTIVE
 #NODAL+CONSERVATIVE
-#CUBATURE+CONVECTIVE
-CUBATURE+CONSERVATIVE
+CUBATURE+CONVECTIVE
+#CUBATURE+CONSERVATIVE
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
@@ -101,14 +102,14 @@ NONE
 0
 
 [FINAL TIME]
-1.0
+10.0
 
 [CFL]
 0.5
 
 # overwrites time step size
 [DT]
-3E-3
+1E-3
 
 [OUTPUT TYPE]
 VTU
@@ -278,15 +279,18 @@ MAX
 #################################################
 ########## Scalar Solver Options ##############
 #################################################
-
-# can add FLEXIBLE to PCG
+# can add FLEXIBLE and/or NONBLOCKING to PCG
 [SCALAR KRYLOV SOLVER]
-#PCG
+PCG
+
+[SCALAR SOLVER TOLERANCE]
+1.e-10
+
+# can be IPDG, [ currently CONTINUOUS seems to be broken ]
+[SCALAR DISCRETIZATION]
+#IPDG
 CONTINUOUS
 
-# can be IPDG, or CONTINUOUS
-[SCALAR DISCRETIZATION]
-IPDG
 
 # can be NODAL or BERN
 [SCALAR BASIS]
@@ -295,6 +299,7 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [SCALAR PRECONDITIONER]
 JACOBI
+#MULTIGRID
 
 ########## MULTIGRID Options ##############
 
@@ -308,6 +313,9 @@ HALFDOFS
 [SCALAR MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
+[SCALAR MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -315,7 +323,7 @@ DAMPEDJACOBI,CHEBYSHEV
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [SCALAR PARALMOND CYCLE]
-KCYCLE
+VCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [SCALAR PARALMOND SMOOTHER]
@@ -333,6 +341,7 @@ DEFAULT
 # can be MAX, MIN, or NONE
 [SCALAR PARALMOND LPSCN ORDERING]
 MAX
+#MIN
 
 [SCALAR PARALMOND CHEBYSHEV DEGREE]
 2

@@ -45,7 +45,15 @@ void insExtBdfCoefficents(ins_t *ins, int order) {
     ins->ExplicitOrder = 1;    
     
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
-    ins->ig0 = 1.0/ins->g0; 
+    ins->ig0 = 1.0/ins->g0;
+    
+     if(ins->Nscalar){
+      ins->sSolver->ExplicitOrder = 1;  
+      ins->sSolver->g0 = ins->g0;    
+      ins->sSolver->lambda = ins->sSolver->g0 / (ins->dt * ins->sSolver->alf);
+      ins->sSolver->ig0 = 1.0/ins->sSolver->g0; 
+    }
+ 
   } else if(order==2) {
     //advection, second order in time, increment
     ins->g0 =  1.5f;
@@ -65,6 +73,12 @@ void insExtBdfCoefficents(ins_t *ins, int order) {
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
     ins->ig0 = 1.0/ins->g0; 
+      if(ins->Nscalar){
+      ins->sSolver->ExplicitOrder = 2;  
+      ins->sSolver->g0 = ins->g0;  
+      ins->sSolver->lambda = ins->sSolver->g0 / (ins->sSolver->dt * ins->sSolver->alf);
+      ins->sSolver->ig0 = 1.0/ins->sSolver->g0; 
+    }
   } else if(order==3) {
     //advection, third order in time, increment
     ins->g0 =  11.f/6.f;
@@ -84,5 +98,11 @@ void insExtBdfCoefficents(ins_t *ins, int order) {
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
     ins->ig0 = 1.0/ins->g0; 
+    if(ins->Nscalar){
+      ins->sSolver->ExplicitOrder = 3;  
+      ins->sSolver->g0 = ins->g0;  
+      ins->sSolver->lambda = ins->sSolver->g0 / (ins->sSolver->dt * ins->sSolver->alf);
+      ins->sSolver->ig0 = 1.0/ins->sSolver->g0; 
+    }
   }
 }

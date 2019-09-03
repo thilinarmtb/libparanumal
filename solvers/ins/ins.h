@@ -46,7 +46,7 @@ typedef struct {
   elliptic_t *pSolver;
   cds_t      *sSolver;
 
-  int scalarSolver; 
+  int Nscalar; 
   setupAide options;
   setupAide vOptions, pOptions; 	
 

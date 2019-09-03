@@ -28,7 +28,8 @@ SOFTWARE.
 // Initial conditions 
 void insFlowField3D(bcData *bc) 
   {                                  
-    bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
+   // bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
+    bc->uP = 1.f;  
     bc->vP = 0.f;                   
     bc->wP = 0.f;                    
     bc->pP = 0.f;                   
@@ -39,7 +40,8 @@ void insFlowField3D(bcData *bc)
 void insVelocityDirichletConditions3D(bcData *bc) 
 {                                   
   if(bc->id==2){                 
-    bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
+    //bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
+    bc->uP = 1.f;    
     bc->vP = 0.f;                    
     bc->wP = 0.f;                    
   } 
