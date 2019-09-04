@@ -145,12 +145,40 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
+ifeq ($(OS),Windows_NT)
+    detected_OS := Windows
+else
+    detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
+SONAME=
+WHOLE=
+NOWHOLE=
+
+ifeq ($(detected_OS),Linux)
+	SONAME=-soname
+	WHOLE=--whole-archive
+	NOWHOLE=--no-whole-archive
+	SHARED=-shared
+	EXT=so
+endif
+ifeq ($(detected_OS),Darwin)
+	SONAME=-install_name
+	WHOLE=-all_load
+	NOWHOLE=-noall_load
+	SHARED=-dynamiclib -undefined dynamic_lookup
+	EXT=dylib
+endif
 
 cdsMain:$(AOBJS) $(LOBJS) ./src/cdsMain.o libblas libogs libparAlmond libelliptic
 	$(LD)  $(LDFLAGS)  -o cdsMain ./src/cdsMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
 	ar -cr libcds.a $(AOBJS)
+
+sharedlib: $(AOBJS)
+	$(LD) $(SHARED) -o libcds.$(EXT) $(AOBJS) \
+	-Wl,$(SONAME),$(NEKRS_INSTALL_DIR)/cds/libcds.$(EXT)
 
 libogs:
 	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/cds

@@ -194,7 +194,8 @@ lib:$(AOBJS)
 	ar -cr libelliptic.a $(AOBJS)
 
 sharedlib: $(AOBJS)
-	$(LD) $(SHARED) -o libelliptic.$(EXT) $(AOBJS) -Wl,$(SONAME),$(NEKRS_INSTALL_DIR)/elliptic/libelliptic.$(EXT)
+	$(LD) $(SHARED) -o libelliptic.$(EXT) $(AOBJS) \
+	-Wl,$(SONAME),$(NEKRS_INSTALL_DIR)/elliptic/libelliptic.$(EXT)
 
 libogs:
 	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/elliptic
