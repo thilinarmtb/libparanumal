@@ -220,6 +220,32 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
   }
   cds->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), cds->mapB);
 
+
+// Currently walid only for quad and HEX !!!!!!! AK
+  if (cds->options.compareArgs("ADVECTION TYPE", "CONVECTIVE")){
+    // build lumped mass matrix for NEK
+    dfloat *lumpedMassMatrix     = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+    dfloat *copyLumpedMassMatrix = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+
+    for(hlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
+        lumpedMassMatrix[e*mesh->Np+n]     = mesh->vgeo[e*mesh->Np*mesh->Nvgeo+JWID*mesh->Np+n];
+        copyLumpedMassMatrix[e*mesh->Np+n] = mesh->vgeo[e*mesh->Np*mesh->Nvgeo+JWID*mesh->Np+n];
+      }
+    }
+  
+    ogsGatherScatter(lumpedMassMatrix, ogsDfloat, ogsAdd, mesh->ogs);
+
+    for(int n=0;n<mesh->Np*mesh->Nelements;++n)
+      lumpedMassMatrix[n] = 1./lumpedMassMatrix[n];
+
+    cds->o_invLumpedMassMatrix = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), lumpedMassMatrix);
+
+    // Need to be revised for Tet/Tri
+    cds->o_InvM = cds->o_invLumpedMassMatrix; 
+  }
+
+
   // time stepper
   dfloat rkC[4] = {1.0, 0.0, -1.0, -2.0};
 
@@ -340,6 +366,13 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
       cds->helmholtzAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
     
+      sprintf(fileName,DCDS "/okl/cdsMassMatrix.okl"); 
+      sprintf(kernelName,"cdsMassMatrix%s", suffix);
+      cds->massMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+
+      sprintf(kernelName,"cdsInvMassMatrix%s", suffix);
+      cds->invMassMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+
       if(cds->Nsubsteps){
         // Note that resU and resV can be replaced with already introduced buffer
         cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
@@ -364,6 +397,12 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
 
         sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
         cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+        sprintf(kernelName, "cdsSubCycleStrongCubatureVolume%s", suffix);
+        cds->subCycleStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        
+        sprintf(kernelName, "cdsSubCycleStrongVolume%s", suffix);
+        cds->subCycleStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
         sprintf(kernelName, "cdsSubCycleRKUpdate");

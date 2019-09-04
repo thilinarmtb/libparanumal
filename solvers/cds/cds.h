@@ -126,6 +126,8 @@ typedef struct {
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
+  occa::kernel subCycleStrongCubatureVolumeKernel;
+  occa::kernel subCycleStrongVolumeKernel;
 
   // occa::kernel constrainKernel;
   
@@ -149,6 +151,9 @@ typedef struct {
   //EXTBDF data
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
   occa::memory o_extC;
+
+  occa::memory o_invLumpedMassMatrix;
+  occa::memory o_InvM;
 
 // Will be depreceated.....AK
   occa::kernel haloExtractKernel;
@@ -176,6 +181,9 @@ typedef struct {
   occa::kernel helmholtzRhsBCKernel;
   occa::kernel helmholtzAddBCKernel;
 
+  occa::kernel invMassMatrixKernel; 
+  occa::kernel massMatrixKernel; 
+
   occa::properties *kernelInfo;
     
 }cds_t;
@@ -194,6 +202,7 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS);
 void cdsHelmholtzSolve(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS,occa::memory o_rkS);
 
+void cdsStrongSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::memory o_S, occa::memory o_Sd);
 // void cdsSolveSetup(cds_t *cds, dfloat lambda, occa::properties &kernelInfo);
 void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::memory o_S);
 

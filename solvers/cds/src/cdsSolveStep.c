@@ -31,9 +31,16 @@ void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::me
   mesh_t *mesh = cds->mesh;
   
   hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+
+  int StrongSubCycle = 0;
+  if(cds->options.compareArgs("ADVECTION TYPE", "CONVECTIVE"))
+    StrongSubCycle   = 1;
    
   if(cds->Nsubsteps) {
+    if(!StrongSubCycle)
     cdsSubCycle(cds, time, cds->Nstages, o_U, o_S,  cds->o_NS);
+    else
+    cdsStrongSubCycle(cds, time, cds->Nstages, o_U, o_S,  cds->o_NS);
   } else {
     cdsAdvection(cds, time, o_U, o_S, cds->o_NS);
   }    
