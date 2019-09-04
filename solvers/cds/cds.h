@@ -168,6 +168,8 @@ typedef struct {
   occa::kernel advectionSurfaceKernel;
   occa::kernel advectionCubatureVolumeKernel;
   occa::kernel advectionCubatureSurfaceKernel;
+  occa::kernel advectionStrongVolumeKernel; 
+  occa::kernel advectionStrongCubatureVolumeKernel; 
 
   occa::kernel helmholtzRhsKernel;
   occa::kernel helmholtzRhsIpdgBCKernel;

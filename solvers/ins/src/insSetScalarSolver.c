@@ -317,6 +317,11 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
       sprintf(kernelName, "cdsAdvectionSurface%s", suffix);
       cds->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      sprintf(kernelName, "cdsStrongAdvectionVolume%s", suffix);
+      cds->advectionStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "cdsStrongAdvectionCubatureVolume%s", suffix);
+      cds->advectionStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
       

@@ -605,6 +605,11 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "cdsAdvectionSurface%s", suffix);
       cds->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+       sprintf(kernelName, "cdsStrongAdvectionVolume%s", suffix);
+      cds->advectionStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "cdsStrongAdvectionCubatureVolume%s", suffix);
+      cds->advectionStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
       
