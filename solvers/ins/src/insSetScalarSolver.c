@@ -83,12 +83,12 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
   cds->Nsubsteps = ins->Nsubsteps; 
 
 
+  cds->Ue      = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
   if(cds->Nsubsteps){
     // This memory can be reduced, check later......!!!!!!!
     cds->Sd      = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
     cds->resS    = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
     cds->rhsSd   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));        
-    cds->Ue      = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
     // 
     cds->SNrk    = ins->SNrk;  
     //
@@ -373,9 +373,9 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
       sprintf(kernelName,"cdsInvMassMatrix%s", suffix);
       cds->invMassMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
 
+        cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
       if(cds->Nsubsteps){
         // Note that resU and resV can be replaced with already introduced buffer
-        cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
         // Can use previous memories
         cds->o_Sd     = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->Sd);
         cds->o_resS   = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->resS);
@@ -400,7 +400,7 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
 
         sprintf(kernelName, "cdsSubCycleStrongCubatureVolume%s", suffix);
         cds->subCycleStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-        
+
         sprintf(kernelName, "cdsSubCycleStrongVolume%s", suffix);
         cds->subCycleStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
@@ -408,9 +408,11 @@ void insSetScalarSolver(ins_t *ins, setupAide options,occa::properties &kernelIn
         sprintf(kernelName, "cdsSubCycleRKUpdate");
         cds->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      }
+      // this is also required if Nstages =0 !!!
+        sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
         sprintf(kernelName, "cdsSubCycleExt");
         cds->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      }
    
     }
     MPI_Barrier(mesh->comm);

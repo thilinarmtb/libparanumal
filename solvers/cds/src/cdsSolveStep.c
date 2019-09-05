@@ -42,7 +42,16 @@ void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::me
     else
     cdsStrongSubCycle(cds, time, cds->Nstages, o_U, o_S,  cds->o_NS);
   } else {
-    cdsAdvection(cds, time, o_U, o_S, cds->o_NS);
+    // First extrapolate velocity to t^(n+1)
+     cds->subCycleExtKernel(mesh->Nelements,
+                            cds->ExplicitOrder,
+                            cds->vOffset,
+                            cds->o_extbdfC,
+                            o_U,
+                            cds->o_Ue);
+     
+    cdsAdvection(cds, time, cds->o_Ue, o_S, cds->o_NS);
+//    cdsAdvection(cds, time, o_U, o_S, cds->o_NS);
   }    
 
   cdsHelmholtzRhs(cds, time+dt, cds->Nstages, cds->o_rhsS);
