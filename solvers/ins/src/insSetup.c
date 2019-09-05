@@ -517,18 +517,18 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   options.getArgs("FINAL TIME", ins->finalTime);
   options.getArgs("START TIME", ins->startTime);
-  
+ 
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF") || 
       options.compareArgs("TIME INTEGRATOR", "TOMBO") ){
-    ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
+    ins->NtimeSteps = ceil((ins->finalTime-ins->startTime)/ins->dt);
 
     if(ins->Nsubsteps){
       ins->dt         = ins->Nsubsteps*ins->dt;
-      ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
+      ins->NtimeSteps = ceil((ins->finalTime-ins->startTime)/ins->dt);
       ins->dt         = (ins->finalTime-ins->startTime)/ins->NtimeSteps;
       ins->sdt        = ins->dt/ins->Nsubsteps;
     } else{
-      ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
+      ins->NtimeSteps = ceil((ins->finalTime-ins->startTime)/ins->dt);
       ins->dt         = (ins->finalTime-ins->startTime)/ins->NtimeSteps;
     }
   }
