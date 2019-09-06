@@ -348,6 +348,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   kernelInfo["includes"].asArray();
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
+  kernelInfo["include_paths"].asArray();
 
   if(ins->dim==3){
     if(ins->elementType != QUADRILATERALS)
@@ -389,6 +390,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   // Struct for BC implementation
   kernelInfo["includes"] += DINS "/data/insBcData.h";
+  char cwdbuf[BUFSIZ];
+  getcwd(cwdbuf, sizeof(cwdbuf));
+  kernelInfo["include_paths"] += cwdbuf;
 
   //add boundary data to kernel info
   string boundaryHeaderFileName; 
