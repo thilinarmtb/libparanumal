@@ -27,55 +27,55 @@
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {									\
-    struct bcData bc;  \
-    bc.idM = vmapM[sk];   bc.time = time;  \
-    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    bc.x   = x[bc.idM]; \
-    bc.y   = y[bc.idM]; \
-    bc.z   = z[bc.idM]; \
-    bc.fieldOffset = offset; \
+    struct bcData bc;							\
+    bc.idM = vmapM[sk];   bc.time = time;				\
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];					\
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];					\
+    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];					\
+    bc.x   = x[bc.idM];							\
+    bc.y   = y[bc.idM];							\
+    bc.z   = z[bc.idM];							\
+    bc.fieldOffset = offset;						\
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
     const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
                                                                         \
     bc.uM = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset];  bc.wM   = U[bc.idM+2*offset]; \
-    bc.uxP = 0.f;  bc.uyP = 0.f;  bc.uzP = 0.f; bc.uP = 0.f;				\
-    bc.vxP = 0.f;  bc.vyP = 0.f;  bc.vzP = 0.f; bc.vP = 0.f;				\
-    bc.wxP = 0.f;  bc.wyP = 0.f;  bc.wzP = 0.f; bc.wP = 0.f;				\
-    bc.wrk = (dfloat *) W; \
+    bc.uxP = 0.f;  bc.uyP = 0.f;  bc.uzP = 0.f; bc.uP = 0.f;		\
+    bc.vxP = 0.f;  bc.vyP = 0.f;  bc.vzP = 0.f; bc.vP = 0.f;		\
+    bc.wxP = 0.f;  bc.wyP = 0.f;  bc.wzP = 0.f; bc.wP = 0.f;		\
+    bc.wrk = (dfloat *) W;						\
                                                                         \
-    bc.id = EToB[face+p_Nfaces*e];        \
+    bc.id = EToB[face+p_Nfaces*e];					\
     if(bc.id>0) {   							\
-      if(bc.id==1 || bc.id == 4 || bc.id == 5 || bc.id == 6){				\
-	      bc.uP = 0.f; bc.vP = 0.f; bc.wP = 0.f;					    \
-      }else if (bc.id==2){								\
-	     insVelocityDirichletConditions3D(&bc); \
+      if(bc.id==1 || bc.id == 4 || bc.id == 5 || bc.id == 6){		\
+	bc.uP = 0.f; bc.vP = 0.f; bc.wP = 0.f;				\
+      }else if (bc.id==2){						\
+	insVelocityDirichletConditions3D(&bc);				\
       }									\
-      insVelocityNeumannConditions3D(&bc); \
+      insVelocityNeumannConditions3D(&bc);				\
     }									\
                                                                         \
     const dfloat du = bc.uP;						\
     const dfloat dv = bc.vP;						\
     const dfloat dw = bc.wP;						\
                                                                         \
-    s_dudx[j][i] = WsJ*bc.nx*du;						\
-    s_dudy[j][i] = WsJ*bc.ny*du;						\
-    s_dudz[j][i] = WsJ*bc.nz*du;						\
-    s_dvdx[j][i] = WsJ*bc.nx*dv;						\
-    s_dvdy[j][i] = WsJ*bc.ny*dv;						\
-    s_dvdz[j][i] = WsJ*bc.nz*dv;						\
-    s_dwdx[j][i] = WsJ*bc.nx*dw;						\
-    s_dwdy[j][i] = WsJ*bc.ny*dw;						\
-    s_dwdz[j][i] = WsJ*bc.nz*dw;						\
+    s_dudx[j][i] = WsJ*bc.nx*du;					\
+    s_dudy[j][i] = WsJ*bc.ny*du;					\
+    s_dudz[j][i] = WsJ*bc.nz*du;					\
+    s_dvdx[j][i] = WsJ*bc.nx*dv;					\
+    s_dvdy[j][i] = WsJ*bc.ny*dv;					\
+    s_dvdz[j][i] = WsJ*bc.nz*dv;					\
+    s_dwdx[j][i] = WsJ*bc.nx*dw;					\
+    s_dwdy[j][i] = WsJ*bc.ny*dw;					\
+    s_dwdz[j][i] = WsJ*bc.nz*dw;					\
                                                                         \
-    s_rhsU[j][i] = -WsJ*(bc.nx*bc.uxP + bc.ny*bc.uyP+ bc.nz*bc.uzP+ tau*du*hinv);	\
-    s_rhsV[j][i] = -WsJ*(bc.nx*bc.vxP + bc.ny*bc.vyP+ bc.nz*bc.vzP+ tau*dv*hinv);	\
-    s_rhsW[j][i] = -WsJ*(bc.nx*bc.wxP + bc.ny*bc.wyP+ bc.nz*bc.wzP+ tau*dw*hinv);	\
+    s_rhsU[j][i] = -WsJ*(bc.nx*bc.uxP + bc.ny*bc.uyP+ bc.nz*bc.uzP+ tau*du*hinv); \
+    s_rhsV[j][i] = -WsJ*(bc.nx*bc.vxP + bc.ny*bc.vyP+ bc.nz*bc.vzP+ tau*dv*hinv); \
+    s_rhsW[j][i] = -WsJ*(bc.nx*bc.wxP + bc.ny*bc.wyP+ bc.nz*bc.wzP+ tau*dw*hinv); \
   }
 
 @kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
-            const dlong offset, 
+				    const dlong offset, 
 				    @restrict const  dlong  *  vmapM,
 				    const dfloat tau,
 				    const dfloat time,
@@ -87,9 +87,9 @@
 				    @restrict const  int    *  EToB,
 				    @restrict const  dfloat *  D,
 				    @restrict const  dfloat *  LIFTT,
-            @restrict const  dfloat *  MM,
-            @restrict const  dfloat *  W,
-            @restrict const  dfloat *  U,
+				    @restrict const  dfloat *  MM,
+				    @restrict const  dfloat *  W,
+				    @restrict const  dfloat *  U,
 				    @restrict dfloat *  rhsU,
 				    @restrict dfloat *  rhsV,
 				    @restrict dfloat *  rhsW){
@@ -437,44 +437,44 @@
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {									\
-    struct bcData bc;  \
-    bc.idM = vmapM[sk];   bc.time = time;  \
-    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
-    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
-    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];        \
-    bc.x   = x[bc.idM]; \
-    bc.y   = y[bc.idM]; \
-    bc.z   = z[bc.idM]; \
-    bc.fieldOffset = offset; \
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
+    struct bcData bc;							\
+    bc.idM = vmapM[sk];   bc.time = time;				\
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];					\
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];					\
+    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];					\
+    bc.x   = x[bc.idM];							\
+    bc.y   = y[bc.idM];							\
+    bc.z   = z[bc.idM];							\
+    bc.fieldOffset = offset;						\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
                                                                         \
     bc.uM     = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset];  bc.wM   = U[bc.idM+2*offset]; \
-    bc.uxP = 0.f;  bc.uyP = 0.f;  bc.uzP = 0.f; bc.uP = 0.f;        \
-    bc.vxP = 0.f;  bc.vyP = 0.f;  bc.vzP = 0.f; bc.vP = 0.f;        \
-    bc.wxP = 0.f;  bc.wyP = 0.f;  bc.wzP = 0.f; bc.wP = 0.f;        \
-    bc.wrk = (dfloat *) W; \
+    bc.uxP = 0.f;  bc.uyP = 0.f;  bc.uzP = 0.f; bc.uP = 0.f;		\
+    bc.vxP = 0.f;  bc.vyP = 0.f;  bc.vzP = 0.f; bc.vP = 0.f;		\
+    bc.wxP = 0.f;  bc.wyP = 0.f;  bc.wzP = 0.f; bc.wP = 0.f;		\
+    bc.wrk = (dfloat *) W;						\
                                                                         \
-    bc.id = mapB[bc.idM];           \
-    if(bc.id>0) {                 \
-      if(bc.id==1 || bc.id == 4 || bc.id == 5 || bc.id == 6){       \
-        bc.uP = 0.f; bc.vP = 0.f; bc.wP = 0.f;             \
-      }else if (bc.id==2){								\
-        insVelocityDirichletConditions3D(&bc); \
-      }                 \
-      insVelocityNeumannConditions3D(&bc); \
-    }                 \
-    \
-    s_U  [j][i] =  bc.uP;							\
-    s_V  [j][i] =  bc.vP;							\
-    s_W  [j][i] =  bc.wP;							\
-    s_ndU[j][i] = -WsJ*(bc.nx*bc.uxP + bc.ny*bc.uyP + bc.nz*bc.uzP);		\
-    s_ndV[j][i] = -WsJ*(bc.nx*bc.vxP + bc.ny*bc.vyP + bc.nz*bc.vzP);		\
-    s_ndW[j][i] = -WsJ*(bc.nx*bc.wxP + bc.ny*bc.wyP + bc.nz*bc.wzP);		\
+    bc.id = mapB[bc.idM];						\
+    if(bc.id>0) {							\
+      if(bc.id==1 || bc.id == 4 || bc.id == 5 || bc.id == 6){		\
+        bc.uP = 0.f; bc.vP = 0.f; bc.wP = 0.f;				\
+      }else if (bc.id==2){						\
+        insVelocityDirichletConditions3D(&bc);				\
+      }									\
+      insVelocityNeumannConditions3D(&bc);				\
+    }									\
+									\
+    s_U  [j][i] =  bc.uP;						\
+    s_V  [j][i] =  bc.vP;						\
+    s_W  [j][i] =  bc.wP;						\
+    s_ndU[j][i] = -WsJ*(bc.nx*bc.uxP + bc.ny*bc.uyP + bc.nz*bc.uzP);	\
+    s_ndV[j][i] = -WsJ*(bc.nx*bc.vxP + bc.ny*bc.vyP + bc.nz*bc.vzP);	\
+    s_ndW[j][i] = -WsJ*(bc.nx*bc.wxP + bc.ny*bc.wyP + bc.nz*bc.wzP);	\
   }
 
 //RHS contributions for continuous solver
 @kernel void insVelocityBCHex3D(const dlong Nelements,
-        const dlong offset, 
+				const dlong offset, 
 				@restrict const  dfloat *  ggeo,
 				@restrict const  dfloat *  sgeo,
 				@restrict const  dfloat *  D,
@@ -489,8 +489,8 @@
 				@restrict const  dfloat *  y,
 				@restrict const  dfloat *  z,
 				@restrict const  int    *  mapB,
-        @restrict const  dfloat *  W,
-        @restrict const  dfloat *  U,
+				@restrict const  dfloat *  W,
+				@restrict const  dfloat *  U,
 				@restrict dfloat *  rhsU,
 				@restrict dfloat *  rhsV,
 				@restrict dfloat *  rhsW){
@@ -872,10 +872,10 @@
     for(int f=0; f<p_Nfaces; f++){
       @barrier("global");
       for(int m=0;m<p_Nfp;++m;@inner(0)){
-         struct bcData bc;
-         const int n = m + f*p_Nfp;         
-	 const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-	 bc.id = mapB[idM];
+	struct bcData bc;
+	const int n = m + f*p_Nfp;         
+	const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+	bc.id = mapB[idM];
 
 	if(bc.id>0) {
           bc.idM = idM; 
