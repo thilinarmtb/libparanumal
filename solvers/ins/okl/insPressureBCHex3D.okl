@@ -27,31 +27,31 @@
 
 #define surfaceTermsIpdg(sk,face,m, i, j)                               \
   {									\
-    struct bcData bc;  \
-    bc.idM = vmapM[sk];         \
-    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    bc.time = time; \
-    bc.x   = x[bc.idM]; \
-    bc.y   = y[bc.idM]; \
-    bc.z   = z[bc.idM]; \
-    bc.fieldOffset = offset; \
+    struct bcData bc;							\
+    bc.idM = vmapM[sk];							\
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];					\
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];					\
+    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];					\
+    bc.time = time;							\
+    bc.x   = x[bc.idM];							\
+    bc.y   = y[bc.idM];							\
+    bc.z   = z[bc.idM];							\
+    bc.fieldOffset = offset;						\
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
     const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
-                                                      \
+									\
     bc.pxP=0.f; bc.pyP=0.f; bc.pzP=0.f; bc.pP=0.f;			\
     bc.uM    = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset];  bc.wM   = U[bc.idM+2*offset]; \
-    bc.wrk = (dfloat *) W; \
+    bc.wrk = (dfloat *) W;						\
   									\
-    dfloat pP = 0.f, pxP = 0.f, pyP = 0.f, pzP = 0.f;       \
-    bc.id = EToB[face+p_Nfaces*e];        \
-    if(bc.id==3) {								\
-      insPressureDirichletConditions3D(&bc); \
-      insPressureNeumannConditions3D(&bc); \
-      pP = bc.pP; pxP = bc.pxP;  pyP = bc.pyP;  pzP = bc.pzP;       \
+    dfloat pP = 0.f, pxP = 0.f, pyP = 0.f, pzP = 0.f;			\
+    bc.id = EToB[face+p_Nfaces*e];					\
+    if(bc.id==3) {							\
+      insPressureDirichletConditions3D(&bc);				\
+      insPressureNeumannConditions3D(&bc);				\
+      pP = bc.pP; pxP = bc.pxP;  pyP = bc.pyP;  pzP = bc.pzP;		\
       for (int s=0;s<stage;s++) {					\
-	dfloat prkBn;						\
+	dfloat prkBn;							\
 	if (ARKswitch) {						\
 	  prkBn = prkB[stage*(p_Nstages+1)+s];				\
 	  bc.time = time-(c[stage]-c[s])*dt;				\
@@ -60,8 +60,8 @@
 	  bc.time = time-(s+1)*dt;					\
 	}								\
 									\
-	insPressureDirichletConditions3D(&bc); \
-	insPressureNeumannConditions3D(&bc); \
+	insPressureDirichletConditions3D(&bc);				\
+	insPressureNeumannConditions3D(&bc);				\
 									\
 									\
 	pP     -= prkBn*bc.pP;						\
@@ -82,7 +82,7 @@
 
 // Actually solves for Pr increamnet not presssure
 @kernel void insPressureIpdgBCHex3D(const dlong Nelements,
-             const dlong offset,
+				    const dlong offset,
 				    @restrict const  dlong  *  vmapM,
 				    const dfloat tau,
 				    const dfloat time,
@@ -99,9 +99,9 @@
 				    @restrict const  int    *  EToB,
 				    @restrict const  dfloat *  D,
 				    @restrict const  dfloat *  LIFTT,
-            @restrict const  dfloat *  MM,
-            @restrict const  dfloat *  W,
-            @restrict const  dfloat *  U,
+				    @restrict const  dfloat *  MM,
+				    @restrict const  dfloat *  W,
+				    @restrict const  dfloat *  U,
 				    @restrict dfloat *  rhsP){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
@@ -309,48 +309,48 @@
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
   {									\
-    struct bcData bc;  \
-    bc.idM = vmapM[sk];         \
-    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];        \
-    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];        \
-    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];        \
-    bc.time = time; \
-    bc.x   = x[bc.idM]; \
-    bc.y   = y[bc.idM]; \
-    bc.z   = z[bc.idM]; \
-    bc.fieldOffset = offset; \
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
-                                                      \
-    bc.pxP=0.f; bc.pyP=0.f; bc.pzP=0.f; bc.pP=0.f;      \
+    struct bcData bc;							\
+    bc.idM = vmapM[sk];							\
+    bc.nx = sgeo[sk*p_Nsgeo+p_NXID];					\
+    bc.ny = sgeo[sk*p_Nsgeo+p_NYID];					\
+    bc.nz = sgeo[sk*p_Nsgeo+p_NZID];					\
+    bc.time = time;							\
+    bc.x   = x[bc.idM];							\
+    bc.y   = y[bc.idM];							\
+    bc.z   = z[bc.idM];							\
+    bc.fieldOffset = offset;						\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+									\
+    bc.pxP=0.f; bc.pyP=0.f; bc.pzP=0.f; bc.pP=0.f;			\
     bc.uM    = U[bc.idM+0*offset];  bc.vM   = U[bc.idM+1*offset];  bc.wM   = U[bc.idM+2*offset]; \
-    bc.wrk = (dfloat *) W; \
-                    \
-    dfloat pP = 0.f, pxP = 0.f, pyP = 0.f, pzP = 0.f;       \
-    bc.id = EToB[face+p_Nfaces*e];        \
-    if(bc.id==3) {                \
-      insPressureDirichletConditions3D(&bc); \
-      insPressureNeumannConditions3D(&bc); \
-      pP = bc.pP; pxP = bc.pxP;  pyP = bc.pyP;  pzP = bc.pzP;       \
-      for (int s=0;s<stage;s++) {         \
-      dfloat prkBn;           \
-      if (ARKswitch) {            \
-        prkBn = prkB[stage*(p_Nstages+1)+s];        \
-        bc.time = time-(c[stage]-c[s])*dt;        \
-      } else {              \
-        prkBn = prkB[s];            \
-        bc.time = time-(s+1)*dt;          \
-      }               \
-                  \
-      insPressureDirichletConditions3D(&bc); \
-      insPressureNeumannConditions3D(&bc); \
-                  \
-                  \
-        pP     -= prkBn*bc.pP;           \
-        pxP    -= prkBn*bc.pxP;            \
-        pyP    -= prkBn*bc.pyP;            \
-        pzP    -= prkBn*bc.pzP;            \
-      }                 \
-    }                 \
+    bc.wrk = (dfloat *) W;						\
+									\
+    dfloat pP = 0.f, pxP = 0.f, pyP = 0.f, pzP = 0.f;			\
+    bc.id = EToB[face+p_Nfaces*e];					\
+    if(bc.id==3) {							\
+      insPressureDirichletConditions3D(&bc);				\
+      insPressureNeumannConditions3D(&bc);				\
+      pP = bc.pP; pxP = bc.pxP;  pyP = bc.pyP;  pzP = bc.pzP;		\
+      for (int s=0;s<stage;s++) {					\
+	dfloat prkBn;							\
+	if (ARKswitch) {						\
+	  prkBn = prkB[stage*(p_Nstages+1)+s];				\
+	  bc.time = time-(c[stage]-c[s])*dt;				\
+	} else {							\
+	  prkBn = prkB[s];						\
+	  bc.time = time-(s+1)*dt;					\
+	}								\
+									\
+	insPressureDirichletConditions3D(&bc);				\
+	insPressureNeumannConditions3D(&bc);				\
+									\
+									\
+        pP     -= prkBn*bc.pP;						\
+        pxP    -= prkBn*bc.pxP;						\
+        pyP    -= prkBn*bc.pyP;						\
+        pzP    -= prkBn*bc.pzP;						\
+      }									\
+    }									\
                                                                         \
     s_p  [m][j][i] = pP;						\
     s_ndp[m][j][i] = -WsJ*(bc.nx*pxP + bc.ny*pyP + bc.nz*pzP);		\
@@ -358,7 +358,7 @@
 
 //RHS contributions for continuous solver
 @kernel void insPressureBCHex3D(const dlong Nelements,
-        const dlong offset,
+				const dlong offset,
 				@restrict const  dfloat *  ggeo,
 				@restrict const  dfloat *  sgeo,
 				@restrict const  dfloat *  D,
@@ -376,8 +376,8 @@
 				@restrict const  dfloat *  y,
 				@restrict const  dfloat *  z,
 				@restrict const  int    *  mapB,
-        @restrict const  dfloat *  W,
-        @restrict const  dfloat *  U,
+				@restrict const  dfloat *  W,
+				@restrict const  dfloat *  U,
 				@restrict dfloat  *  rhsP){
   
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
@@ -609,61 +609,67 @@
 @kernel void insPressureAddBCHex3D(const dlong Nelements,
 				   const dfloat time,
 				   const dfloat dt,
-           const dlong offset,
+				   const dlong offset,
 				   const int stage,
 				   const int ARKswitch,
 				   @restrict const  dfloat *  c,
 				   @restrict const  dfloat *  prkB,
-           @restrict const  dfloat *  sgeo, 
+				   @restrict const  dfloat *  sgeo, 
 				   @restrict const  dfloat *  x,
 				   @restrict const  dfloat *  y,
 				   @restrict const  dfloat *  z,
 				   @restrict const  dlong  *  vmapM,
 				   @restrict const  int    *  mapB,
-           @restrict const  dfloat *  W,
-           @restrict const  dfloat *  U,
+				   @restrict const  dfloat *  W,
+				   @restrict const  dfloat *  U,
 				   @restrict dfloat *  P){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      struct bcData bc;
-      bc.idM  = vmapM[e*p_Nfp*p_Nfaces + n];
-      bc.id   = mapB[bc.idM];
-      bc.time = time; 
+    for(int f=0; f<p_Nfaces; f++){
+      @barrier("global");
+      for(int m=0;m<p_Nfp;++m;@inner(0)){
+        struct bcData bc;
+        const int n = m + f*p_Nfp;  
+	bc.idM  = vmapM[e*p_Nfp*p_Nfaces + n];
+	bc.id   = mapB[bc.idM];
+	bc.time = time; 
+	bc.fieldOffset = offset; 
 
-      if(bc.id==3) {
-        bc.x  = x[bc.idM]; 
-        bc.y  = y[bc.idM]; 
-        bc.z  = z[bc.idM]; 
+
+	if(bc.id==3) {
+	  bc.x  = x[bc.idM]; 
+	  bc.y  = y[bc.idM]; 
+	  bc.z  = z[bc.idM]; 
     
-        const dlong sid  = e*p_Nfaces*p_Nfp + n;
-        bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
-        bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
-        bc.nz = sgeo[sid*p_Nsgeo+p_NZID];
-        // Get Current Solution i.e. Un
-        bc.uM = U[bc.idM + 0*offset]; 
-        bc.vM = U[bc.idM + 1*offset]; 
-        bc.wM = U[bc.idM + 2*offset]; 
-        // dfloat pP = 0.f;
-        bc.pP = P[bc.idM]; bc.wrk = (dfloat *) W; 
-        insPressureDirichletConditions3D(&bc);
-        dfloat pP = bc.pP; 
+	  const dlong sid  = e*p_Nfaces*p_Nfp + n;
+	  bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
+	  bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
+	  bc.nz = sgeo[sid*p_Nsgeo+p_NZID];
+	  // Get Current Solution i.e. Un
+	  bc.uM = U[bc.idM + 0*offset]; 
+	  bc.vM = U[bc.idM + 1*offset]; 
+	  bc.wM = U[bc.idM + 2*offset]; 
+	  // dfloat pP = 0.f;
+	  bc.pP = P[bc.idM]; bc.wrk = (dfloat *) W; 
+	  insPressureDirichletConditions3D(&bc);
+	  dfloat pP = bc.pP; 
         
-        for (int s=0;s<stage;s++) {
-          dfloat prkBn;
-          if (ARKswitch) {
-            prkBn = prkB[stage*(p_Nstages+1)+s];
-            bc.time = time-(c[stage]-c[s])*dt;
-          } else {
-            prkBn = prkB[s];
-            bc.time = time-(s+1)*dt;
-          }
-          insPressureDirichletConditions3D(&bc);
-          pP    -= prkBn*bc.pP;
-        }
+	  for (int s=0;s<stage;s++) {
+	    dfloat prkBn;
+	    if (ARKswitch) {
+	      prkBn = prkB[stage*(p_Nstages+1)+s];
+	      bc.time = time-(c[stage]-c[s])*dt;
+	    } else {
+	      prkBn = prkB[s];
+	      bc.time = time-(s+1)*dt;
+	    }
+	    insPressureDirichletConditions3D(&bc);
+	    pP    -= prkBn*bc.pP;
+	  }
 
-        P[bc.idM] = pP;
-      }    
+	  P[bc.idM] = pP;
+	}    
+      }
     }
   }
 }
@@ -681,38 +687,41 @@
 					@restrict const  dlong  *  vmapM,
 					@restrict const  int    *  mapB,
 					@restrict const  int    *  EToB,
-          @restrict const  dfloat *  W,
-          @restrict const  dfloat *  U,
-          @restrict dfloat *  P){
+					@restrict const  dfloat *  W,
+					@restrict const  dfloat *  U,
+					@restrict dfloat *  P){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
-      const int f = n/p_Nfp; 
-      struct bcData bc;
-      const dlong sid  = e*p_Nfaces*p_Nfp + n;
-      bc.idM  = vmapM[e*p_Nfp*p_Nfaces + n];
-      bc.id   = EToB[f + p_Nfaces*e]; 
-      bc.time = time;
-      bc.fieldOffset = offset; 
-      //  
-      if(bc.id==3) {
-        bc.x  = x[bc.idM]; 
-        bc.y  = y[bc.idM]; 
-        bc.z  = z[bc.idM]; 
-        bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
-        bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
-        bc.nz = sgeo[sid*p_Nsgeo+p_NZID];
-        // Get Current Solution i.e. Un
-        bc.uM = U[bc.idM + 0*offset]; 
-        bc.vM = U[bc.idM + 1*offset]; 
-        bc.wM = U[bc.idM + 2*offset]; 
+    for(int f=0; f<p_Nfaces; f++){
+      @barrier("global");
+      for(int m=0;m<p_Nfp;++m;@inner(0)){
+        struct bcData bc;
+        const int n = m + f*p_Nfp;  
+	const dlong sid  = e*p_Nfaces*p_Nfp + n;
+	bc.idM  = vmapM[e*p_Nfp*p_Nfaces + n];
+	bc.id   = EToB[f + p_Nfaces*e]; 
+	bc.time = time;
+	bc.fieldOffset = offset; 
+	//  
+	if(bc.id==3) {
+	  bc.x  = x[bc.idM]; 
+	  bc.y  = y[bc.idM]; 
+	  bc.z  = z[bc.idM]; 
+	  bc.nx = sgeo[sid*p_Nsgeo+p_NXID];
+	  bc.ny = sgeo[sid*p_Nsgeo+p_NYID];
+	  bc.nz = sgeo[sid*p_Nsgeo+p_NZID];
+	  // Get Current Solution i.e. Un
+	  bc.uM = U[bc.idM + 0*offset]; 
+	  bc.vM = U[bc.idM + 1*offset]; 
+	  bc.wM = U[bc.idM + 2*offset]; 
 
-        bc.pP  = 0.f; 
-        bc.wrk = (dfloat *) W; 
-        //
-        insPressureDirichletConditions3D(&bc);
-        P[bc.idM] = bc.pP;         
-      }    
+	  bc.pP  = 0.f; 
+	  bc.wrk = (dfloat *) W; 
+	  //
+	  insPressureDirichletConditions3D(&bc);
+	  P[bc.idM] = bc.pP;         
+	}    
+      }
     }
   }
 }
