@@ -88,11 +88,11 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     options.getArgs("SUBCYCLING STEPS",cds->Nsubsteps);
 
 
+    cds->Ue      = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
   if(cds->Nsubsteps){
     cds->Sd      = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
     cds->resS    = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
     cds->rhsSd   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));        
-    cds->Ue      = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
 
  
     // Prepare RK stages for Subcycling Part
@@ -494,6 +494,31 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     exit(EXIT_FAILURE);
   }
 
+  // Currently walid only for quad and HEX !!!!!!! AK
+  if (options.compareArgs("ADVECTION TYPE", "CONVECTIVE")){
+    // build lumped mass matrix for NEK
+    dfloat *lumpedMassMatrix     = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+    dfloat *copyLumpedMassMatrix = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+
+    for(hlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
+        lumpedMassMatrix[e*mesh->Np+n]     = mesh->vgeo[e*mesh->Np*mesh->Nvgeo+JWID*mesh->Np+n];
+        copyLumpedMassMatrix[e*mesh->Np+n] = mesh->vgeo[e*mesh->Np*mesh->Nvgeo+JWID*mesh->Np+n];
+      }
+    }
+  
+    ogsGatherScatter(lumpedMassMatrix, ogsDfloat, ogsAdd, mesh->ogs);
+
+    for(int n=0;n<mesh->Np*mesh->Nelements;++n)
+      lumpedMassMatrix[n] = 1./lumpedMassMatrix[n];
+
+    cds->o_invLumpedMassMatrix = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), lumpedMassMatrix);
+
+    // Need to be revised for Tet/Tri
+    cds->o_InvM = cds->o_invLumpedMassMatrix; 
+  }
+
+
   // MEMORY ALLOCATION
   cds->o_rhsS  = mesh->device.malloc(cds->NSfields*                 Ntotal*sizeof(dfloat), cds->rhsS);
   cds->o_NS    = mesh->device.malloc(cds->NSfields*(cds->Nstages+1)*Ntotal*sizeof(dfloat), cds->NS);
@@ -605,9 +630,13 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "cdsAdvectionSurface%s", suffix);
       cds->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+       sprintf(kernelName, "cdsStrongAdvectionVolume%s", suffix);
+      cds->advectionStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "cdsStrongAdvectionCubatureVolume%s", suffix);
+      cds->advectionStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
-      
       sprintf(fileName, DCDS "/okl/cdsHelmholtzRhs%s.okl", suffix);
       sprintf(kernelName, "cdsHelmholtzRhsEXTBDF%s", suffix);
       cds->helmholtzRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -621,11 +650,17 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
       sprintf(kernelName, "cdsHelmholtzAddBC%s", suffix);
       cds->helmholtzAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
     
+      sprintf(fileName,DCDS "/okl/cdsMassMatrix.okl"); 
+      sprintf(kernelName,"cdsMassMatrix%s", suffix);
+      cds->massMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+
+      sprintf(kernelName,"cdsInvMassMatrix%s", suffix);
+      cds->invMassMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+
+      cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
       if(cds->Nsubsteps){
         // Note that resU and resV can be replaced with already introduced buffer
-        cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
         cds->o_Sd     = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->Sd);
         cds->o_resS   = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->resS);
         cds->o_rhsSd  = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->rhsSd);
@@ -647,13 +682,20 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
         sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
         cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+        sprintf(kernelName, "cdsSubCycleStrongCubatureVolume%s", suffix);
+        cds->subCycleStrongCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        
+        sprintf(kernelName, "cdsSubCycleStrongVolume%s", suffix);
+        cds->subCycleStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
         sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
         sprintf(kernelName, "cdsSubCycleRKUpdate");
         cds->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      }
+        sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
         sprintf(kernelName, "cdsSubCycleExt");
         cds->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      }
    
     }
     MPI_Barrier(mesh->comm);

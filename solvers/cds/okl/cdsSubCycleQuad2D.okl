@@ -682,3 +682,237 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
   }
 }
 
+
+
+@kernel void cdsSubCycleStrongCubatureVolumeQuad2D(const dlong Nelements,
+               @restrict const  dfloat *  vgeo,
+               @restrict const  dfloat *  cubvgeo,
+               @restrict const  dfloat *  cubDT,
+               @restrict const  dfloat *  cubInterpT,
+               @restrict const  dfloat *  cubProjectT,
+               const dlong voffset,
+               const dlong soffset,
+               @restrict const  dfloat *  U,
+               @restrict const  dfloat *  S,
+               @restrict dfloat *  NS){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_U[p_cubNq][p_cubNq];
+    @shared dfloat s_V[p_cubNq][p_cubNq];
+    @shared dfloat s_S[p_cubNq][p_cubNq];
+    @shared dfloat s_Sr[p_cubNq][p_cubNq];
+
+#define s_NS s_U
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubDT[p_Nq][p_cubNq];
+    @exclusive dfloat r_U, r_V; 
+    @exclusive dfloat r_S, r_Sr,r_Ss;
+
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        dlong id;
+        if((i<p_Nq) && (j<p_Nq)){
+          id = e*p_Np + j*p_Nq+i;
+          s_U[j][i]  = U[id+0*voffset];
+          s_V[j][i]  = U[id+1*voffset];
+          s_S[j][i]  = S[id+0*soffset];
+        }
+
+        id = i + j*p_cubNq;
+        if (id<p_Nq*p_cubNq) {
+          s_cubDT[0][id] = cubDT[id];
+          s_cubInterpT[0][id] = cubInterpT[id];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in i, store in register
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq) {
+          r_U = 0.; r_V  = 0.; r_S = 0.; r_Sr = 0 ; 
+#pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ini = s_cubInterpT[n][i];
+            const dfloat Dni = s_cubDT[n][i];
+            dfloat Ujn  = s_U[j][n];
+            dfloat Vjn  = s_V[j][n];
+            dfloat Sjn  = s_S[j][n];
+
+            r_U    += Ini*Ujn;
+            r_V    += Ini*Vjn;
+            r_S    += Ini*Sjn;
+            r_Sr   += Dni*Sjn;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq) {
+          s_U[j][i]   = r_U;
+          s_V[j][i]   = r_V;
+          s_S[j][i]   = r_S;
+          s_Sr[j][i]  = r_Sr;
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in j and store flux in register
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        r_U  = 0.; r_V  = 0.; r_Sr  = 0.; r_Ss = 0.; 
+
+#pragma unroll p_Nq
+        for (int n=0;n<p_Nq;n++) {
+          const dfloat Inj = s_cubInterpT[n][j];
+          const dfloat Dnj = s_cubDT[n][j];
+          
+          dfloat Uni  = s_U[n][i];
+          dfloat Vni  = s_V[n][i];
+          dfloat Sni  = s_S[n][i];
+          dfloat Srni = s_Sr[n][i];
+          // interpolate convective velocity
+          r_U   += Inj*Uni;
+          r_V   += Inj*Vni;
+          r_Sr  += Inj*Srni;
+          r_Ss  += Dnj*Sni;
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //construct flux from registers
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+        const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
+        const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
+        const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
+        const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
+        const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
+        const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
+
+        dfloat dSdx = drdx*r_Sr + dsdx*r_Ss;
+        dfloat dSdy = drdy*r_Sr + dsdy*r_Ss;
+
+        s_NS[j][i] = JW*(r_U*dSdx + r_V*dSdy);
+      }
+    }
+
+    @barrier("local");
+
+    //project/differentiate in j
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        dfloat r_NS  = 0.; 
+        if (j<p_Nq) {
+#pragma unroll p_cubNq
+          for (int n=0;n<p_cubNq;n++) {
+            const dfloat Inj = s_cubInterpT[j][n];
+            r_NS += Inj*s_NS[n][i];
+          }
+          s_S[j][i] = r_NS;
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //project/differentiate in i and write back
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if((i<p_Nq) && (j<p_Nq)){
+          dfloat ns = 0.f; 
+#pragma unroll p_cubNq
+          for(int n=0;n<p_cubNq;++n){
+            const dfloat Ini = s_cubInterpT[i][n];
+            ns += Ini*s_S[j][n];
+          }
+          const dlong id = e*p_Np + j*p_Nq + i;
+          NS[id+0*soffset] = ns;
+        }
+      }
+    }
+  }
+}
+
+
+@kernel void cdsSubCycleStrongVolumeQuad2D(const dlong Nelements,
+             @restrict const  dfloat *  vgeo,
+             @restrict const  dfloat *  D,
+             const dlong voffset,
+             const dlong soffset,
+             @restrict const  dfloat *  U,
+             @restrict const  dfloat *  S,
+             @restrict dfloat *  NS){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_S[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+  for(int i=0;i<p_Nq;++i;@inner(0)){    
+    const dlong e = eo+es; // element in block
+    if(e<Nelements){ 
+      const dlong id = e*p_Np + j*p_Nq+i;
+      s_S[es][j][i] = S[id+0*soffset];
+      if (es==0)
+        s_D[j][i] = D[j*p_Nq+i];
+    }
+  }
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+  for(int i=0;i<p_Nq;++i;@inner(0)){    
+    const dlong e = eo+es; // element in block
+    if(e<Nelements){ 
+      const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+
+      const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+      const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+      const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+      const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+      const dfloat JW   = vgeo[gid + p_JWID*p_Np];
+      dfloat dSdr = 0.f, dSds = 0.f;
+
+#pragma unroll p_Nq
+      for(int n=0;n<p_Nq;++n){
+        const dfloat Dr = s_D[i][n];
+        const dfloat Ds = s_D[j][n];
+        //
+        dSdr += Dr*s_S[es][j][n];
+        dSds += Ds*s_S[es][n][i];
+      }
+
+      dfloat dSdx = drdx*dSdr + dsdx*dSds;
+      dfloat dSdy = drdy*dSdr + dsdy*dSds;
+
+      const dlong id =e*p_Np+ j*p_Nq + i;
+      dfloat u       =U[id+0*voffset];
+      dfloat v       =U[id+1*voffset];
+
+      NS[id+0*soffset] =  JW*(u*dSdx + v*dSdy);
+    }
+  }
+      }
+    }
+  }
+}

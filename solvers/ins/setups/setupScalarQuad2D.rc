@@ -2,32 +2,26 @@
 1.0
 
 [DATA FILE]
-#data/insVortex3D.h
-#data/insBeltrami3D.h
-data/insChannel3D.h
+data/insChannel2D.h
+
+[BOX DOMAIN]
+FALSE
 
 [MESH FILE]
-#../../meshes/insChannelSlipHex3D.msh
-#../../meshes/insBeltramiHex3D.msh
-#../../meshes/insVortex3D.msh
-../../meshes/insChannelHex3D.msh
+../../meshes/insChannelQuad2D.msh
+
 
 [MESH DIMENSION]
-3
+2
 
 [ELEMENT TYPE] # number of edges
-12
-
-[POLYNOMIAL DEGREE]
 4
 
-
-[ELEMENT MAP]
-ISOPARAMETRIC
+[POLYNOMIAL DEGREE]
+7
 
 [THREAD MODEL]
 #Serial
-#OpenCL
 CUDA
 
 [PLATFORM NUMBER]
@@ -37,14 +31,12 @@ CUDA
 0
 
 # can be EXTBDF1,2, or 3
-# can add SUBCYCLING to EXTBDF or TOMBO (if C0 velocity solve)
-# can add DIFF for velocity increament solve in TOMBO
+# can add SUBCYCLING to EXTBDF
 [TIME INTEGRATOR]
 #ARK2
 #EXTBDF2
 TOMBO2
 
-#currently one only
 [NUMBER of SCALAR FIELD]
 1
 
@@ -55,12 +47,11 @@ TOMBO2
 4
 
 # can be CUBATURE or COLLOCATION
-# CONVECTIVE (CO only) or CONSERVATIVE (C0 or DG)
 [ADVECTION TYPE]
 #NODAL+CONVECTIVE
 #NODAL+CONSERVATIVE
-#CUBATURE+CONVECTIVE
-CUBATURE+CONSERVATIVE
+#CUBATURE+CONSERVATIVE
+CUBATURE+CONVECTIVE
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
@@ -78,15 +69,15 @@ NONE
 0.01
 
 [DIFFUSIVITY]
-0.001 
+0.01
+
+[MACH NUMBER]
+.2
 
 [UBAR]
 1.0
 
 [VBAR]
-0.0
-
-[WBAR]
 0.0
 
 [PBAR]
@@ -102,11 +93,11 @@ NONE
 10.0
 
 [CFL]
-0.5
+0.2
 
 # overwrites time step size
 [DT]
-1E-3
+1.0E-3
 
 [OUTPUT TYPE]
 VTU
@@ -115,30 +106,23 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-insChannelHex3D
+insChannelQuad2D
 
 #################################################
 ########## Velocity Solver Options ##############
 #################################################
 
-# can add FLEXIBLE and/or NONBLOCKING to PCG
+# can add FLEXIBLE to PCG
 [VELOCITY KRYLOV SOLVER]
 PCG
-#PCG+NONBLOCKING
-#+NONBLOCKING
-#PCG+FLEXIBLE
-# PCG+FLEXIBLE
-# PCG+NONBLOCKING
-# PCG+NONBLOCKING+FLEXIBLE
 
-[VELOCITY SOLVER TOLERANCE]
-1.e-10
-
-# can be IPDG, [ currently CONTINUOUS seems to be broken ]
+# can be IPDG, or CONTINUOUS
 [VELOCITY DISCRETIZATION]
 #IPDG
 CONTINUOUS
 
+[VELOCITY SOLVER TOLERANCE]
+1.e-10
 
 # can be NODAL or BERN
 [VELOCITY BASIS]
@@ -147,7 +131,6 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [VELOCITY PRECONDITIONER]
 JACOBI
-#MULTIGRID
 
 ########## MULTIGRID Options ##############
 
@@ -160,6 +143,9 @@ HALFDOFS
 # can include CHEBYSHEV for smoother acceleration
 [VELOCITY MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
+
+[VELOCITY CHEBYSHEV DEGREE]
+2
 
 [VELOCITY MULTIGRID CHEBYSHEV DEGREE]
 2
@@ -203,21 +189,14 @@ MAX
 # can add FLEXIBLE to PCG
 [PRESSURE KRYLOV SOLVER]
 PCG
-#PCG+FLEXIBLE
-#PCG+FLEXIBLE+NONBLOCKING
-#PCG (if fixed preconditioner)
-#PCG+NONBLOCKING (if fixed preconditioner)
-#PCG+FLEXIBLE
-#PCG+FLEXIBLE+NONBLOCKING
-
-[PRESSURE SOLVER TOLERANCE]
-1.e-10
 
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
-CONTINUOUS
 #IPDG
-#(we don't typically use this)
+CONTINUOUS
+
+[PRESSURE SOLVER TOLERANCE]
+1.e-10
 
 # can be NODAL or BERN
 [PRESSURE BASIS]
@@ -225,9 +204,12 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRESSURE PRECONDITIONER]
-#JACOBI
 MULTIGRID
 #FULLALMOND
+
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ########## MULTIGRID Options ##############
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
@@ -240,7 +222,7 @@ HALFDOFS
 [PRESSURE MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
-[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+[PRESSURE CHEBYSHEV DEGREE]
 2
 
 ###########################################
@@ -272,6 +254,15 @@ MAX
 
 [PRESSURE PARALMOND CHEBYSHEV DEGREE]
 2
+
+# only smooth at bottom of cycle
+[PARALMOND SMOOTH COARSEST]
+FALSE
+#TRUE
+
+[PARALMOND SMOOTH COARSEST DEGREE]
+20
+
 
 #################################################
 ########## Scalar Solver Options ##############
@@ -346,15 +337,14 @@ MAX
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
-# can be BELTRAMI
+# can be VORTEX or KOVASZNAY
 [EXACT]
 #VORTEX
-#BELTRAMI
+#KOVASZNAY
 NONE
 
 [VERBOSE]
 FALSE
-#TRUE
 
 [DEBUG ENABLE OGS]
 1
@@ -375,3 +365,5 @@ FALSE
 
 [USE PRECOMPILED BINARIES]
 FALSE
+
+
