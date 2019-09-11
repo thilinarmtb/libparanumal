@@ -36,9 +36,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->options = options;
   ins->kernelInfo = new occa::properties();
 
-  if(mesh->rank==0)
-    printf("\n==================INS SETUP====================================");
-
   options.getArgs("MESH DIMENSION", ins->dim);
   options.getArgs("ELEMENT TYPE", ins->elementType);
   
@@ -800,7 +797,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   
 
   kernelInfo["defines/" "p_blockSize"]= blockSize;
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
+  //kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   if(options.compareArgs("TIME INTEGRATOR", "EXTBDF")){
     kernelInfo["defines/" "p_EXTBDF"]= 1;
