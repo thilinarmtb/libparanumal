@@ -69,6 +69,7 @@ typedef struct {
   int   NtimeSteps;  // number of time steps 
   int   Nstages;     
   int   outputStep;
+  int   isOutputStep;
   int   outputForceStep; 
   int   dtAdaptStep; 
 
