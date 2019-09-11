@@ -36,6 +36,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->options = options;
   ins->kernelInfo = new occa::properties();
 
+  if(mesh->rank==0)
+    printf("\n==================INS SETUP====================================");
+
   options.getArgs("MESH DIMENSION", ins->dim);
   options.getArgs("ELEMENT TYPE", ins->elementType);
   
@@ -390,15 +393,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   // Struct for BC implementation
   kernelInfo["includes"] += DINS "/data/insBcData.h";
-  char cwdbuf[BUFSIZ];
-  getcwd(cwdbuf, sizeof(cwdbuf));
-  kernelInfo["include_paths"] += cwdbuf;
 
   //add boundary data to kernel info
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
-  kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
-  
+  kernelInfo["includes"] += realpath(boundaryHeaderFileName.c_str(), NULL);
+
   ins->o_U = mesh->device.malloc(ins->NVfields*ins->Nstages*Ntotal*sizeof(dfloat), ins->U);
   ins->o_P = mesh->device.malloc(              ins->Nstages*Ntotal*sizeof(dfloat), ins->P);
 
