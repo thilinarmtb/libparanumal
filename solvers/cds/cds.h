@@ -92,8 +92,9 @@ typedef struct {
   dfloat *extbdfA, *extbdfB, *extbdfC;
   dfloat *extC;
 
-  int *mapB;
+  int *mapB, *EToB;
   occa::memory o_mapB;
+  occa::memory o_EToB; 
 
   //halo data
   dfloat *sendBuffer;

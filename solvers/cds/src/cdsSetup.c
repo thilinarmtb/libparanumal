@@ -394,6 +394,10 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   // bc = 4 -> x-aligned slip, bc = 5 -> y-aligned slip, bc = 6 -> z-aligned slip
 
   int sBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+
+  // Set solver based Element-To- Boundary Map 
+  cds->EToB = mesh->EToB; 
+  cds->o_EToB = mesh->o_EToB; 
  
   //Solver tolerances 
   // cds->TOL = 1E-10;
@@ -416,7 +420,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) cds->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
-      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      int bc = cds->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
         for (int n=0;n<mesh->Nfp;n++) {
           int fid = mesh->faceNodes[n+f*mesh->Nfp];
