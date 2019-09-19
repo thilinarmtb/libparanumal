@@ -119,8 +119,8 @@ typedef struct {
   dfloat *Sd, *Ue, *resS, *rhsS, *rhsSd;
   occa::memory o_Sd, o_Ue, o_resS, o_rhsS, o_rhsSd;
 
-  dfloat *cU, *cSd, *cS; 
-  occa::memory o_cU, o_cSd, o_cS;
+  dfloat *cU, *cSd, *cS, *FS; 
+  occa::memory o_cU, o_cSd, o_cS, o_FS;
 
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;

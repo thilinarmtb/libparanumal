@@ -52,7 +52,9 @@ void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::me
      
     cdsAdvection(cds, time, cds->o_Ue, o_S, cds->o_NS);
 //    cdsAdvection(cds, time, o_U, o_S, cds->o_NS);
-  }    
+  } 
+
+  // Add user forcing if needed   
 
   cdsHelmholtzRhs(cds, time+dt, cds->Nstages, cds->o_rhsS);
 
@@ -67,6 +69,10 @@ void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::me
     cds->o_NS.copyFrom(cds->o_NS, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
 		       (s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
 		       (s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
+
+    cds->o_FS.copyFrom(cds->o_FS, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
+           (s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
+           (s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
   }
   //copy updated scalar
   o_S.copyFrom(cds->o_rkS, cds->NSfields*cds->Ntotal*sizeof(dfloat)); 
