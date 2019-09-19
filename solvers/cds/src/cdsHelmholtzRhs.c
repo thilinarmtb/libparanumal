@@ -42,5 +42,6 @@ void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS){
                           cds->sOffset,
                           cds->o_S,
                           cds->o_NS,
+                          cds->o_FS,
                           o_rhsS);
 }
