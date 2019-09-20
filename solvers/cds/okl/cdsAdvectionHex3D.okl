@@ -1179,12 +1179,12 @@ SOFTWARE.
           const dfloat Vn = r_V[k];
           const dfloat Wn = r_W[k];
 
-    const dfloat dSdx = JW*(Sdr*drdx + Sds*drdy + Sdt*drdz);
-    const dfloat dSdy = JW*(Sdr*dsdx + Sds*dsdy + Sdt*dsdz);
-    const dfloat dSdz = JW*(Sdr*dtdx + Sds*dtdy + Sdt*dtdz);
+          const dfloat Uhat = JW*(Un*drdx + Vn*drdy + Wn*drdz);
+          const dfloat Vhat = JW*(Un*dsdx + Vn*dsdy + Wn*dsdz);
+          const dfloat What = JW*(Un*dtdx + Vn*dtdy + Wn*dtdz);
 
-    // I_f^t*(J_f*C_f^t)*G_f*\hat{D}_f*I_f*u
-    r_S[k] = Un*dSdx + Vn*dSdy + Wn*dSdz;
+          // I_f^t*(J_f*C_f^t)*G_f*\hat{D}_f*I_f*u
+          r_S[k] = Uhat*Sdr + Vhat*Sds + What*Sdt;
   }
       }
     }
