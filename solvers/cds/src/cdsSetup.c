@@ -393,14 +393,24 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   // SetUp Boundary Flags types for Elliptic Solve
   // bc = 1 -> wall bc = 2 -> inflow bc = 3 -> outflow
   // bc = 4 -> x-aligned slip, bc = 5 -> y-aligned slip, bc = 6 -> z-aligned slip
+  
+  // int sBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  // This needd to be got from user for scalar solver
+  int Nbc = 7; // Hard coded now
+  int sBCMap[7]  = {0, 1, 2, 3 ,1, 1, 1};  // This should be user input
+  int *sBCType = (int *) calloc(Nbc, sizeof(int)); 
 
-  int sBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  for(int n=0; n<Nbc; n++){
+    const int bc = sBCMap[n];
+    if(bc==1) 
+      sBCType[n] = 1; 
+    else if(bc==2 || bc==3)  
+      sBCType[n] = 2;
+    else
+      sBCType[n] = 0;
+  }
 
-  // Set solver based Element-To- Boundary Map 
-  cds->EToB = mesh->EToB; 
-  cds->o_EToB = mesh->o_EToB; 
- 
-  //Solver tolerances 
+   //Solver tolerances 
   // cds->TOL = 1E-10;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
@@ -411,13 +421,27 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   cds->solver->options = cds->options;
   cds->solver->dim = cds->dim;
   cds->solver->elementType = cds->elementType;
-  cds->solver->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(cds->solver->BCType,sBCType,7*sizeof(int));
+  cds->solver->BCType = (int*) calloc(Nbc,sizeof(int));
+  memcpy(cds->solver->BCType,sBCType,Nbc*sizeof(int));
   ellipticSolveSetup(cds->solver, cds->lambda, kernelInfo); 
 
   //make node-wise boundary flags
   cds->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  // Set solver based Element-To- Boundary Map 
+  cds->EToB = mesh->EToB; cds->o_EToB = mesh->o_EToB; 
   
+  // cds->EToB   = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
+  // for(int e=0; e<mesh->Nelements; e++){
+  //   for(int f=0; f<mesh->Nfaces; f++){
+  //     int bc = mesh->EToB[f+ e*mesh->Nfaces]; 
+  //     if(bc>0)
+  //      cds->EToB[f+e*mesh->Nfaces] = sBCMap[bc]; 
+  //   }
+  // }
+
+
+
+ 
   for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) cds->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
@@ -438,6 +462,8 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       cds->mapB[n] = 0.;
     }
   }
+
+  // cds->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), cds->EToB);
   cds->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), cds->mapB);
 
   kernelInfo["defines/" "p_blockSize"]= blockSize;

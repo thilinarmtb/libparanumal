@@ -56,25 +56,13 @@ void cdsDirichletConditions2D(bcData *bc){
     dfloat r2 = (bc->x-xt)*(bc->x-xt) + (bc->y-yt)*(bc->y-yt); 
     dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));  
   if(bc->id==1){                        
-    bc->sP = 0.f;                    
-  } else if(bc->id==2){                 
-    bc->sP = sExact;		    
-  } else if(bc->id==3){       
-    bc->sP = bc->sM;           
-  } else if(bc->id==4||bc->id==5||bc->id==6){
-    bc->sP = bc->sM; 
-  }             
+    bc->sP = sExact;        
+  }          
 }
 
 void cdsNeumannConditions2D(bcData *bc){                                         
-  if(bc->id==1 || bc->id==2){               
+  if(bc->id==2){               
     bc->sxP = bc->sxM;                    
     bc->syP = bc->syM;                    
-  } else if(bc->id==3){                    
-    bc->sxP = 0.f;                        
-    bc->syP = 0.f;                        
-  } else if(bc->id==4||bc->id==5||bc->id==6){
-    bc->sxP = bc->nx*bc->nx*bc->sxM;      
-    bc->syP = bc->ny*bc->ny*bc->syM;      
-  }                                       
+  }                                    
 }

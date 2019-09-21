@@ -138,7 +138,8 @@ void surfaceTerms(dlong e, int es, dlong voffset, dlong soffset, dfloat bScale, 
   // bc.wrk = (dfloat *) W;
   
   bc.id = EToB[face+p_Nfaces*e];                                       
-  if(bc.id>0) {                                                            
+  if(bc.id==1) { 
+     bc.sP = 0.f;                                                            
      cdsDirichletConditions2D(&bc);
      bc.sP *= bScale; 
   }                                                                     
@@ -609,10 +610,11 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
       bc.sP = r_SPn[face]; 
 
 	    bc.id = EToB[face+p_Nfaces*e];
-	    if(bc.id>0) {
-	      cdsDirichletConditions2D(&bc);
+      if(bc.id==1) { 
+        bc.sP = 0;                                                            
+        cdsDirichletConditions2D(&bc);
         bc.sP *= bScale; 
-	    }
+      }  
 
 	    const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM);
 	    const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP);

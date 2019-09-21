@@ -38,8 +38,10 @@ SOFTWARE.
     const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
   bc.sxP=0, bc.syP=0, bc.sP=0;                                        \
   bc.id = EToB[face+p_Nfaces*e];                                 \
-  if(bc.id>0) {                                                            \
+  if(bc.id==1) {                                                            \
     cdsDirichletConditions2D(&bc);\
+  }                                                                     \
+  if(bc.id==2) {                                                            \
     cdsNeumannConditions2D(&bc); \
   }                                                                     \
                                                                         \
@@ -162,8 +164,10 @@ SOFTWARE.
     const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];       \
   bc.sxP=0, bc.syP=0, bc.sP=0;                                        \
   bc.id = EToB[face+p_Nfaces*e];                                 \
-  if(bc.id>0) {                                                            \
+  if(bc.id==1) {                                                            \
     cdsDirichletConditions2D(&bc);\
+  }                                                                     \
+  if(bc.id==2) {                                                            \
     cdsNeumannConditions2D(&bc); \
   }                                                                     \
                                                                         \
@@ -326,7 +330,7 @@ SOFTWARE.
    const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
    bc.id = mapB[idM];
 
-     if(bc.id>0) {
+     if(bc.id==1) {
           bc.idM = idM; 
           bc.time = time; 
           bc.x  = x[bc.idM]; 

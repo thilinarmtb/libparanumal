@@ -66,28 +66,14 @@ void cdsDirichletConditions3D(bcData *bc){
     									
     dfloat sExact = coef*exp(-xterm -yterm - zterm);
   if(bc->id==1){  
-    bc->sP = 0.f;
-  } else if(bc->id==2){ 
-    bc->sP = sExact;		 
-  } else if(bc->id==3){    
-    bc->sP = bc->sM;        
-  } else if(bc->id==4||bc->id==5||bc->id==6){
-    bc->sP = bc->sM; 
-  }            
+    bc->sP = sExact;
+  }       
 }
 
 void cdsNeumannConditions3D(bcData *bc){          
-  if(bc->id==1 || bc->id==2){                  
+  if(bc->id==2){                  
     bc->sxP = bc->sxM;                      
     bc->syP = bc->syM;                      
     bc->szP = bc->szM;                      
-  } else if(bc->id==3){                    
-    bc->sxP = 0.f;                      
-    bc->syP = 0.f;                      
-    bc->szP = 0.f;                      
-  } else if(bc->id==4||bc->id==5||bc->id==6){      
-    bc->sxP = bc->nx*bc->nx*bc->sxM;                
-    bc->syP = bc->nx*bc->nx*bc->syM;                
-    bc->szP = bc->nx*bc->nx*bc->szM;                
-  }                                    
+  }                             
 }

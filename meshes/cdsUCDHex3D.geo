@@ -13,5 +13,5 @@ Recombine Surface {6};
 Extrude {0, 0, 1} {
   Surface{6}; Layers{1/r}; Recombine;
 }
-Physical Surface("Inflow",2) = {28, 6, 27, 19, 15, 23};
+Physical Surface("Wall",1) = {28, 6, 27, 19, 15, 23};
 Physical Volume("Domain",9) = {1};

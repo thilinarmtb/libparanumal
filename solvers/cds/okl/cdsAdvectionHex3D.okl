@@ -152,7 +152,8 @@ SOFTWARE.
   bc.sM = S[idM+0*bc.soffset], bc.sP = S[idP+0*bc.soffset]; \
                                                                         \
   bc.id = EToB[face+p_Nfaces*e];                                 \
-  if(bc.id>0) {                                                            \
+  if(bc.id==1) {                                                    \
+     bc.sP = 0.f;                                                           \
     cdsDirichletConditions3D(&bc); \
   }                                                                     \
                                                                         \
@@ -687,9 +688,10 @@ SOFTWARE.
 	  bc.sM = r_SMn,  bc.sP = r_SPn;				\
                   \
     bc.id = EToB[face+p_Nfaces*e];        \
-	if(bc.id>0) {							\
-	  cdsDirichletConditions3D(&bc); \
-	}								\
+	if(bc.id==1) {                                                    \
+     bc.sP = 0.f;                                                           \
+    cdsDirichletConditions3D(&bc); \
+  }                                                                     \
 									\
 	const dfloat unM   = fabs(bc.nx*bc.uM + bc.ny*bc.vM + bc.nz*bc.wM);		\
 	const dfloat unP   = fabs(bc.nx*bc.uP + bc.ny*bc.vP + bc.nz*bc.wP);		\

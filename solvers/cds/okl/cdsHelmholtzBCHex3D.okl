@@ -41,10 +41,12 @@
                                                                         \
     bc.sxP=0.f; bc.syP=0.f; bc.szP =0.f; bc.sP=0.f;                                        \
     bc.id = EToB[face+p_Nfaces*e];                                 \
-    if(bc.id>0) {                                                            \
+    if(bc.id==1) {                                                            \
       cdsDirichletConditions3D(&bc);\
-      cdsNeumannConditions3D(&bc); \
     }                                                                     \
+    if(bc.id==2) {                                                            \
+      cdsNeumannConditions3D(&bc); \
+    }                                                                       \
                                                                         \
   const dfloat ds = bc.sP;                                                 \
                                                                         \
@@ -335,10 +337,12 @@
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];      \
     bc.sxP=0.f; bc.syP=0.f; bc.szP =0.f; bc.sP=0.f;                                        \
     bc.id = mapB[bc.idM];                                 \
-    if(bc.id>0) {                                                            \
+   if(bc.id==1) {                                                            \
       cdsDirichletConditions3D(&bc);\
-      cdsNeumannConditions3D(&bc); \
     }                                                                     \
+    if(bc.id==2) {                                                            \
+      cdsNeumannConditions3D(&bc); \
+    }                                                                       \
                                                                         \
     s_U  [j][i] =  bc.sP;							\
     s_ndU[j][i] = -WsJ*(bc.nx*bc.sxP + bc.ny*bc.syP + bc.nz*bc.szP);		\
@@ -654,7 +658,7 @@
         const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
         bc.id = mapB[idM];
 
-      if(bc.id>0) {
+      if(bc.id==1) {
           bc.idM = idM; 
           bc.time = time; 
           bc.x  = x[bc.idM]; 
@@ -666,7 +670,6 @@
         bc.nx = sgeo[sk*p_Nsgeo+p_NXID];
         bc.ny = sgeo[sk*p_Nsgeo+p_NYID];
         bc.nz = sgeo[sk*p_Nsgeo+p_NZID];
-
         bc.sP = 0.f;
         cdsDirichletConditions3D(&bc) ;
         S[idM] = bc.sP;
