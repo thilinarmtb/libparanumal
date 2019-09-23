@@ -428,20 +428,17 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   //make node-wise boundary flags
   cds->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   // Set solver based Element-To- Boundary Map 
-  cds->EToB = mesh->EToB; cds->o_EToB = mesh->o_EToB; 
+  // cds->EToB = mesh->EToB; cds->o_EToB = mesh->o_EToB; 
   
-  // cds->EToB   = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
-  // for(int e=0; e<mesh->Nelements; e++){
-  //   for(int f=0; f<mesh->Nfaces; f++){
-  //     int bc = mesh->EToB[f+ e*mesh->Nfaces]; 
-  //     if(bc>0)
-  //      cds->EToB[f+e*mesh->Nfaces] = sBCMap[bc]; 
-  //   }
-  // }
+  cds->EToB   = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
+  for(int e=0; e<mesh->Nelements; e++){
+    for(int f=0; f<mesh->Nfaces; f++){
+      int bc = mesh->EToB[f+ e*mesh->Nfaces]; 
+      if(bc>0)
+       cds->EToB[f+e*mesh->Nfaces] = sBCMap[bc]; 
+    }
+  }
 
-
-
- 
   for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) cds->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
@@ -463,7 +460,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     }
   }
 
-  // cds->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), cds->EToB);
+  cds->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), cds->EToB);
   cds->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), cds->mapB);
 
   kernelInfo["defines/" "p_blockSize"]= blockSize;

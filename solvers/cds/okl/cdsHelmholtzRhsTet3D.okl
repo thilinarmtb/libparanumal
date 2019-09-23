@@ -36,6 +36,7 @@ SOFTWARE.
                                         const dlong sOffset,
                                         @restrict const  dfloat *  S,
                                         @restrict const  dfloat *  NS,
+                                        @restrict const  dfloat *  FS,
                                               @restrict dfloat *  rhsS){
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
@@ -52,14 +53,19 @@ SOFTWARE.
             //NU holds \hat{U} after subcycling
             const dfloat NSm = NS[id+0*sOffset];
             s_rhsS[es][n] = J*ialf*idt*NSm;
+            for (int s=0;s<p_Nstages;s++) {
+              // double check sign!!!!!
+              rhsSn += J*ialf*extbdfA[s]*FS[id+0*sOffset+s*p_NSfields*sOffset];
+            }
           } else {
             s_rhsS[es][n] = 0.f;
 
             for (int s=0;s<p_Nstages;s++) {
               //S and NS
               const dfloat Sm  = S[id+0*sOffset+s*p_NSfields*sOffset];
-              const dfloat NSm  = NS[id+0*sOffset+s*p_NSfields*sOffset];
-              s_rhsS[es][n]    += J*ialf*(idt*extbdfB[s]*Sm - extbdfA[s]*NSm );
+              const dfloat NSm = NS[id+0*sOffset+s*p_NSfields*sOffset];
+              const dfloat FSm = FS[id+0*sOffset+s*p_NSfields*sOffset];
+              s_rhsS[es][n]    += J*ialf*(idt*extbdfB[s]*Sm - extbdfA[s]*(NSm - FSm));
             }
           }
         }
