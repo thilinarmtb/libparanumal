@@ -29,6 +29,7 @@
 void insRunTOMBO(ins_t *ins){
 
   mesh_t *mesh = ins->mesh;
+  cds_t *cds = ins->sSolver; 
   
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
@@ -44,7 +45,7 @@ void insRunTOMBO(ins_t *ins){
   dfloat cfl = insComputeCfl(ins, ins->startTime, 0); printf("CFL = %.4e \n", cfl);
   
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-    // for(int tstep=0;tstep<10;++tstep){
+   // for(int tstep=0;tstep<10;++tstep){
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
     else if(tstep<2 && ins->temporalOrder>=2) 
@@ -91,23 +92,27 @@ void insRunTOMBO(ins_t *ins){
     }
 
    
-    //copy updated pressure
+    //copy updated velocity
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
+   
+   // scalar solver step
+    if(ins->Nscalar)
+      cdsSolveStep(cds, time, ins->dt, cds->o_U, cds->o_S); 
 
 
     //cycle rhs history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+       (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+       (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
       
       ins->o_NC.copyFrom(ins->o_NC, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+       (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+       (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
       
       ins->o_FU.copyFrom(ins->o_FU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+       (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+       (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
     
@@ -116,10 +121,16 @@ void insRunTOMBO(ins_t *ins){
 
     if(ins->outputStep){
       if(((tstep+1)%(ins->outputStep))==0){
+
+	     if(ins->Nscalar){
+        if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d, S - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP,cds->Niter);
+        if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d, S - %3d\n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, cds->Niter);
+       }else{
         if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+       }
 
-	insReport(ins, time+ins->dt, tstep+1);
+  insReport(ins, time+ins->dt, tstep+1);
         
         dfloat cfl = insComputeCfl(ins, time+ins->dt, tstep+1); printf("CFL = %.4e \n", cfl);
     
@@ -133,9 +144,14 @@ void insRunTOMBO(ins_t *ins){
       }
     }
 
+    if(ins->Nscalar){
+    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d, S - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP, cds->Niter); fflush(stdout);
+    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d, S - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, cds->Niter); fflush(stdout);
+    }else{
     if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
-    
+    }
+
     occaTimerToc(mesh->device,"Report");
   }
 

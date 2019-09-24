@@ -52,6 +52,9 @@ void insReport(ins_t *ins, dfloat time, int tstep){
   ins->o_U.copyTo(ins->U);
   ins->o_P.copyTo(ins->P);
 
+   if(ins->Nscalar)
+    ins->sSolver->o_S.copyTo(ins->sSolver->S);
+
   ins->o_Vort.copyTo(ins->Vort);
   ins->o_Div.copyTo(ins->Div);
   

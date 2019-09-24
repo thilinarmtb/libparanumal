@@ -24,68 +24,25 @@ SOFTWARE.
 
 */
 
-//    
+
 // Initial conditions 
-void insFlowField3D(bcData *bc) 
-  {                                  
-   // bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
-    bc->uP = 1.f;  
-    bc->vP = 0.f;                   
-    bc->wP = 0.f;                    
-    bc->pP = 0.f;                   
-  }   
+void cdsFlowField3D(bcData *bc){                                   
+    bc->uP = p_ubar;                    
+    bc->vP = p_vbar;                    
+    bc->wP = p_wbar;                    
+}   
+
+void cdsScalarField3D(bcData *bc){                                   
+    bc->sP = p_sbar;                    
+}   
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-void insVelocityDirichletConditions3D(bcData *bc) 
-{                                   
-  if(bc->id==2){                 
-    //bc->uP = 1.f - 4.f*bc->y*bc->y/1.f ;    
-    bc->uP = 1.f;    
-    bc->vP = 0.f;                    
-    bc->wP = 0.f;                    
-  } 
-}
-
-void insVelocityNeumannConditions3D(bcData *bc) 
-{                                          
-  if(bc->id==3){                        
-    bc->uxP = 0.f;                          
-    bc->uyP = 0.f;                          
-    bc->uzP = 0.f;                          
-    bc->vxP = 0.f;                          
-    bc->vyP = 0.f;                          
-    bc->vzP = 0.f;                          
-    bc->wxP = 0.f;                          
-    bc->wyP = 0.f;                          
-    bc->wzP = 0.f;                          
-  }                                        
-}
-
-
-void insPressureDirichletConditions3D(bcData *bc) 
-{                                   
-  if(bc->id==3){                 
-    bc->pP = 0.f;                 
-  } 
-}
-
-void insPressureNeumannConditions3D(bcData *bc)
-{                                          
-}
-
-// Initial conditions 
-void cdsScalarField3D(bcData *bc) {                               
-    bc->sP = 0.f;                
-  }  
-  
-/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-void cdsDirichletConditions3D(bcData *bc) 
-{                                   
+void cdsDirichletConditions3D(bcData *bc){                                   
   if(bc->id==1){                        
-    bc->sP = 1.f;                    
+    bc->sP = 0.f;                    
   } else if(bc->id==2){                 
-    bc->sP = 0.f;                 
+    bc->sP = p_sbar;                 
   } else if(bc->id==3){                 
     bc->sP = bc->sM;                     
   } else if(bc->id==4||bc->id==5||bc->id==6){   
@@ -93,9 +50,8 @@ void cdsDirichletConditions3D(bcData *bc)
   }                                 
 }
 
-void cdsNeumannConditions3D(bcData *bc) 
-{                                          
-  if(bc->id==1 || bc->id==2){                      
+void cdsNeumannConditions3D(bcData *bc){                                          
+  if(bc->id==1||bc->id==2){                      
     bc->sxP = bc->sxM;                          
     bc->syP = bc->syM;                          
     bc->szP = bc->szM;                          
@@ -109,4 +65,3 @@ void cdsNeumannConditions3D(bcData *bc)
     bc->szP = bc->nx*bc->nx*bc->szM;                    
   }                                        
 }
-

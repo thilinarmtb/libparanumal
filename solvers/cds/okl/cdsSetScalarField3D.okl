@@ -24,43 +24,33 @@ SOFTWARE.
 
 */
 
-#define WALL 1
-#define INLET 2
-#define OUTLET 3
-#define XSLIP 4
-#define YSLIP 5
-#define ZSLIP 6
 
-struct bcData
-{
-   int idM;
-   int idP;
-   int fieldOffset;
-   int id;
+@kernel void cdsSetScalarField3D(const dlong Nelements,
+                               const dfloat t,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               const dlong offset,
+                               @restrict dfloat *  S){
 
-   int voffset; // remove this later AK. 
-   int soffset;
+  for(dlong n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
 
-   dfloat time;
-   dfloat x, y, z;
-   dfloat nx, ny, nz;
+    if(n<p_Np*Nelements){
+      struct bcData bc; 
+      bc.time    = t;
+      bc.idM     = n; 
+      //
+      bc.x = x[n];
+      bc.y = y[n];
+      bc.z = z[n];
+      //
+      bc.sP = 0.f;
+      
+      cdsScalarField3D(&bc);
 
-   dfloat uM, vM, wM;
-   dfloat uP, vP, wP;
-   dfloat uxM, uyM, uzM;
-   dfloat vxM, vyM, vzM;
-   dfloat wxM, wyM, wzM;
-   dfloat uxP, uyP, uzP;
-   dfloat vxP, vyP, vzP;
-   dfloat wxP, wyP, wzP;
+      S[n+0*offset] = bc.sP;
+    }
+  }
+}
 
-   dfloat pM;
-   dfloat pP, pxP, pyP, pzP;
 
-   dfloat* wrk;
-
-   dfloat sM, sP; 
-   dfloat sxM, syM, szM;
-   dfloat sxP, syP, szP;
-
-};

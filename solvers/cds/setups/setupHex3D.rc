@@ -1,0 +1,196 @@
+[FORMAT]
+1.0
+
+[BOX DOMAIN]
+FALSE
+
+[DATA FILE]
+#data/cdsGaussHill3D.h
+data/cdsUCD3D.h
+
+[MESH FILE]
+../../meshes/cdsUCDHex3D.msh
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] 
+12
+
+[POLYNOMIAL DEGREE]
+5
+
+[ELEMENT MAP]
+ISOPARAMETRIC
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[TIME INTEGRATOR]
+EXTBDF2
+
+[SUBCYCLING STEPS]
+0
+
+[SUBCYCLING TIME ORDER]
+3
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+COLLOCATION
+#CUBATURE +CONVECTIVE
+#CONVECTIVE
+
+[VISCOSITY]
+1
+
+[DENSITY]
+1
+
+[CONDUCTIVITY]
+0.01 
+
+[SPECIFIC HEAT]
+1
+
+[UBAR]
+0.0
+
+[VBAR]
+0.0
+
+[WBAR]
+0.0
+
+[SBAR]
+0.0
+
+[TSTEPS FOR SOLUTION OUTPUT]
+100
+
+[START TIME]
+0
+
+[FINAL TIME]
+1.0
+
+[CFL]
+0.1
+
+[OUTPUT TYPE]
+VTU
+
+[RESTART FROM FILE]
+0
+
+[OUTPUT FILE NAME]
+ucdHex3D
+
+#################################################
+########## Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[KRYLOV SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[DISCRETIZATION]
+#IPDG
+CONTINUOUS
+
+[SOLVER TOLERANCE]
+1.e-10
+
+# can be NODAL or BERN
+[BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[PRECONDITIONER]
+JACOBI
+
+[ELLIPTIC INTEGRATION]
+NODAL
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+[CHEBYSHEV DEGREE]
+2
+
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[VELOCITY PARALMOND CYCLE]
+VCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
+[PARALMOND CHEBYSHEV DEGREE]
+2
+###########################################
+
+# compare to a reference solution. Use NONE to skip comparison
+# can be BELTRAMI
+[EXACT]
+#GAUSS
+UCD
+
+[VERBOSE]
+FALSE
+
+# set to 0 (zero) to disable reductions
+[DEBUG ENABLE REDUCTIONS]
+1
+
+# set to 0 (zero) to disable gather-scatter
+[DEBUG ENABLE OGS]
+1
+
+# bail out iteration count for PCG
+[MAXIMUM ITERATIONS]
+1000
+
+# force PCG to go to MAXIMUM ITERATIONS
+[FIXED ITERATION COUNT]
+FALSE
+
+[USE PRECOMPILED BINARIES]
+FALSE

@@ -35,11 +35,9 @@ struct bcData
 {
    int idM;
    int idP;
-   int fieldOffset;
-   int id;
-
-   int voffset; // remove this later AK. 
+   int voffset;
    int soffset;
+   int id;
 
    dfloat time;
    dfloat x, y, z;
@@ -57,10 +55,10 @@ struct bcData
    dfloat pM;
    dfloat pP, pxP, pyP, pzP;
 
-   dfloat* wrk;
-
    dfloat sM, sP; 
    dfloat sxM, syM, szM;
    dfloat sxP, syP, szP;
+
+   dfloat* wrk;
 
 };
