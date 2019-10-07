@@ -56,50 +56,54 @@ struct hypre_crs_data *hypre_setup(int nrows, const long long int rowStart,
  
   // Set AMG parameters
   if (uparam) {
-      //printf("\n");
-      int i;
-      for (i = 0; i < HYPRE_NPARAM; i++) {
-          hypre_param[i] = param[i+1]; 
-           //if (rank == 0)
-           //   printf("Custom HYPREsettings[%d]: %.2f\n", i+1, hypre_param[i]);
-      }
+    int i;
+    for (i = 0; i < HYPRE_NPARAM; i++)
+        hypre_param[i] = param[i+1]; 
   } else {
-      hypre_param[0] = 10;   /* HMIS                        */
-      hypre_param[1] = 6;    /* Extended+i                  */
-      hypre_param[2] = 0;    /* not used                    */
-      hypre_param[3] = 3;    /* SSOR smoother for crs level */
-      hypre_param[4] = 3;
-      hypre_param[5] = 0.25;
-      hypre_param[6] = 0.1;
-      hypre_param[7] = 0.0;
-      hypre_param[8] = 0.01;
-      hypre_param[9] = 0.05;
+    hypre_param[0]  = 6;    /* coarsening */
+    hypre_param[1]  = 0;    /* interpolation */
+    hypre_param[2]  = 1;    /* number of cycles */
+    hypre_param[3]  = 6;    /* smoother for crs level */
+    hypre_param[4]  = 3;    /* sweeps */
+    hypre_param[5]  = 6;    /* smoother */
+    hypre_param[6]  = 1;    /* sweeps   */
+    hypre_param[7]  = 0.5;  /* threshold */
+    hypre_param[8]  = 0.1;  /* non galerkin tolerance */
+    hypre_param[9]  = 0.0;
+    hypre_param[10] = 0.01;
+    hypre_param[11] = 0.05;
   }
 
-  //HYPRE_BoomerAMGSetCycleType(solver,2);
-  HYPRE_BoomerAMGSetMaxCoarseSize(solver, 10);
+  //HYPRE_BoomerAMGSetMaxCoarseSize(solver, 1);
   HYPRE_BoomerAMGSetCoarsenType(solver,hypre_param[0]);
   HYPRE_BoomerAMGSetInterpType(solver,hypre_param[1]);
 
   HYPRE_BoomerAMGSetKeepTranspose(solver, 1);
 
-  HYPRE_BoomerAMGSetCycleRelaxType(solver, 16, 1);
-  HYPRE_BoomerAMGSetCycleRelaxType(solver, 16, 2);
+  if (hypre_param[5] > 0) {
+    HYPRE_BoomerAMGSetCycleRelaxType(solver, hypre_param[5], 1);
+    HYPRE_BoomerAMGSetCycleRelaxType(solver, hypre_param[5], 2);
+  } 
+  HYPRE_BoomerAMGSetCycleNumSweeps(solver, hypre_param[6], 1);
+  HYPRE_BoomerAMGSetCycleNumSweeps(solver, hypre_param[6], 2);
   HYPRE_BoomerAMGSetCycleRelaxType(solver,  9, 3);
-  HYPRE_BoomerAMGSetChebyFraction(solver, 1./20); 
+
+  //HYPRE_BoomerAMGSetChebyFraction(solver, 1./20); 
 
   if (null_space) {
     HYPRE_BoomerAMGSetCycleRelaxType(solver, hypre_param[3], 3);
     HYPRE_BoomerAMGSetCycleNumSweeps(solver, hypre_param[4], 3);
   }
 
-  HYPRE_BoomerAMGSetStrongThreshold(solver,hypre_param[5]);
+  HYPRE_BoomerAMGSetStrongThreshold(solver,hypre_param[7]);
 
-  HYPRE_BoomerAMGSetNonGalerkinTol(solver,hypre_param[6]);
-  HYPRE_BoomerAMGSetLevelNonGalerkinTol(solver,hypre_param[7], 0);
-  HYPRE_BoomerAMGSetLevelNonGalerkinTol(solver,hypre_param[8], 1);
-  HYPRE_BoomerAMGSetLevelNonGalerkinTol(solver,hypre_param[9], 2);
- 
+  if (hypre_param[8] > 1e-3) {
+    HYPRE_BoomerAMGSetNonGalerkinTol(solver,hypre_param[8]);
+    HYPRE_BoomerAMGSetLevelNonGalerkinTol(solver,hypre_param[9], 0);
+    HYPRE_BoomerAMGSetLevelNonGalerkinTol(solver,hypre_param[10], 1);
+    HYPRE_BoomerAMGSetLevelNonGalerkinTol(solver,hypre_param[11], 2);
+  }
+
   //HYPRE_BoomerAMGSetAggNumLevels(solver, 1); 
 
   HYPRE_BoomerAMGSetMaxIter(solver,hypre_param[2]); // number of V-cycles

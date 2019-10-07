@@ -129,7 +129,7 @@ void setupAgmgSmoother(agmgLevel *level, SmoothType s, int ChebIterations){
     if (s == DAMPED_JACOBI) {
       level->lambda = (4./3.)/rho;
     } else if (s == CHEBYSHEV) {
-      level->lambda1 = rho;
+      level->lambda1 = 1.1*rho;
       level->lambda0 = rho/10.;
     }
   }

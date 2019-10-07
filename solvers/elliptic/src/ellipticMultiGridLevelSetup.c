@@ -136,8 +136,8 @@ void MGLevel::setupSmoother() {
       //estimate the max eigenvalue of S*A
       dfloat rho = this->maxEigSmoothAx();
 
-      lambda1 = rho;
-      lambda0 = rho/20.;
+      lambda1 = 1.1*rho;
+      lambda0 = rho/10.;
     } else {
       stype = RICHARDSON;
 
@@ -171,8 +171,8 @@ void MGLevel::setupSmoother() {
       //estimate the max eigenvalue of S*A
       dfloat rho = this->maxEigSmoothAx();
 
-      lambda1 = rho;
-      lambda0 = rho/20.;
+      lambda1 = 1.1*rho;
+      lambda0 = rho/10.;
     } else {
       stype = RICHARDSON;
 

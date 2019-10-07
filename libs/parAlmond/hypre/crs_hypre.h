@@ -14,7 +14,7 @@
 #define HYPRE_Real double
 #endif
 
-#define HYPRE_NPARAM 10
+#define HYPRE_NPARAM 12
 
 struct hypre_crs_data {
   HYPRE_Solver solver;
