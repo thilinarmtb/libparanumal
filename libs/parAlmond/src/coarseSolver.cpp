@@ -96,7 +96,7 @@ void coarseSolver::setup(parCSR *A) {
     settings[0]  = 1;    /* custom settings             */
     settings[1]  = 8;    /* coarsening                  */
     settings[2]  = 6;    /* interpolation               */
-    settings[3]  = 1;    /* number of cycles            */
+    settings[3]  = 2;    /* number of cycles            */
     settings[4]  = 16;   /* smoother for crs level      */
     settings[5]  = 3;    /* number of coarse sweeps     */
     settings[6]  = 16;   /* smoother                    */
