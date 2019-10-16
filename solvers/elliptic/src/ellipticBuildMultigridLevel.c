@@ -689,10 +689,12 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
                           mesh->ggeo);
 
-    mesh->o_cubggeo =
-      mesh->device.malloc(mesh->Nelements*mesh->cubNp*mesh->Nggeo*sizeof(dfloat),
-                          mesh->cubggeo);
-    
+    mesh->o_cubggeo = mesh->o_ggeo; // dummy
+    if(options.compareArgs("ELLIPTIC INTEGRATION", "CUBATURE")) {
+      mesh->o_cubggeo =
+        mesh->device.malloc(mesh->Nelements*mesh->cubNp*mesh->Nggeo*sizeof(dfloat),
+                            mesh->cubggeo);
+    }
 
     mesh->o_vmapM =
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
