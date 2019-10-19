@@ -255,6 +255,9 @@ void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat 
 void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A,
                                   dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
+void ellipticBuildContinuousFromNek(elliptic_t *elliptic, int Nf, dfloat lambda, nonZero_t **A,
+                                  dlong *nnz, ogs_t **ogs, hlong *globalStarts);
+
 void ellipticBuildJacobi(elliptic_t *elliptic, dfloat lambda, dfloat **invDiagA);
 
 void ellipticBuildLocalPatches(elliptic_t *elliptic, dfloat lambda, dfloat rateTolerance,
