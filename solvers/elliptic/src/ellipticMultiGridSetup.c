@@ -163,6 +163,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     ellipticBuildIpdg(ellipticCoarse, basisNp, basis, lambda, &coarseA, &nnzCoarseA,coarseGlobalStarts);
   } else if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
 #if defined(NEK_COARSE_SOLVE) || defined(LIBP_COARSE_SOLVE)
+    if(mesh->rank==0) printf("my versions.\n");
     ellipticBuildContinuousFromNek(ellipticCoarse,elliptic,lambda,&coarseA,&nnzCoarseA,
        &coarseogs,coarseGlobalStarts);
 #else

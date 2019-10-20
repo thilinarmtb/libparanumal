@@ -268,6 +268,7 @@ void ellipticBuildContinuousFromNekHex3D(elliptic_t *elliptic,elliptic_t *ellipt
   dfloat lambda1=lambda;
   if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
+  dlong cnt =0;
 #ifdef LIBP_COARSE_SOLVE
   if(mesh->rank==0) printf("Using coarse system from libP fine... lambda=%lf\n",lambda1);
   fflush(stdout);
@@ -283,12 +284,15 @@ void ellipticBuildContinuousFromNekHex3D(elliptic_t *elliptic,elliptic_t *ellipt
   for(int jj=0;jj<mesh->Np;jj++)
     ellipticGenerateCoarseBasisHex3D(b,jj,ellipticFine);
 
-  dlong cnt =0;
   for (int nz=0;nz<mesh->Nq;nz++) {
   for (int ny=0;ny<mesh->Nq;ny++) {
   for (int nx=0;nx<mesh->Nq;nx++) {
     int idn = nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
     for (dlong e=0;e<mesh->Nelements;e++) {
+      if (mask[e*mesh->Np + idn]) {
+        printf("Masked node !! %d\n",idn);
+        continue; //skip masked nodes
+      }
       // ax_e
       for(int nnn=0;nnn<meshf->Np;nnn++){
         ab[nnn]=0.f;
@@ -301,6 +305,10 @@ void ellipticBuildContinuousFromNekHex3D(elliptic_t *elliptic,elliptic_t *ellipt
       for (int my=0;my<mesh->Nq;my++) {
       for (int mx=0;mx<mesh->Nq;mx++) {
          int idm = mx+my*mesh->Nq+mz*mesh->Nq*mesh->Nq;
+         if (mask[e*mesh->Np + idm]) {
+           printf("Masked node !! %d\n",idm);
+           continue; //skip masked nodes
+         }
 
          dfloat val=0.f;
          for(int mmm=0;mmm<meshf->Np;mmm++){
@@ -340,7 +348,6 @@ void ellipticBuildContinuousFromNekHex3D(elliptic_t *elliptic,elliptic_t *ellipt
   fflush(stdout);
   nek_get_coarse_galerkin(a,lambda1,ellipticFine->mesh->Nq,nx1,elliptic->dim,mesh->Nelements);
 
-  dlong cnt =0;
   for (dlong e=0;e<mesh->Nelements;e++) {
     for (int nz=0;nz<mesh->Nq;nz++) {
     for (int ny=0;ny<mesh->Nq;ny++) {
