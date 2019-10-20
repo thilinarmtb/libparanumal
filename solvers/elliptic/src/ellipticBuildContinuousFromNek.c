@@ -25,8 +25,9 @@ SOFTWARE.
 */
 
 #include "elliptic.h"
-#include "nek.hpp"
-
+#ifdef NEK_COARSE_SOLVE
+  #include "nek.hpp"
+#endif
 
 // compare on global indices
 static int parallelCompareRowColumn(const void *a, const void *b){
@@ -269,7 +270,7 @@ void ellipticBuildContinuousFromNekHex3D(elliptic_t *elliptic,elliptic_t *ellipt
   if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   dlong cnt =0;
-#ifdef LIBP_COARSE_SOLVE
+#ifdef LIBP_NEW_COARSE_SOLVE
   if(mesh->rank==0) printf("Using coarse system from libP fine... lambda=%lf\n",lambda1);
   fflush(stdout);
 
