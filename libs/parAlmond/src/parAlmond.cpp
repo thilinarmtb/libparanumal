@@ -67,6 +67,7 @@ void AMGSetup(solver_t *MM,
                           nullSpace, null, nullSpacePenalty,
                           M->comm, M->device);
   free(null);
+  A->print();
 
   M->AMGSetup(A);
 

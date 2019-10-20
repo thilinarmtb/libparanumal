@@ -63,6 +63,7 @@ public:
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z);
   void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, const occa::memory o_y);
   void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, occa::memory o_y, occa::memory o_z);
+  void print();
 };
 
 class ELL: public matrix_t {
@@ -175,6 +176,7 @@ public:
   void haloExchangeFinish(dfloat *x);
   void haloExchangeStart (occa::memory o_x);
   void haloExchangeFinish(occa::memory o_x);
+  void print();
 
   dfloat rhoDinvA();
 

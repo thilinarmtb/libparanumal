@@ -1021,6 +1021,8 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
               sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + idn];
               sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + idm];
               sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + idn];
+              printf("val (%d, %d, %lf)\n",sendNonZeros[cnt].row,sendNonZeros[cnt].col,
+                  sendNonZeros[cnt].val);
               cnt++;
             }
         }
