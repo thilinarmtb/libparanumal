@@ -162,10 +162,12 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
     ellipticBuildIpdg(ellipticCoarse, basisNp, basis, lambda, &coarseA, &nnzCoarseA,coarseGlobalStarts);
   } else if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-#if defined(NEK_COARSE_SOLVE)
-    ellipticBuildContinuousFromNek(ellipticCoarse,mesh->N+1,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts);
+#if defined(NEK_COARSE_SOLVE) || defined(LIBP_COARSE_SOLVE)
+    ellipticBuildContinuousFromNek(ellipticCoarse,elliptic,lambda,&coarseA,&nnzCoarseA,
+       &coarseogs,coarseGlobalStarts);
 #else
-    ellipticBuildContinuous(ellipticCoarse,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts);
+    ellipticBuildContinuous(ellipticCoarse,lambda,&coarseA,&nnzCoarseA,&coarseogs,
+       coarseGlobalStarts);
 #endif
   }
 
