@@ -123,6 +123,6 @@ libParAlmond: hypre  $(OBJS)
 
 clean:
 	rm -f libparAlmond.a
-	rm -f ./hypre/*.o
+	cd ./hypre && ./install clean && cd ..
 	rm -f ./src/*.o
 	rm -f ./src/agmgSetup/*.o
