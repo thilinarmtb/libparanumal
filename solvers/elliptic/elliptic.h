@@ -255,7 +255,7 @@ void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat 
 void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A,
                                   dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
-void ellipticBuildContinuousFromNek(elliptic_t *elliptic, elliptic_t *ellipticFine,
+void ellipticBuildContinuousFromFine(elliptic_t *elliptic, elliptic_t *ellipticFine,
                                   dfloat lambda, nonZero_t **A,
                                   dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 

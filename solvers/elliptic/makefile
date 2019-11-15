@@ -67,7 +67,7 @@ AOBJS    = \
 ./src/ellipticSerialPartialAxHex3D.o \
 ./src/ellipticPlotVTUHex3D.o \
 ./src/ellipticBuildContinuous.o \
-./src/ellipticBuildContinuousFromNek.o \
+./src/ellipticBuildContinuousFromFine.o \
 ./src/ellipticBuildIpdg.o \
 ./src/ellipticBuildJacobi.o \
 ./src/ellipticBuildLocalPatches.o \

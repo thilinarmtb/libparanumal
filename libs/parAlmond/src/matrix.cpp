@@ -48,16 +48,6 @@ CSR::~CSR() {
   if (o_vals.size()) o_vals.free();
 }
 
-void CSR::print(){
-  printf("Matrix:\n");
-  for(int i=0;i<Nrows;i++){
-    for(int j=rowStarts[i];j<rowStarts[i+1];j++){
-      printf("(%d,%d,%lf)\n",i,cols[j],vals[j]);
-    }
-    printf("\n");
-  }
-}
-
 //------------------------------------------------------------------------
 //
 //  ELL matrix
@@ -129,11 +119,6 @@ void MCSR::syncToDevice(occa::device device) {
 //  parCSR matrix
 //
 //------------------------------------------------------------------------
-void parCSR::print(){
-  offd->print();
-  diag->print();
-}
-
 parCSR::parCSR(dlong N, dlong M): matrix_t(N,M) {
   diag = new CSR(N,M);
   offd = new CSR(N,M);
@@ -515,7 +500,6 @@ dfloat parCSR::rhoDinvA(){
 //  parHYB matrix
 //
 //------------------------------------------------------------------------
-
 //build from parCSR
 parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
 
