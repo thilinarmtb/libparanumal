@@ -25,9 +25,6 @@ SOFTWARE.
 */
 
 #include "elliptic.h"
-#ifdef NEK_COARSE_SOLVE
-  #include "nek.hpp"
-#endif
 
 // compare on global indices
 static int parallelCompareRowColumn(const void *a, const void *b){
