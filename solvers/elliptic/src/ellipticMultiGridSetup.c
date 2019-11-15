@@ -162,7 +162,14 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
     ellipticBuildIpdg(ellipticCoarse, basisNp, basis, lambda, &coarseA, &nnzCoarseA,coarseGlobalStarts);
   } else if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ellipticBuildContinuous(ellipticCoarse,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts);
+#if defined(NEK_COARSE_SOLVE) || defined(LIBP_NEW_COARSE_SOLVE)
+    if(mesh->rank==0) printf("my versions.\n");
+    ellipticBuildContinuousFromNek(ellipticCoarse,elliptic,lambda,&coarseA,&nnzCoarseA,
+       &coarseogs,coarseGlobalStarts);
+#else
+    ellipticBuildContinuous(ellipticCoarse,lambda,&coarseA,&nnzCoarseA,&coarseogs,
+       coarseGlobalStarts);
+#endif
   }
 
   hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
