@@ -163,7 +163,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     ellipticBuildIpdg(ellipticCoarse, basisNp, basis, lambda, &coarseA, &nnzCoarseA,coarseGlobalStarts);
   } else if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
 #if defined(USE_GALERKIN_COARSE_MATRIX)
-    ellipticBuildContinuousFromFine(ellipticCoarse,elliptic,lambda,&coarseA,&nnzCoarseA,
+    ellipticBuildContinuousGalerkinHex3D(ellipticCoarse,elliptic,lambda,&coarseA,&nnzCoarseA,
        &coarseogs,coarseGlobalStarts);
 #else
     ellipticBuildContinuous(ellipticCoarse,lambda,&coarseA,&nnzCoarseA,&coarseogs,

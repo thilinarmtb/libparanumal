@@ -41,10 +41,10 @@ static int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void ellipticBuildContinuousFromFineHex3D (elliptic_t *elliptic, elliptic_t *ellipticFine,
+void ellipticBuildContinuousGalerkinHex3D (elliptic_t *elliptic, elliptic_t *ellipticFine,
   dfloat lambda, nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
-void ellipticBuildContinuousFromFine(elliptic_t *elliptic, elliptic_t *ellipticFine,
+void ellipticBuildContinuousGalerkin(elliptic_t *elliptic, elliptic_t *ellipticFine,
   dfloat lambda, nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
 
   mesh_t *mesh=elliptic->mesh;
@@ -52,11 +52,11 @@ void ellipticBuildContinuousFromFine(elliptic_t *elliptic, elliptic_t *ellipticF
     case TRIANGLES:
     case TETRAHEDRA:
     case QUADRILATERALS:
-      printf("ellipticBuildContinuousFromFine is called with wrong element type.\n");
+      printf("ellipticBuildContinuousGalerkin is called with wrong element type.\n");
       exit(1);
       break;
     case HEXAHEDRA:
-      ellipticBuildContinuousFromFineHex3D(elliptic,ellipticFine,lambda,A,nnz,ogs,globalStarts);
+      ellipticBuildContinuousGalerkinHex3D(elliptic,ellipticFine,lambda,A,nnz,ogs,globalStarts);
       break;
 
       break;
@@ -103,118 +103,9 @@ void ellipticGenerateCoarseBasisHex3D(dfloat *b,int j_,elliptic_t *elliptic){
   free(zr); free(zs); free(zt); free(z0); free(z1);
 }
 
-void ellipticBuildContinuousFineHex3D(dfloat *a,elliptic_t *elliptic, dfloat lambda){
-  // a is of size ncrxncrxnelements, initialized to zeros
-  mesh2D *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
-
-  int rank = mesh->rank;
-
-  //use the masked gs handle to define a global ordering
-
-  int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
-  for (dlong n=0;n<elliptic->Nmasked;n++) mask[elliptic->maskIds[n]] = 1;
-
-  if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
-
-  dlong cnt =0;
-  for (dlong e=0;e<mesh->Nelements;e++) {
-    for (int nz=0;nz<mesh->Nq;nz++) {
-    for (int ny=0;ny<mesh->Nq;ny++) {
-    for (int nx=0;nx<mesh->Nq;nx++) {
-      int idn = nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-      if (mask[e*mesh->Np + idn]) continue; //skip masked nodes
-
-        for (int mz=0;mz<mesh->Nq;mz++) {
-        for (int my=0;my<mesh->Nq;my++) {
-        for (int mx=0;mx<mesh->Nq;mx++) {
-          int idm = mx+my*mesh->Nq+mz*mesh->Nq*mesh->Nq;
-          if (mask[e*mesh->Np + idm]) continue; //skip masked nodes
-          
-            int id;
-            dfloat val = 0.;
-            
-            if ((ny==my)&&(nz==mz)) {
-              for (int k=0;k<mesh->Nq;k++) {
-                id = k+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                dfloat Grr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
-
-                val += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
-              }
-            }
-
-            if (nz==mz) {
-              id = mx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-              dfloat Grs = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
-              val += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
-
-              id = nx+my*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-              dfloat Gsr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
-              val += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
-            }
-
-            if (ny==my) {
-              id = mx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-              dfloat Grt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
-              val += Grt*mesh->D[nx+mx*mesh->Nq]*mesh->D[mz+nz*mesh->Nq];
-
-              id = nx+ny*mesh->Nq+mz*mesh->Nq*mesh->Nq;
-              dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
-              val += Gst*mesh->D[mx+nx*mesh->Nq]*mesh->D[nz+mz*mesh->Nq];
-            }
-
-            if ((nx==mx)&&(nz==mz)) {
-              for (int k=0;k<mesh->Nq;k++) {
-                id = nx+k*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                dfloat Gss = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
-
-                val += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
-              }
-            }
-            
-            if (nx==mx) {
-              id = nx+my*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-              dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
-              val += Gst*mesh->D[ny+my*mesh->Nq]*mesh->D[mz+nz*mesh->Nq];
-
-              id = nx+ny*mesh->Nq+mz*mesh->Nq*mesh->Nq;
-              dfloat Gts = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
-              val += Gts*mesh->D[my+ny*mesh->Nq]*mesh->D[nz+mz*mesh->Nq];
-            }
-
-            if ((nx==mx)&&(ny==my)) {
-              for (int k=0;k<mesh->Nq;k++) {
-                id = nx+ny*mesh->Nq+k*mesh->Nq*mesh->Nq;
-                dfloat Gtt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
-
-                val += Gtt*mesh->D[nz+k*mesh->Nq]*mesh->D[mz+k*mesh->Nq];
-              }
-            }
-            
-            if ((nx==mx)&&(ny==my)&&(nz==mz)) {
-              id = nx + ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-              dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
-              val += JW*lambda;
-            }
-            
-            // pack non-zero
-            dfloat nonZeroThreshold = 1e-7;
-            if (fabs(val) >= nonZeroThreshold) {
-              a[idm+mesh->Np*idn+e*mesh->Np*mesh->Np] = val;
-              cnt++;
-            }
-        }
-        }
-        }
-      }
-      }
-      }
-  }
-
-}
-
-void ellipticBuildContinuousFromFineHex3D(elliptic_t *elliptic,elliptic_t *ellipticFine,
-  dfloat lambda, nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
+void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellipticFine,
+  dfloat lambda,nonZero_t **A,dlong *nnz,ogs_t **ogs,hlong *globalStarts)
+{
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
@@ -268,34 +159,33 @@ void ellipticBuildContinuousFromFineHex3D(elliptic_t *elliptic,elliptic_t *ellip
     "Using coarse system generated by fine level...\n");
   fflush(stdout);
 
-  dlong cnt =0;
-
-  dfloat *a,*b,*ab;
   mesh_t *meshf=ellipticFine->mesh;
 
-  a =(dfloat *)calloc(meshf->Np*meshf->Np*meshf->Nelements,sizeof(dfloat));
+  dfloat *b,*q,*Aq;
   b =(dfloat *)calloc(mesh->Np*meshf->Np,sizeof(dfloat));
-  ab=(dfloat *)calloc(meshf->Np,sizeof(dfloat));
+  q =(dfloat *)calloc(meshf->Np*mesh->Nelements,sizeof(dfloat));
+  Aq=(dfloat *)calloc(meshf->Np*mesh->Nelements,sizeof(dfloat));
 
-  ellipticBuildContinuousFineHex3D(a,ellipticFine,lambda);
   for(int jj=0;jj<mesh->Np;jj++)
     ellipticGenerateCoarseBasisHex3D(b,jj,ellipticFine);
 
+  dlong cnt =0;
   for (int nz=0;nz<mesh->Nq;nz++) {
   for (int ny=0;ny<mesh->Nq;ny++) {
   for (int nx=0;nx<mesh->Nq;nx++) {
     int idn = nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
     for (dlong e=0;e<mesh->Nelements;e++) {
-      if (mask[e*mesh->Np + idn])
-        continue; //skip masked nodes
-      // ax_e
-      for(int nnn=0;nnn<meshf->Np;nnn++){
-        ab[nnn]=0.f;
-        for(int mmm=0;mmm<meshf->Np;mmm++){
-          ab[nnn]+=a[mmm+nnn*meshf->Np+e*meshf->Np*meshf->Np]*b[mmm+idn*meshf->Np];
-        }
-      }
+      //if (mask[e*mesh->Np + idn])
+      //  continue; //skip masked nodes
+      // setup q
+      memcpy(&q[e*meshf->Np],&b[idn*meshf->Np],meshf->Np);
+    }
 
+    // Aq
+    ellipticHostAxHexKernel3D(meshf->Nq,meshf->Nelements,meshf->ggeo,meshf->Dmatrices,
+	    meshf->Smatrices,meshf->MM,lambda,q,Aq);
+
+    for(dlong e=0;e<mesh->Nelements;e++){
       for (int mz=0;mz<mesh->Nq;mz++) {
       for (int my=0;my<mesh->Nq;my++) {
       for (int mx=0;mx<mesh->Nq;mx++) {
@@ -305,7 +195,7 @@ void ellipticBuildContinuousFromFineHex3D(elliptic_t *elliptic,elliptic_t *ellip
 
          dfloat val=0.f;
          for(int mmm=0;mmm<meshf->Np;mmm++){
-           val+=ab[mmm]*b[mmm+idm*meshf->Np];
+           val+=Aq[e*meshf->Np+mmm]*q[mmm+idm*meshf->Np];
          }
 
          // pack non-zero
@@ -325,7 +215,7 @@ void ellipticBuildContinuousFromFineHex3D(elliptic_t *elliptic,elliptic_t *ellip
   }
   }
 
-  free(a); free(b); free(ab);
+  free(b); free(q); free(Aq);
 
   // Make the MPI_NONZERO_T data type
   MPI_Datatype MPI_NONZERO_T;

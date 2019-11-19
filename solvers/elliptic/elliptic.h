@@ -255,9 +255,8 @@ void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat 
 void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A,
                                   dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
-void ellipticBuildContinuousFromFine(elliptic_t *elliptic, elliptic_t *ellipticFine,
-                                  dfloat lambda, nonZero_t **A,
-                                  dlong *nnz, ogs_t **ogs, hlong *globalStarts);
+void ellipticBuildContinuousGalerkinHex3D(elliptic_t* elliptic,elliptic_t* ellipticFine,
+  dfloat lambda,nonZero_t **A,dlong *nnz,ogs_t **ogs,hlong *globalStarts);
 
 void ellipticBuildJacobi(elliptic_t *elliptic, dfloat lambda, dfloat **invDiagA);
 
@@ -307,6 +306,16 @@ void ellipticSerialAxHexKernel3D(const int Nq,
 				 const occa::memory &o_q,
 				 occa::memory &o_Aq,
 				 const occa::memory &o_ggeoNoJW);
+
+void ellipticHostAxHexKernel3D(const int Nq,
+				 const hlong Nelements,
+				 const dfloat *ggeo,
+				 const dfloat *Dmatrices,
+				 const dfloat *Smatrices,
+				 const dfloat *MM,
+				 const dfloat lambda,
+				 const dfloat *o_q,
+				       dfloat *o_Aq);
 
 void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo);
 void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfloat lambda);
