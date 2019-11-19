@@ -558,33 +558,6 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
   }
 }
 
-void ellipticHostAxHexKernel3D(const int Nq,
-				 const hlong Nelements,
-				 const dfloat *ggeo,
-				 const dfloat *D,
-				 const dfloat *S,
-				 const dfloat *MM,
-				 const dfloat lambda,
-				 const dfloat *q,
-				       dfloat *Aq
-				 )
-{
-  switch(Nq){
-  case  2: ellipticSerialAxHexKernel3D< 2> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  3: ellipticSerialAxHexKernel3D< 3> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  4: ellipticSerialAxHexKernel3D< 4> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  5: ellipticSerialAxHexKernel3D< 5> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  6: ellipticSerialAxHexKernel3D< 6> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  7: ellipticSerialAxHexKernel3D< 7> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  8: ellipticSerialAxHexKernel3D< 8> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  9: ellipticSerialAxHexKernel3D< 9> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 10: ellipticSerialAxHexKernel3D<10> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 11: ellipticSerialAxHexKernel3D<11> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 12: ellipticSerialAxHexKernel3D<12> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 13: ellipticSerialAxHexKernel3D<13> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  }
-}
-
 void ellipticSerialAxHexKernel3D(const int Nq,
 				 const hlong Nelements,
 				 const occa::memory &o_ggeo,
