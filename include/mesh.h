@@ -144,6 +144,7 @@ typedef struct {
   int Nq, NqP, NpP;
   
   dfloat *D; // 1D differentiation matrix (for tensor-product)
+  dfloat *DT; // Transpose of 1D differentiation matrix (for tensor-product)
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
 

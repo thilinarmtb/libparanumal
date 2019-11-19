@@ -647,7 +647,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
     for (int j=0;j<mesh->Nq;j++) {
       for (int i=0;i<mesh->Nq;i++) {
-	DT[j*mesh->Nq+i] = mesh->D[i*mesh->Nq+j];
+        DT[j*mesh->Nq+i] = mesh->D[i*mesh->Nq+j];
       }
     }
     

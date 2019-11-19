@@ -183,7 +183,7 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
 
     // Aq
     ellipticHostAxHexKernel3D(meshf->Nq,meshf->Nelements,meshf->ggeo,meshf->Dmatrices,
-	    meshf->Smatrices,meshf->MM,lambda,q,Aq);
+	    meshf->DT,meshf->MM,lambda,q,Aq);
 
     for(dlong e=0;e<mesh->Nelements;e++){
       for (int mz=0;mz<mesh->Nq;mz++) {

@@ -66,6 +66,10 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   readDfloatArray(fp, "Nodal 1D GLL Nodes", &(mesh->gllz), &Nrows, &Ncols);
   readDfloatArray(fp, "Nodal 1D GLL Weights", &(mesh->gllw), &Nrows, &Ncols);
   readDfloatArray(fp, "Nodal 1D differentiation matrix", &(mesh->D), &Nrows, &Ncols);
+  mesh->DT=(dfloat *)calloc(Nrows*Ncols,sizeof(dfloat));
+  for(int i=0;i<Nrows;i++)
+    for(int j=0;j<Ncols;j++)
+      mesh->DT[i*Nrows+j]=mesh->D[j*Ncols+i];
 
   readDfloatArray(fp, "1D degree raise matrix", &(mesh->interpRaise), &Nrows, &Ncols);
   readDfloatArray(fp, "1D degree lower matrix", &(mesh->interpLower), &Nrows, &Ncols);
