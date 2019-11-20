@@ -56,9 +56,8 @@ void ellipticBuildContinuousGalerkin(elliptic_t *elliptic, elliptic_t *ellipticF
       exit(1);
       break;
     case HEXAHEDRA:
-      ellipticBuildContinuousGalerkinHex3D(elliptic,ellipticFine,lambda,A,nnz,ogs,globalStarts);
-      break;
-
+      ellipticBuildContinuousGalerkinHex3D(elliptic,ellipticFine,
+	lambda,A,nnz,ogs,globalStarts);
       break;
     default:
       break;
@@ -184,8 +183,6 @@ void ellipticHostAxHexKernel3D (const hlong Nelements,
 
   for(dlong e=0; e<Nelements; ++e){
     const dlong element = e;
-
-    // MIXED STEFAN + TW VERSION
     ellipticHostElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np, s_wk);
