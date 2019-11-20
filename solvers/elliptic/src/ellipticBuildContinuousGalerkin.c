@@ -71,30 +71,8 @@ template < const int rowsA, const int rowsB, const int colsC >
   static void mxm(const dfloat * __restrict__ A,
 		    const dfloat * __restrict__ B,
 		    const dfloat BETA, 
-		    dfloat * __restrict__ C){
-
-#if USE_XSMM || USE_BLAS
-  // dgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC)
-  // C = beta*C + A*B
-  char TRANSA = 'N';
-  char TRANSB = 'N';
-  int M = rowsA;
-  int N = colsC;
-  int K = rowsB;
-  dfloat ALPHA = 1;
-  int LDA = rowsA;
-  int LDB = rowsB;
-  int LDC = rowsA;
-
-#if USE_XSMM
-  libxsmm_dgemm_
-#else
-    dgemm_
-#endif
-    (&TRANSA, &TRANSB, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);
-
-
-#else
+		    dfloat * __restrict__ C)
+{
   if(BETA)
     for(int j=0;j<colsC;++j){
       for(int i=0;i<rowsA;++i){
@@ -115,7 +93,6 @@ template < const int rowsA, const int rowsB, const int colsC >
 	C[i+j*rowsA] = res;
       }
     }
-#endif
 }
 
 template < const int p_Nq >
@@ -198,113 +175,20 @@ void ellipticHostAxHexKernel3D (const hlong Nelements,
   Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
   ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
 
-  dfloat s_q  [p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  dfloat s_Gqr[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  dfloat s_Gqs[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  dfloat s_Gqt[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-
-#if 1
   dfloat s_tmp[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   
   dfloat s_qr[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_qs[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_qt[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_wk[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-#endif
-
-  // ok
-  dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  dfloat s_S[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-
-  for(int j=0;j<p_Nq;++j){
-    for(int i=0;i<p_Nq;++i){
-      s_D[j][i] = D[j*p_Nq+i];
-      s_S[j][i] = S[j*p_Nq+i];
-    }
-  }
 
   for(dlong e=0; e<Nelements; ++e){
     const dlong element = e;
 
-#if 1
     // MIXED STEFAN + TW VERSION
     ellipticHostElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np, s_wk);
-#else
-    // TW version
-    for(int k=0;k<p_Nq;k++) {
-      for(int j=0;j<p_Nq;++j){
-        for(int i=0;i<p_Nq;++i){
-          const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*c_Np;
-          const dfloat qbase = q[base];
-          s_q[k][j][i] = qbase;
-        }
-      }
-    }
-
-    for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j){
-        for(int i=0;i<p_Nq;++i){
-          const dlong gbase = element*p_Nggeo*c_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat r_G00 = ggeo[gbase+G00ID*p_Np];
-          const dfloat r_G01 = ggeo[gbase+G01ID*p_Np];
-          const dfloat r_G11 = ggeo[gbase+G11ID*p_Np];
-          const dfloat r_G12 = ggeo[gbase+G12ID*p_Np];
-          const dfloat r_G02 = ggeo[gbase+G02ID*p_Np];
-          const dfloat r_G22 = ggeo[gbase+G22ID*p_Np];
-
-          dfloat qr = 0.f;
-          dfloat qs = 0.f;
-          dfloat qt = 0.f;
-
-          for(int m = 0; m < p_Nq; m++) {
-            qr += s_D[m][i]*s_q[k][j][m];
-            qs += s_D[m][j]*s_q[k][m][i];
-            qt += s_D[m][k]*s_q[m][j][i];
-          }
-
-          dfloat Gqr = r_G00*qr;
-          Gqr += r_G01*qs;
-          Gqr += r_G02*qt;
-
-          dfloat Gqs = r_G01*qr;
-          Gqs += r_G11*qs;
-          Gqs += r_G12*qt;
-
-          dfloat Gqt = r_G02*qr;
-          Gqt += r_G12*qs;
-          Gqt += r_G22*qt;
-
-          s_Gqr[k][j][i] = Gqr;
-          s_Gqs[k][j][i] = Gqs;
-          s_Gqt[k][j][i] = Gqt;
-        }
-      }
-    }
-
-    for(int k=0;k<p_Nq;k++){
-      for(int j=0;j<p_Nq;++j){
-        for(int i=0;i<p_Nq;++i){
-          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat r_GwJ = ggeo[gbase+GWJID*p_Np];
-
-          dfloat r_Aq = r_GwJ*lambda*s_q[k][j][i];
-          dfloat r_Aqr = 0, r_Aqs = 0, r_Aqt = 0;
-
-          for(int m = 0; m < p_Nq; m++)
-            r_Aqr += s_S[m][i]*s_Gqr[k][j][m];
-          for(int m = 0; m < p_Nq; m++)
-            r_Aqs += s_S[m][j]*s_Gqs[k][m][i];
-          for(int m = 0; m < p_Nq; m++)
-            r_Aqt += s_S[m][k]*s_Gqt[m][j][i];
-
-          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-          Aq[id] = r_Aqr + r_Aqs + r_Aqt +r_Aq;
-        }
-      }
-    }
-#endif
   }
 }
 
@@ -464,10 +348,6 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
     ellipticHostAxHexKernel3D(meshf->Nq,meshf->Nelements,meshf->ggeo,meshf->D,
 	    meshf->DT,meshf->MM,lambda,q,Aq);
 
-    //for(int e=0;e<meshf->Nelements;e++)
-    //  for(int i=0;i<meshf->Np;i++)
-    //    printf("%lf ",Aq[e*meshf->Np+i]);
-
     for(dlong e=0;e<mesh->Nelements;e++){
       for (int mz=0;mz<mesh->Nq;mz++) {
       for (int my=0;my<mesh->Nq;my++) {
@@ -490,7 +370,6 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
            sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + idm];
            sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + idn];
            sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + idm];
-           printf("(%d,%d,%lf)\n",sendNonZeros[cnt].row,sendNonZeros[cnt].col,val);
            cnt++;
          }
       }
