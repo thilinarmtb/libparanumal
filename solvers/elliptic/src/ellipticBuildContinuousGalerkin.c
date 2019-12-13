@@ -64,170 +64,6 @@ void ellipticBuildContinuousGalerkin(elliptic_t *elliptic, elliptic_t *ellipticF
   }
 }
 
-#define p_Nggeo 7
-
-template < const int rowsA, const int rowsB, const int colsC >
-  static void mxm(const dfloat * __restrict__ A,
-		    const dfloat * __restrict__ B,
-		    const dfloat BETA, 
-		    dfloat * __restrict__ C)
-{
-  if(BETA)
-    for(int j=0;j<colsC;++j){
-      for(int i=0;i<rowsA;++i){
-	dfloat res = BETA*C[i+j*rowsA];
-	for(int k=0;k<rowsB;++k){
-	  res += A[i+k*rowsA]*B[k+j*rowsB];
-	}
-	C[i+j*rowsA] = res;
-      }
-    }
-  else
-    for(int j=0;j<colsC;++j){
-      for(int i=0;i<rowsA;++i){
-	dfloat res = 0;
-	for(int k=0;k<rowsB;++k){
-	  res += A[i+k*rowsA]*B[k+j*rowsB];
-	}
-	C[i+j*rowsA] = res;
-      }
-    }
-}
-
-template < const int p_Nq >
-void ellipticHostElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
-					const dfloat * __restrict__ D,
-					const dfloat * __restrict__ S,
-					const dfloat * __restrict__ MM,
-					const dfloat lambda,
-					const dfloat * __restrict__ q,
-					dfloat * __restrict__ qr,
-					dfloat * __restrict__ qs,
-					dfloat * __restrict__ qt,
-					dfloat * __restrict__ Aq,
-					dfloat * __restrict__ wk)
-{
-  const int p_Np=p_Nq*p_Nq*p_Nq;
-  const int p_N =p_Nq-1;
-
-  D    = (dfloat*)__builtin_assume_aligned(D, USE_OCCA_MEM_BYTE_ALIGN) ;
-  S    = (dfloat*)__builtin_assume_aligned(S, USE_OCCA_MEM_BYTE_ALIGN) ;
-  MM   = (dfloat*)__builtin_assume_aligned(MM, USE_OCCA_MEM_BYTE_ALIGN) ;
-  q    = (dfloat*)__builtin_assume_aligned(q, USE_OCCA_MEM_BYTE_ALIGN) ;
-  qr    = (dfloat*)__builtin_assume_aligned(qr, USE_OCCA_MEM_BYTE_ALIGN) ;
-  qs    = (dfloat*)__builtin_assume_aligned(qs, USE_OCCA_MEM_BYTE_ALIGN) ;
-  qt    = (dfloat*)__builtin_assume_aligned(qt, USE_OCCA_MEM_BYTE_ALIGN) ;
-  Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
-  ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
-
-  dfloat zero = 0, one = 1.0;
-  const int N = p_Nq-1;
-
-  // grad
-  mxm<p_Nq,p_Nq,p_Nq*p_Nq>(S, q, zero, qr); // D(:,:)*q(:,:+::)
-  for(int k=0;k<p_Nq;++k){
-    mxm<p_Nq,p_Nq,p_Nq>(q+k*p_Nq*p_Nq, D, zero, qs+k*p_Nq*p_Nq);
-  }
-  mxm<p_Nq*p_Nq,p_Nq,p_Nq>(q, D, zero, qt);
-  
-  for(int n=0;n<p_Np;++n){
-    const dfloat G00 = ggeo[n+G00ID*p_Np], G01 = ggeo[n+G01ID*p_Np], G11 = ggeo[n+G11ID*p_Np];
-    const dfloat GWJ = ggeo[n+GWJID*p_Np];
-    const dfloat G12 = ggeo[n+G12ID*p_Np], G02 = ggeo[n+G02ID*p_Np], G22 = ggeo[n+G22ID*p_Np];
-
-    dfloat qrn = G00*qr[n] + G01*qs[n] + G02*qt[n];
-    dfloat qsn = G01*qr[n] + G11*qs[n] + G12*qt[n];
-    dfloat qtn = G02*qr[n] + G12*qs[n] + G22*qt[n];
-
-    qr[n] = qrn;
-    qs[n] = qsn;
-    qt[n] = qtn;
-  }
-
-  // gradT
-  mxm<p_Nq,p_Nq,p_Nq*p_Nq>(D, qr, zero, Aq); // D(:,:)*q(:,:+::)
-  for(int k=0;k<p_Nq;++k){
-    mxm<p_Nq,p_Nq,p_Nq>(qs+k*p_Nq*p_Nq, S, one, Aq+k*p_Nq*p_Nq);
-  }
-  mxm<p_Nq*p_Nq,p_Nq,p_Nq>(qt, S, one, Aq);
-}
-
-
-template < const int p_Nq >
-void ellipticHostAxHexKernel3D (const hlong Nelements,
-				  const dfloat * __restrict__ ggeo ,
-				  const dfloat * __restrict__ D ,
-				  const dfloat * __restrict__ S ,
-				  const dfloat * __restrict__ MM ,
-				  const dfloat lambda,
-				  const dfloat * __restrict__ q ,
-				  dfloat * __restrict__ Aq )
-{
-  const int p_Np=p_Nq*p_Nq*p_Nq;
-  const int c_Np=p_Np;
-  const int p_N =p_Nq-1;
-
-  D    = (dfloat*)__builtin_assume_aligned(D, USE_OCCA_MEM_BYTE_ALIGN) ;
-  S    = (dfloat*)__builtin_assume_aligned(S, USE_OCCA_MEM_BYTE_ALIGN) ;
-  MM   = (dfloat*)__builtin_assume_aligned(MM, USE_OCCA_MEM_BYTE_ALIGN) ;
-  q    = (dfloat*)__builtin_assume_aligned(q, USE_OCCA_MEM_BYTE_ALIGN) ;
-  Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
-  ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
-
-  dfloat s_tmp[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  
-  dfloat s_qr[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  dfloat s_qs[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  dfloat s_qt[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  dfloat s_wk[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-
-  for(dlong e=0; e<Nelements; ++e){
-    const dlong element = e;
-    ellipticHostElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
-					     D, S, MM, lambda, q + element*p_Np,
-					     s_qr, s_qs, s_qt, Aq+element*p_Np, s_wk);
-  }
-}
-
-void ellipticHostAxHexKernel3D(const int Nq,
-				 const hlong Nelements,
-				 const dfloat *ggeo,
-				 const dfloat *D,
-				 const dfloat *S,
-				 const dfloat *MM,
-				 const dfloat lambda,
-				 const dfloat *q,
-				       dfloat *Aq
-				 )
-{
-  switch(Nq){
-  case  2:
-    ellipticHostAxHexKernel3D< 2> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  3:
-    ellipticHostAxHexKernel3D< 3> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  4:
-    ellipticHostAxHexKernel3D< 4> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  5:
-    ellipticHostAxHexKernel3D< 5> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  6:
-    ellipticHostAxHexKernel3D< 6> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  7:
-    ellipticHostAxHexKernel3D< 7> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  8:
-    ellipticHostAxHexKernel3D< 8> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case  9:
-    ellipticHostAxHexKernel3D< 9> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 10:
-    ellipticHostAxHexKernel3D<10> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 11:
-    ellipticHostAxHexKernel3D<11> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 12:
-    ellipticHostAxHexKernel3D<12> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  case 13:
-    ellipticHostAxHexKernel3D<13> (Nelements,ggeo,D,S,MM,lambda,q,Aq); break;
-  }
-}
-
 void ellipticGenerateCoarseBasisHex3D(dfloat *b,int j_,elliptic_t *elliptic){
   // b = lx1**dim
   mesh_t* mesh=elliptic->mesh;
@@ -269,7 +105,6 @@ void ellipticGenerateCoarseBasisHex3D(dfloat *b,int j_,elliptic_t *elliptic){
 void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellipticFine,
   dfloat lambda,nonZero_t **A,dlong *nnz,ogs_t **ogs,hlong *globalStarts)
 {
-
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
@@ -324,12 +159,27 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
   mesh_t *meshf=ellipticFine->mesh;
 
   dfloat *b,*q,*Aq;
-  b =(dfloat *)calloc(mesh->Np*meshf->Np       ,sizeof(dfloat));
-  q =(dfloat *)calloc(meshf->Np*mesh->Nelements,sizeof(dfloat));
-  Aq=(dfloat *)calloc(meshf->Np*mesh->Nelements,sizeof(dfloat));
+  b =(dfloat *)calloc(meshf->Np*mesh->Np,sizeof(dfloat));
+  q =(dfloat *)calloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages),sizeof(dfloat));
+  Aq=(dfloat *)calloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages),sizeof(dfloat));
+
+  occa::memory o_q =mesh->device.malloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages)*sizeof(dfloat), q);
+  occa::memory o_Aq=mesh->device.malloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages)*sizeof(dfloat),Aq);
 
   for(int jj=0;jj<mesh->Np;jj++)
     ellipticGenerateCoarseBasisHex3D(b,jj,ellipticFine);
+
+  int enableGatherScatters = 1;
+  int enableReductions = 1;
+
+  setupAide &optionsFine = ellipticFine->options;
+  optionsFine.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  optionsFine.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
+
+  //optionsFine.setArgs("DEBUG ENABLE REDUCTIONS", "FALSE");
+  //optionsFine.setArgs("DEBUG ENABLE OGS", "FALSE");
+  optionsFine.setArgs("DEBUG ENABLE REDUCTIONS", "0");
+  optionsFine.setArgs("DEBUG ENABLE OGS", "0");
 
   dlong cnt =0;
   for (int nz=0;nz<mesh->Nq;nz++) {
@@ -341,9 +191,9 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
       memcpy(&q[e*meshf->Np],&b[idn*meshf->Np],meshf->Np*sizeof(dfloat));
     }
 
-    // Aq
-    ellipticHostAxHexKernel3D(meshf->Nq,meshf->Nelements,meshf->ggeo,meshf->D,
-	    meshf->DT,meshf->MM,lambda,q,Aq);
+    o_q.copyFrom(q);
+    ellipticOperator(ellipticFine,lambda,o_q,o_Aq,dfloatString);
+    o_Aq.copyTo(Aq);
 
     for(dlong e=0;e<mesh->Nelements;e++){
       for (int mz=0;mz<mesh->Nq;mz++) {
@@ -377,7 +227,10 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
   }
   }
 
-  free(b); free(q); free(Aq);
+  optionsFine.setArgs("DEBUG ENABLE REDUCTIONS", std::to_string(enableReductions));
+  optionsFine.setArgs("DEBUG ENABLE OGS"       , std::to_string(enableGatherScatters));
+
+  free(b); free(q); free(Aq); o_q.free(); o_Aq.free();
 
   // Make the MPI_NONZERO_T data type
   MPI_Datatype MPI_NONZERO_T;
