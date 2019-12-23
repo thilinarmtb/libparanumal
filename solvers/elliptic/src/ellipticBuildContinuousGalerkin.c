@@ -160,11 +160,13 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
 
   dfloat *b,*q,*Aq;
   b =(dfloat *)calloc(meshf->Np*mesh->Np,sizeof(dfloat));
-  q =(dfloat *)calloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages),sizeof(dfloat));
-  Aq=(dfloat *)calloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages),sizeof(dfloat));
+  q =(dfloat *)calloc(meshf->Np*mesh->Nelements,sizeof(dfloat));
+  Aq=(dfloat *)calloc(meshf->Np*mesh->Nelements,sizeof(dfloat));
 
-  occa::memory o_q =mesh->device.malloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages)*sizeof(dfloat), q);
-  occa::memory o_Aq=mesh->device.malloc(meshf->Np*(mesh->Nelements+mesh->NhaloMessages)*sizeof(dfloat),Aq);
+  occa::memory o_q =mesh->device.malloc(meshf->Np*
+    mesh->Nelements*sizeof(dfloat), q);
+  occa::memory o_Aq=mesh->device.malloc(meshf->Np*
+    mesh->Nelements*sizeof(dfloat),Aq);
 
   for(int jj=0;jj<mesh->Np;jj++)
     ellipticGenerateCoarseBasisHex3D(b,jj,ellipticFine);
@@ -173,11 +175,10 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
   int enableReductions = 1;
 
   setupAide &optionsFine = ellipticFine->options;
-  optionsFine.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  optionsFine.getArgs("DEBUG ENABLE REDUCTIONS",
+    enableReductions);
   optionsFine.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
 
-  //optionsFine.setArgs("DEBUG ENABLE REDUCTIONS", "FALSE");
-  //optionsFine.setArgs("DEBUG ENABLE OGS", "FALSE");
   optionsFine.setArgs("DEBUG ENABLE REDUCTIONS", "0");
   optionsFine.setArgs("DEBUG ENABLE OGS", "0");
 
@@ -188,11 +189,14 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
     int idn = nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
     // ok
     for (dlong e=0;e<mesh->Nelements;e++) {
-      memcpy(&q[e*meshf->Np],&b[idn*meshf->Np],meshf->Np*sizeof(dfloat));
+      memcpy(&q[e*meshf->Np],&b[idn*meshf->Np],
+        meshf->Np*sizeof(dfloat));
     }
 
     o_q.copyFrom(q);
-    ellipticOperator(ellipticFine,lambda,o_q,o_Aq,dfloatString);
+    ellipticFine->AxKernel(mesh->Nelements,meshf->o_ggeo,
+      meshf->o_Dmatrices,meshf->o_Smatrices,meshf->o_MM,
+      lambda,o_q,o_Aq);
     o_Aq.copyTo(Aq);
 
     for(dlong e=0;e<mesh->Nelements;e++){

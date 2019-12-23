@@ -96,7 +96,8 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
   
 }
 
-void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
+void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq,
+	const char *precision){
 
   mesh_t *mesh = elliptic->mesh;
   setupAide &options = elliptic->options;
@@ -139,18 +140,21 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     int integrationType = (elliptic->elementType==HEXAHEDRA &&
 			   options.compareArgs("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
     
-    occa::kernel &partialAxKernel = (strstr(precision, "float")) ? elliptic->partialFloatAxKernel : elliptic->partialAxKernel;
+    occa::kernel &partialAxKernel =
+	(strstr(precision, "float")) ? elliptic->partialFloatAxKernel : elliptic->partialAxKernel;
     
     if(mesh->NglobalGatherElements) {
       
       if(integrationType==0) { // GLL or non-hex
 	if(mapType==0){
 	  partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
-			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda,
+			  o_q, o_Aq);
 	}
 	else
 	  partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
-			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices,
+			  mesh->o_MM, lambda, o_q, o_Aq);
       }
       else{
 	elliptic->partialCubatureAxKernel(mesh->NglobalGatherElements,
@@ -169,11 +173,13 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       if(integrationType==0) { // GLL or non-hex
 	if(mapType==0){
 	  partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
-			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
+		      	  lambda, o_q, o_Aq);
 	}
 	else
 	  partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
-			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices,
+			  mesh->o_MM, lambda, o_q, o_Aq);
       }
       else{
 	elliptic->partialCubatureAxKernel(mesh->NlocalGatherElements,
