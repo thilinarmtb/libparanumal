@@ -177,12 +177,12 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
   setupAide &optionsFine = ellipticFine->options;
   optionsFine.getArgs("DEBUG ENABLE REDUCTIONS",
     enableReductions);
-  optionsFine.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-
-  optionsFine.setArgs("DEBUG ENABLE REDUCTIONS", "0");
-  optionsFine.setArgs("DEBUG ENABLE OGS", "0");
+  optionsFine.getArgs("DEBUG ENABLE OGS",
+    enableGatherScatters);
 
   dlong cnt =0;
+  for(int i=0;i<mesh->size;i++){
+  if(i==rank){
   for (int nz=0;nz<mesh->Nq;nz++) {
   for (int ny=0;ny<mesh->Nq;ny++) {
   for (int nx=0;nx<mesh->Nq;nx++) {
@@ -221,6 +221,8 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
            sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + idm];
            sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + idn];
            sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + idm];
+           printf("(rank,elem,row,col,val) %d %d %d %d %1.8e\n",rank,e,idm,idn,val);
+           fflush(stdout);
            cnt++;
          }
       }
@@ -230,9 +232,10 @@ void ellipticBuildContinuousGalerkinHex3D(elliptic_t *elliptic,elliptic_t *ellip
   }
   }
   }
+  }
+  MPI_Barrier(mesh->comm);
 
-  optionsFine.setArgs("DEBUG ENABLE REDUCTIONS", std::to_string(enableReductions));
-  optionsFine.setArgs("DEBUG ENABLE OGS"       , std::to_string(enableGatherScatters));
+  }
 
   free(b); free(q); free(Aq); o_q.free(); o_Aq.free();
 
