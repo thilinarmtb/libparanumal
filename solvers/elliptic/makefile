@@ -164,7 +164,7 @@ libblas:
 libparAlmond:
 	cd ../../libs/parAlmond; make -j lib; cd ../../solvers/elliptic
 
-all: lib ellipticMain
+all: lib ellipticMain BP
 
 # what to do if user types "make clean"
 clean:

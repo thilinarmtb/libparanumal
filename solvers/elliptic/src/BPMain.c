@@ -44,6 +44,7 @@ int main(int argc, char **argv){
   string fileName = argv[2];
   int    N        = atoi(argv[3]);
   int    maxiter  = atoi(argv[4]);
+  int 	 ppn	  = atoi(argv[5]);
 
   int NTEST      = 1; // number of test for BP5 
   options.getArgs("ELEMENT TYPE", elementType);
@@ -69,6 +70,9 @@ int main(int argc, char **argv){
   profiler->tic("PCG");
 #endif
 
+  // do a hot start
+  pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, 100);
+
 #if 1
   double start = 0.0, end =0.0;
   mesh->device.finish();
@@ -78,15 +82,14 @@ int main(int argc, char **argv){
   occa::streamTag startTag = mesh->device.tagStream();
 #endif
 
-  // for(int tst=0; tst<NTEST; tst++){
-  //cuProfilerStart();
-  pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxiter);
-  //cuProfilerStop();
-  // }
+  for(int tst=0; tst<NTEST; tst++){
+    pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxiter);
+  }
 
 
 #if 1
   mesh->device.finish();
+  MPI_Barrier(mesh->comm);
   end = MPI_Wtime();
   double localElapsed = end-start;
 #else
@@ -94,14 +97,8 @@ int main(int argc, char **argv){
   double localElapsed = mesh->device.timeBetween(startTag, stopTag);
 #endif
 
-
-#if(TIMER) 
-  profiler->toc("PCG");
-#endif
-
   localElapsed /= NTEST; // Average time for each PCG solve; 
 
-  
   int size = mesh->size;
 
   hlong   localDofs     = (hlong) mesh->Np*mesh->Nelements;
@@ -115,30 +112,11 @@ int main(int argc, char **argv){
   MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
 
   globalElapsed /= maxiter;
-  int ppn = 1;
   if (mesh->rank==0){
-#if 0
-    char fname[BUFSIZ];
-    sprintf(fname,"BP5_Scaling_M%02d.dat", mesh->size);
-    FILE *fp;
-    fp = fopen(fname, "a");
-
-    fprintf(fp, "%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g \n",
-	    mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),1.0/(globalElapsed/(globalDofs)));
-
-    fprintf(fp, "lipP,CUDA,BP5,%02d,%02d,%d,"hlongFormat",%17.15lg\n",mesh->N, mesh->size, ppn, globalElements,globalElapsed);
-    fclose(fp);
-#else
-    printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME TIME_PER_DOF, DOF_PER_TIME] \n",
-	   mesh->size, mesh->N, globalElements, globalDofs, maxiter, globalElapsed, globalElapsed/(globalDofs),
-	   1.0/(globalElapsed/(globalDofs)));
-#endif
+    printf("libP,occa,BP5,%d,%d,%d,%lld,%g\n",
+	   mesh->N,mesh->size,ppn,globalElements,globalElapsed);
   }
 
-#if(TIMER) 
-  profiler->printTimer(elliptic->mesh->rank, elliptic->mesh->size, elliptic->mesh->comm);
-#endif
-  
   // close down MPI
   MPI_Finalize();
 
